@@ -3,7 +3,7 @@ import sounddevice as sd
 import soundfile as sf
 from utility.huggingface.request import HuggingFaceRequest
 from utility.sensory.config import STT_CONFIG
-import logger
+from logger import logger
 
 class STTClient:
     def __init__(self):
@@ -12,7 +12,9 @@ class STTClient:
         self.seconds = STT_CONFIG["seconds"]
         self.channels = STT_CONFIG["channels"]
         
-    def listen(self):
+    def listen(self) -> str:
+        """Record audio from the microphone and return the transcribed text using LLM"""
+        
         logger.info("Starting audio recording: %d seconds at %d Hz", self.seconds, self.sample_rate)
         audio = sd.rec(
             int(self.seconds * self.sample_rate),
@@ -32,10 +34,12 @@ class STTClient:
         return transcription
         
     def transcribe(self, audio_bytes: bytes) -> str:
+        """Send the recorded audio bytes to the Hugging Face model for transcription and return the text."""
+        
         logger.info("Transcribing audio data of size: %d bytes", len(audio_bytes))
         result = HuggingFaceRequest(
             feature="stt", 
             data=audio_bytes
         )
         logger.info("Transcription result: %s", result)
-        return result["text"]
+        return result.text

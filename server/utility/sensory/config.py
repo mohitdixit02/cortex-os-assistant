@@ -8,3 +8,9 @@ STT_CONFIG = {
     "seconds": 5,
     "channels": 1
 }
+
+TTS_CONFIG = {
+    "voice": "af_heart",
+    "sample_rate": 24000,
+    "channels": 1
+}

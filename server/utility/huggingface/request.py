@@ -3,6 +3,7 @@ import requests
 from dotenv import load_dotenv
 from typing import Literal
 from utility.huggingface.config import models
+from huggingface_hub import InferenceClient
 load_dotenv()
 
 HUGGINGFACE_API_KEY = os.environ["HF_TOKEN"]
@@ -19,24 +20,27 @@ def HuggingFaceRequest(
             data (dict): The data to send in the request.
     """
     
-    model_name = models[feature]
+    model_name = models[feature].get("name") if feature in models else None
     if not model_name:
         raise ValueError(f"No model configured for feature '{feature}'")
-    
-    url = HUGGINGFACE_MODEL_API_URL + model_name
-    print(f"Sending request to HuggingFace model '{model_name}' at URL: {url}")
-    
+        
     headers = {
         "Authorization": f"Bearer {HUGGINGFACE_API_KEY}",
     }
     
     if feature == "stt":
         headers["Content-Type"] = "audio/wav"
-        
-        response = requests.post(url, headers=headers, data=data)
-        response.raise_for_status()
-        return response.json()
-    
+        client = InferenceClient(
+            model=model_name,
+            token=HUGGINGFACE_API_KEY,
+            headers=headers
+        )
+        res = client.automatic_speech_recognition(
+            audio=data
+        )
+        return res
     else:
-        # HuggingFace Models Langchain endpoint
-        return {}
+        headers["Content-Type"] = "application/json"
+        
+    
+    

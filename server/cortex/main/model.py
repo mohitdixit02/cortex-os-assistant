@@ -5,8 +5,9 @@ from typing import TypedDict, Annotated, Literal, Optional, Dict, Any
 import numpy as np
 from numpy import dot
 from numpy.linalg import norm
-import logger
+from logger import logger
 from utility.huggingface.config import models
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 
 # class QueryTypeStructModel(BaseModel):
 #     type: Annotated[Literal["casual", "query"], Field(description="Type of the user query")]
@@ -36,6 +37,19 @@ class CortexMainModel:
     def get_model(self):
         return self.model
         
-    def generate(self, context: object, behaviour: str="Explain", mode: str="casual"):
+    def generate(
+        self,
+        query: str,
+    ):
         logger.info("Generating response...")
+        prompt = ChatPromptTemplate.from_messages([
+            SystemMessagePromptTemplate.from_template("You are a helpful assistant that provides concise and accurate answers to user queries."),
+            HumanMessagePromptTemplate.from_template("{query}")
+        ])
+        formatted_prompt = prompt.format_messages(query=query)
+        print(formatted_prompt)
+        logger.info("Generating response for query: %s", query)
+        response = self.model.invoke(formatted_prompt)
+        return response.content
+        
        
