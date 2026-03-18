@@ -3,3 +3,11 @@
 
 # env files
 .env
+
+# python cache
+__pycache__/
+
+# app
+.next/
+node_modules/
+package-lock.json
