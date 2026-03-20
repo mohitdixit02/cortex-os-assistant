@@ -37,7 +37,7 @@ class CortexMainModel:
     def get_model(self):
         return self.model
         
-    def generate(
+    async def generate(
         self,
         query: str,
     ):

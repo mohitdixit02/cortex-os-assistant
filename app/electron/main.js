@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow } = require("electron");
 const path = require("path");
 
 const isDev = !app.isPackaged;
@@ -24,36 +24,6 @@ function createWindow() {
     mainWindow.webContents.openDevTools({ mode: "detach" });
   }
 }
-
-ipcMain.handle("assistant:ping-backend", async (_event, backendUrl) => {
-  const base = (backendUrl || "http://127.0.0.1:8000").replace(/\/$/, "");
-    console.log(`Pinging backend at ${base}/health...`);
-
-  try {
-    // const response = await fetch(`${base}/health`, {
-    //   method: "GET",
-    // });
-
-    // return {
-    //   ok: response.ok,
-    //   status: response.status,
-    //   url: `${base}/health`,
-    // };
-    return {
-        ok: true,
-        status: 200,
-        url: `${base}/health`,
-        type: "mock",
-    }
-  } catch (error) {
-    return {
-      ok: false,
-      status: null,
-      url: `${base}/health`,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
-});
 
 app.whenReady().then(() => {
   createWindow();
