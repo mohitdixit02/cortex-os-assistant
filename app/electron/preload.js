@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
-contextBridge.exposeInMainWorld("assistantAPI", {
+const rendererApi = {
   pingBackend: (backendUrl) => ipcRenderer.invoke("assistant:ping-backend", backendUrl),
   startMicRecording: (options) => ipcRenderer.invoke("assistant:mic-start", options),
   stopMicRecording: () => ipcRenderer.invoke("assistant:mic-stop"),
@@ -14,4 +14,8 @@ contextBridge.exposeInMainWorld("assistantAPI", {
     ipcRenderer.on("assistant:mic-error", listener);
     return () => ipcRenderer.removeListener("assistant:mic-error", listener);
   },
-});
+};
+
+const rendererAPIName = "assistantAPI";
+
+contextBridge.exposeInMainWorld(rendererAPIName, rendererApi);

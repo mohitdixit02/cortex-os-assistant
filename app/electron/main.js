@@ -1,6 +1,6 @@
 const { app, BrowserWindow } = require("electron");
 const path = require("path");
-const { registerIpcHandlers, stopMicRecorder } = require("./api");
+const { registerIpcHandlers, audioManager } = require("./api");
 
 const isDev = !app.isPackaged;
 const startUrl = process.env.ELECTRON_START_URL || "http://localhost:3000";
@@ -37,7 +37,7 @@ app.whenReady().then(() => {
 });
 
 app.on("before-quit", () => {
-  stopMicRecorder();
+  audioManager.stopMicRecorder();
 });
 
 app.on("window-all-closed", () => {

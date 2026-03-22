@@ -13,6 +13,7 @@
     "start:electron": "cross-env ELECTRON_START_URL=http://localhost:3000 electron ."
   },
   "dependencies": {
+    "@ericedouard/vad-node-realtime": "^0.2.0",
     "next": "16.2.0",
     "node-audiorecorder": "^3.0.0",
     "pcm-player": "^0.0.18",
