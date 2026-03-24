@@ -7,9 +7,10 @@ const thresholdConfig = {
     frameSize: 1600
 };
 
-export class VAD{
+class VAD {
     constructor() {
-        RealTimeVAD.new({
+        this.vad = null;
+        this.ready = RealTimeVAD.new({
             onSpeechStart: () => {
                 console.log("Speech started");
             },
@@ -18,9 +19,11 @@ export class VAD{
             },
             ...thresholdConfig
         }).then((vad) => {
+            console.log("VAD initialized successfully");
             this.vad = vad;
         }).catch((error) => {
             console.error("Failed to initialize VAD:", error);
+            throw error;
         });
     }
 
@@ -33,6 +36,7 @@ export class VAD{
     }
 
     async processAudioChunk(chunk) {
+        console.log("Processing audio chunk of size:", chunk.length);
         await this.vad.processAudio(chunk);
     }
 
@@ -41,3 +45,7 @@ export class VAD{
         this.vad.destroy();
     }
 }
+
+module.exports = {
+    VAD,
+};

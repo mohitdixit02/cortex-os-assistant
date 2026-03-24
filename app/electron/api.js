@@ -1,5 +1,5 @@
 const { ipcMain } = require("electron");
-const { AudioManager } = require("./audio/audioManager");
+const { AudioManager } = require("./audio");
 
 const audioManager = new AudioManager();
 

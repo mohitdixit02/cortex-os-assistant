@@ -4,6 +4,22 @@ const { registerIpcHandlers, audioManager } = require("./api");
 
 const isDev = !app.isPackaged;
 const startUrl = process.env.ELECTRON_START_URL || "http://localhost:3000";
+const env = process.env.NODE_ENV || 'development';
+
+// Hot Reload
+if (env.toLowerCase() === "development") {
+  const electronBinary = path.join(
+    process.cwd(),
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? "electron.cmd" : "electron"
+  );
+
+  require("electron-reload")(__dirname, {
+    electron: electronBinary,
+    hardResetMethod: "exit",
+  });
+}
 
 function createWindow() {
   const mainWindow = new BrowserWindow({

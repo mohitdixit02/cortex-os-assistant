@@ -87,7 +87,7 @@ export const useAudioManager = () => {
                 }
 
                 console.log("Received mic chunk:", normalized.byteLength, "bytes");
-                chunkHandler(normalized);
+                // chunkHandler(normalized);
             });
 
             // Listener to mic recording errors from main process

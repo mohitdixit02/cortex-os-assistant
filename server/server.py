@@ -41,6 +41,11 @@ async def websocket_endpoint(websocket: WebSocket):
             if msg_type == "stop":
                 print("Received stop signal, processing complete audio data of size:", len(audio_buffer))
                 # audio bytes
+                if not audio_buffer or len(audio_buffer) == 0:
+                    print("No audio data received, sending error response")
+                    await websocket.send_json({"type": "error", "message": "No audio data received"})
+                    continue
+            
                 text_generator = listen_and_respond(bytes(audio_buffer))
 
                 await websocket.send_json(

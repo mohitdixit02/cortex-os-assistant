@@ -1,12 +1,13 @@
 const path = require("path");
-import AudioRecorder from "node-audiorecorder";
-import soxPath from 'sox-bin';
+const AudioRecorder = require("node-audiorecorder");
+const soxPath = require("sox-bin");
+const { VAD } = require("./vad");
+
 const soxDir = path.dirname(soxPath);
 process.env.PATH = `${soxDir};${process.env.PATH}`;
 process.env.AUDIODRIVER = 'waveaudio';
-const { VAD } = require("./vad");
 
-export class AudioManager {
+class AudioManager {
     constructor() {
         this.micRecorder = null;
         this.micStream = null;
@@ -50,6 +51,7 @@ export class AudioManager {
             if (!this.micOwnerWebContents || this.micOwnerWebContents.isDestroyed()) {
                 return;
             }
+            // console.log("Received audio chunk of size:", chunk.length);
             await this.vad.processAudioChunk(chunk);
             // if (this.micOwnerWebContents && !this.micOwnerWebContents.isDestroyed()) {
             //     this.micOwnerWebContents.send(errorRendererEndPoint, String(error));
@@ -71,3 +73,7 @@ export class AudioManager {
         });
     }
 }
+
+module.exports = {
+    AudioManager,
+};
