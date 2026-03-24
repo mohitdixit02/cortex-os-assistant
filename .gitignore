@@ -11,3 +11,6 @@ __pycache__/
 .next/
 node_modules/
 package-lock.json
+
+# electron
+dist-electron/

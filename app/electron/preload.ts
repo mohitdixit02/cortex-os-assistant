@@ -19,3 +19,5 @@ const rendererApi = {
 const rendererAPIName = "assistantAPI";
 
 contextBridge.exposeInMainWorld(rendererAPIName, rendererApi);
+
+export {};

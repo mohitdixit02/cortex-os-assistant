@@ -2,15 +2,17 @@
   "name": "app",
   "version": "0.1.0",
   "private": true,
-  "main": "electron/main.js",
+  "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "concurrently -k \"npm:dev:web\" \"npm:dev:electron\"",
+    "dev": "concurrently -k \"npm:dev:web\" \"npm:dev:electron:watch\" \"npm:dev:electron\"",
     "dev:web": "next dev",
-    "dev:electron": "wait-on tcp:3000 && cross-env ELECTRON_START_URL=http://localhost:3000 electron .",
-    "build": "next build",
+    "dev:electron": "wait-on tcp:3000 file:dist-electron/main.js && cross-env ELECTRON_START_URL=http://localhost:3000 electron .",
+    "dev:electron:watch": "tsc -p tsconfig.electron.json -w",
+    "build": "next build && npm run build:electron",
+    "build:electron": "tsc -p tsconfig.electron.json",
     "start": "next start",
     "lint": "eslint",
-    "start:electron": "cross-env ELECTRON_START_URL=http://localhost:3000 electron ."
+    "start:electron": "npm run build:electron && cross-env ELECTRON_START_URL=http://localhost:3000 electron ."
   },
   "dependencies": {
     "@ericedouard/vad-node-realtime": "^0.2.0",
@@ -22,6 +24,8 @@
     "sox-bin": "^1.1.0"
   },
   "devDependencies": {
+    "@types/electron": "^1.6.12",
+    "@types/node": "^25.5.0",
     "@types/react": "19.2.14",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
@@ -30,6 +34,7 @@
     "electron-reloader": "^1.2.3",
     "eslint": "^9",
     "eslint-config-next": "16.2.0",
+    "typescript": "^5.9.3",
     "wait-on": "^9.0.4"
   }
 }

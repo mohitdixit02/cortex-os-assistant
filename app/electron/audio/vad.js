@@ -36,7 +36,7 @@ class VAD {
     }
 
     async processAudioChunk(chunk) {
-        console.log("Processing audio chunk of size:", chunk.length);
+        // console.log("Processing audio chunk of size:", chunk.length);
         await this.vad.processAudio(chunk);
     }
 

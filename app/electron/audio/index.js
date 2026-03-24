@@ -52,6 +52,7 @@ class AudioManager {
                 return;
             }
             // console.log("Received audio chunk of size:", chunk.length);
+            console.log("Type of chunk:", typeof chunk);
             await this.vad.processAudioChunk(chunk);
             // if (this.micOwnerWebContents && !this.micOwnerWebContents.isDestroyed()) {
             //     this.micOwnerWebContents.send(errorRendererEndPoint, String(error));

@@ -1,0 +1,25 @@
+/*
+Configuration used by TS Compiler to compile Electron main and preload scripts. 
+    Source - electronq
+    Destination - dist-electron
+*/
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "rootDir": "electron",
+    "outDir": "dist-electron",
+    "noEmit": false,
+    "strict": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "allowJs": true,
+    "types": ["node", "electron"]
+  },
+  "include": ["electron/**/*.ts", "electron/**/*.js"],
+  "exclude": ["node_modules", "dist-electron"]
+}
