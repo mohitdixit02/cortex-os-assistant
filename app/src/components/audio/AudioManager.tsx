@@ -128,7 +128,7 @@ export const useAudioManager = () => {
 
     const playAudio = async (chunk: ArrayBuffer) => {
         playingRef.current = true;               
-        await feedPcm(chunk);
+        await feedPcm(chunk); // PCM Player will handle the chunk and play it
     }
 
     const pauseAudio = async () => {

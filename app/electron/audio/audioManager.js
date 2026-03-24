@@ -1,35 +1,17 @@
-// let micRecorder = null;
-// let micStream = null;
-// let micOwnerWebContents = null;
-
-// const vad = new RealTimeVAD({
-//   onSpeechStart: () => {
-//     console.log("Speech started");
-//   },
-//   onSpeechEnd: () => {
-//     console.log("Speech ended");
-//   },
-//   positiveSpeechThreshold: 0.6,
-//   negativeSpeechThreshold: 0.3,
-//   sampleRate: 16000,
-//   frameSize: 1600, // 100ms frames at 16kHz
-// });
-
-// vad.start();
-
 const path = require("path");
-const AudioRecorder = require("node-audiorecorder");
-const soxPath = require('sox-bin');
+import AudioRecorder from "node-audiorecorder";
+import soxPath from 'sox-bin';
 const soxDir = path.dirname(soxPath);
 process.env.PATH = `${soxDir};${process.env.PATH}`;
 process.env.AUDIODRIVER = 'waveaudio';
+const { VAD } = require("./vad");
 
 export class AudioManager {
     constructor() {
         this.micRecorder = null;
         this.micStream = null;
         this.micOwnerWebContents = null;
-        this.vad = null;
+        this.vad = new VAD();
     }
 
     stopMicRecorder() {
@@ -64,11 +46,16 @@ export class AudioManager {
             throw new Error("Microphone stream is not available");
         }
 
-        this.micStream.on("data", (chunk) => {
+        this.micStream.on("data", async (chunk) => {
             if (!this.micOwnerWebContents || this.micOwnerWebContents.isDestroyed()) {
                 return;
             }
-            this.micOwnerWebContents.send(streamRendererEndPoint, chunk);
+            await this.vad.processAudioChunk(chunk);
+            // if (this.micOwnerWebContents && !this.micOwnerWebContents.isDestroyed()) {
+            //     this.micOwnerWebContents.send(errorRendererEndPoint, String(error));
+            // }
+            // });
+            // this.micOwnerWebContents.send(streamRendererEndPoint, chunk);
         });
 
         this.micStream.on("error", (error) => {
