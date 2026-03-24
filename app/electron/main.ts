@@ -26,7 +26,7 @@ function createWindow() {
     width: 1200,
     height: 800,
     minWidth: 560,
-    minHeight: 640,
+    minHeight: 320,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -52,8 +52,8 @@ app.whenReady().then(() => {
   });
 });
 
-app.on("before-quit", () => {
-  audioManager.stopMicRecorder();
+app.on("before-quit", async () => {
+  await audioManager.stopMicRecorder();
 });
 
 app.on("window-all-closed", () => {

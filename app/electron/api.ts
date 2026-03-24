@@ -5,7 +5,7 @@ const audioManager = new AudioManager();
 
 function registerIpcHandlers() {
   ipcMain.handle("assistant:mic-start", async (event, options = {}) => {
-    audioManager.stopMicRecorder();
+    await audioManager.stopMicRecorder();
 
     const recorderOptions = {
       program: "sox",
@@ -27,7 +27,7 @@ function registerIpcHandlers() {
       });
       return { ok: true };
     } catch (error) {
-      audioManager.stopMicRecorder();
+      await audioManager.stopMicRecorder();
       return {
         ok: false,
         error: error instanceof Error ? error.message : String(error),
@@ -36,7 +36,7 @@ function registerIpcHandlers() {
   });
 
   ipcMain.handle("assistant:mic-stop", async () => {
-    audioManager.stopMicRecorder();
+    await audioManager.stopMicRecorder();
     return { ok: true };
   });
 }

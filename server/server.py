@@ -1,7 +1,9 @@
 import os
 from dotenv import load_dotenv
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 import json
+import io
+import wave
 
 app = FastAPI()
 
@@ -15,53 +17,112 @@ os.makedirs(cache_dir, exist_ok=True)
 
 from cortex.main import listen_and_respond
 
+def pcm16le_to_wav_bytes(pcm_bytes: bytes, sample_rate: int = 16000, channels: int = 1) -> bytes:
+    with io.BytesIO() as wav_buffer:
+        with wave.open(wav_buffer, "wb") as wav_file:
+            wav_file.setnchannels(channels)
+            wav_file.setsampwidth(2)
+            wav_file.setframerate(sample_rate)
+            wav_file.writeframes(pcm_bytes)
+        return wav_buffer.getvalue()
+
 # input
 # ws.send(JSON.stringify({ type: "start", mime: recorder.mimeType }));
+
+# temp reference
+# start_conversation - conversation start signal
+# interruption : event = speech-start - user starts speaking
+# interruption : event = speech-end - user stops speaking
+# end_conversation - conversation end signal
+# close_connection - signal to close websocket connection from client side
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-
+    is_user_speaking = False
     audio_buffer = bytearray()
-    while True:
-        res = await websocket.receive()
-        if res.get("bytes") is not None:
-            print("Adding chunk of audio data to buffer, size:", len(res.get("bytes")))
-            audio_buffer.extend(res.get("bytes"))
-            continue
-        
-        if res.get("text") is not None:
-            payload = json.loads(res.get("text"))
+    try:
+        while True:
+            res = await websocket.receive()
+            if res.get("bytes") is not None:
+                if is_user_speaking:
+                    print("Adding chunk of audio data to buffer, size:", len(res.get("bytes")))
+                    audio_buffer.extend(res.get("bytes"))
+                continue
+
+            text_payload = res.get("text")
+            if text_payload is None:
+                continue
+
+            if text_payload == "close_connection":
+                print("Received close connection signal, closing websocket")
+                await websocket.close()
+                break
+
+            try:
+                payload = json.loads(text_payload)
+            except json.JSONDecodeError:
+                print("Received non-JSON text payload, ignoring:", text_payload)
+                continue
+
             msg_type = payload.get("type")
-            if msg_type == "start":
+            if msg_type == "start_conversation":
                 print("Received start signal, initializing audio buffer")
                 audio_buffer.clear()
-                await websocket.send_json({"type": "ack", "stage": "started"})
-                
-            if msg_type == "stop":
-                print("Received stop signal, processing complete audio data of size:", len(audio_buffer))
-                # audio bytes
-                if not audio_buffer or len(audio_buffer) == 0:
-                    print("No audio data received, sending error response")
-                    await websocket.send_json({"type": "error", "message": "No audio data received"})
-                    continue
+                await websocket.send_json({"type": "acknowledged", "stage": "started"})
             
-                text_generator = listen_and_respond(bytes(audio_buffer))
-
-                await websocket.send_json(
-                    {
-                        "type": "audio_meta",
-                        "sampleRate": 24000,
-                        "channels": 1,
-                        "format": "f32le",
-                    }
-                )
-
-                chunk_idx = 0
-                async for audio_chunk in text_generator:
-                    chunk_idx += 1
-                    await websocket.send_bytes(audio_chunk.tobytes())
-                print("Total TTS chunks sent:", chunk_idx)
-                
-                await websocket.send_json({"type": "done"})
+            if msg_type == "interruption":
+                event = payload.get("event")
+                print(f"Received interruption event: {event}")
+                if event == "speech-start":
+                    print("User started speaking, clearing audio buffer for new input")
+                    audio_buffer.clear()
+                    is_user_speaking = True
+                    await websocket.send_json({"type": "new audio starts listening", "stage": f"interruption_{event}"})
+                elif event == "speech-end":
+                    print("User stopped speaking, ready to process audio buffer of size:", len(audio_buffer))
+                    is_user_speaking = False
+                    await websocket.send_json({"type": "finished listening", "stage": f"interruption_{event}"})
+                    
+                    if not audio_buffer or len(audio_buffer) == 0:
+                        print("No audio data received during interruption, sending error response")
+                        await websocket.send_json({"type": "error", "message": "No audio data received during interruption"})
+                    else:
+                        wav_bytes = pcm16le_to_wav_bytes(bytes(audio_buffer), sample_rate=16000, channels=1)
+                        text_generator = listen_and_respond(wav_bytes)
+                        await websocket.send_json(
+                            {
+                                "type": "audio_meta",
+                                "sampleRate": 24000,
+                                "channels": 1,
+                                "format": "f32le",
+                            }
+                        )
+                        
+                        chunk_idx = 0
+                        async for audio_chunk in text_generator:
+                            chunk_idx += 1
+                            await websocket.send_bytes(audio_chunk.tobytes())
+                        print("Total TTS chunks sent:", chunk_idx)
+                        
+                        await websocket.send_json({"type": "done"})
+                        audio_buffer.clear()
+            
+            if msg_type == "end_conversation":
+                print("Received stop signal, processing complete audio data of size:", len(audio_buffer))
                 audio_buffer.clear()
+                await websocket.send_json({"type": "acknowledged", "stage": "ended"})
+
+            if msg_type == "close_connection":
+                print("Received close connection signal, closing websocket")
+                await websocket.close()
+                break
+    except WebSocketDisconnect:
+        print("WebSocket disconnected")
+    except Exception as e:
+        print("WebSocket endpoint error:", e)
+        try:
+            if websocket.client_state.name != "DISCONNECTED":
+                await websocket.close()
+        except Exception:
+            pass

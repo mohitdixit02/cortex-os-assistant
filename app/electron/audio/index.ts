@@ -7,7 +7,7 @@ const soxDir = path.dirname(soxPath);
 process.env.PATH = `${soxDir};${process.env.PATH}`;
 process.env.AUDIODRIVER = 'waveaudio';
 
-interface MicStreamOptions {
+type MicStreamOptions = {
     recorderOptions: Record<string, any>;
     event: Electron.IpcMainInvokeEvent;
     streamRendererEndPoint: string;
@@ -20,15 +20,17 @@ class AudioManager {
     micStream: NodeJS.ReadableStream | null;
     micOwnerWebContents: Electron.WebContents | null;
     vad: any;
+    isUserSpeaking: boolean;
 
     constructor() {
         this.micRecorder = null;
         this.micStream = null;
         this.micOwnerWebContents = null;
         this.vad = new VAD();
+        this.isUserSpeaking = false;
     }
 
-    stopMicRecorder() {
+    async stopMicRecorder() {
         if (this.micStream) {
             this.micStream.removeAllListeners("data");
             this.micStream.removeAllListeners("error");
@@ -61,14 +63,27 @@ class AudioManager {
             throw new Error("Microphone stream is not available");
         }
 
+        // Handlers for VAD events
+        const handleSpeechStart = () => {
+            this.isUserSpeaking = true;
+            console.log("[VAD] Detected speech start");
+            if (this.micOwnerWebContents && !this.micOwnerWebContents.isDestroyed()) {
+                this.micOwnerWebContents.send(streamRendererEndPoint, { event: "speech-start" });
+            }
+        }
+
+        const handleSpeechEnd = () => {
+            this.isUserSpeaking = false;
+            console.log("[VAD] Detected speech end");
+            if (this.micOwnerWebContents && !this.micOwnerWebContents.isDestroyed()) {
+                this.micOwnerWebContents.send(streamRendererEndPoint, { event: "speech-end" });
+            }
+        }
+        
         // Start VAD processing loop
         await this.vad.initialize(
-            () => {
-                console.log("[AudioManager] VAD detected speech start");
-            },
-            () => {
-                console.log("[AudioManager] VAD detected speech end");
-            }
+            handleSpeechStart,
+            handleSpeechEnd
         );
         console.log("[AudioManager] Mic stream started; VAD ready");
 
@@ -78,14 +93,17 @@ class AudioManager {
             }
             try {
                 await this.vad.processAudioChunk(chunk);
+                if (this.isUserSpeaking) { // for now, send all chunks regardless of VAD state
+                    if (this.micOwnerWebContents && !this.micOwnerWebContents.isDestroyed()) {
+                        this.micOwnerWebContents.send(streamRendererEndPoint, { event: "speech-data", chunk: chunk });
+                    }
+                }
             } catch (error) {
                 console.error("[AudioManager] VAD processing error:", error);
                 if (this.micOwnerWebContents && !this.micOwnerWebContents.isDestroyed()) {
                     this.micOwnerWebContents.send(errorRendererEndPoint, String(error));
                 }
             }
-
-            // this.micOwnerWebContents.send(streamRendererEndPoint, chunk);
         });
 
         this.micStream.on("error", (error: Error) => {
@@ -106,4 +124,4 @@ module.exports = {
     AudioManager,
 };
 
-export {};
+export { };

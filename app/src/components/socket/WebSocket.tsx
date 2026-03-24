@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useAudioManager } from "../audio/AudioManager";
+import { MicStreamRes } from "../audio/AudioInterface";
 
 const ensureSocketOpen = async (socket: WebSocket) => {
     if (socket.readyState === WebSocket.OPEN) {
@@ -28,7 +29,7 @@ const ensureSocketOpen = async (socket: WebSocket) => {
     });
 };
 
-interface BackendListenerProps {
+type BackendListenerProps = {
     metaDataKey?: string;
     audioEndKey?: string;
 }
@@ -37,7 +38,7 @@ export const useWebSocket = (
     socketUrl?: string,
     binaryType: "arraybuffer" | "blob" = "arraybuffer"
 ) => {
-    if(!socketUrl) {
+    if (!socketUrl) {
         throw new Error("WebSocket URL is required");
     }
     const socket = new WebSocket(socketUrl);
@@ -80,13 +81,9 @@ export const useWebSocket = (
                 return;
             }
 
-            if (event.data instanceof Blob) {
-                await playAudio(await event.data.arrayBuffer());
-                return; // Res as blob means no more data is expected, so we can return early
-            }
-
-            if (event.data instanceof ArrayBuffer) {
+            if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
                 await playAudio(event.data);
+                return;
             }
         });
 
@@ -96,11 +93,11 @@ export const useWebSocket = (
 
     };
 
-    const closeSocket = (socketEndResponse: string = "res_end") => {
+    const closeSocket = (socketEndResponse: string = "close_connection") => {
         return () => {
             closeAudioPlayer();
             if (socketRef.current?.readyState === WebSocket.OPEN) {
-                socketRef.current.send(socketEndResponse);
+                socketRef.current.send(JSON.stringify({ type: socketEndResponse }));
             }
             socketRef.current.close();
         };
@@ -124,12 +121,21 @@ export const useWebSocket = (
             const errHandler = (error: string) => {
                 console.error("Mic recorder error:", error);
             }
+            const interruptionHandler = (res: MicStreamRes) => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: "interruption", event: res.event }));
+                }
+            }
 
             // trigger audio start
-            ws.send(JSON.stringify({ type: "start", mime: "audio/wav" }));
+            ws.send(JSON.stringify({ type: "start_conversation", mime: "audio/wav" }));
 
             // Audio manager will handle chunks as per handlers provided
-            startRecording(chunkHandler, errHandler);
+            startRecording(
+                chunkHandler,
+                errHandler,
+                interruptionHandler
+            );
         } catch (error) {
             console.error("Failed to start streaming:", error);
             await stopRecording();
@@ -140,7 +146,7 @@ export const useWebSocket = (
         const ws = socketRef.current;
         await stopRecording();
         if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: "stop" }));
+            ws.send(JSON.stringify({ type: "end_conversation" }));
         }
     };
 

@@ -2,14 +2,6 @@ import PCMPlayer from "pcm-player";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
 type PcmCodec = "Int16" | "Float32";
-interface PCMPlayerType {
-    playerRef: React.RefObject<PCMPlayer | null>;
-    audioConfigRef: React.RefObject<{
-        codec: PcmCodec;
-        sampleRate: number;
-        channels: number;
-    }>;
-}
 
 export const usePCMPlayer = () => {
     // Audio Player

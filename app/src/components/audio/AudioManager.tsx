@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import PCMPlayer from "pcm-player";
 import { usePCMPlayer } from "./PCMPlayer";
-
-// Assistant APIs - Exposed by Electron main process
-type AssistantAPI = {
-    startMicRecording: (options?: Record<string, unknown>) => Promise<RecorderStartResult>;
-    stopMicRecording: () => Promise<RecorderStartResult>;
-    onMicChunk: (handler: (chunk: unknown) => void) => () => void;
-    onMicError: (handler: (error: string) => void) => () => void;
-};
+import { 
+    PcmCodec ,
+    RecorderStartResult,
+    AssistantAPI,
+    MicStreamRes
+} from "./AudioInterface";
 
 const getAssistantApi = (): AssistantAPI | null => {
     const value = (window as Window & { assistantAPI?: AssistantAPI }).assistantAPI;
@@ -31,19 +28,19 @@ const normalizeArrayBuffer = (chunk: unknown): ArrayBuffer | null => {
     return null;
 };
 
-type PcmCodec = "Int16" | "Float32";
-type RecorderStartResult = { ok: boolean; error?: string };
-
 export const useAudioManager = () => {
     // Is audio currently playing
     const playingRef = useRef(false);
 
     // PCM Player
     const { resetPlayer, feedPcm } = usePCMPlayer();
-    
+
     // References for mic event listeners so we can detach them later
     const detachMicChunkRef = useRef<(() => void) | null>(null);
     const detachMicErrorRef = useRef<(() => void) | null>(null);
+
+    // State to track if user is currently speaking (based on VAD)
+    const isUserSpeaking = useRef(false);
 
     // Detach mic event listeners
     const detachMicListeners = () => {
@@ -64,11 +61,12 @@ export const useAudioManager = () => {
             sampleRate: number;
             channels: number;
         }
-    ) => { await resetPlayer(config);}
+    ) => { await resetPlayer(config); }
 
     const startRecording = async (
         chunkHandler: (chunk: ArrayBuffer) => void,
-        errHandler: (error: string) => void
+        errHandler: (error: string) => void,
+        interuptionHandler: (data: MicStreamRes) => void
     ) => {
         const api = getAssistantApi();
         if (!api) {
@@ -80,14 +78,28 @@ export const useAudioManager = () => {
             detachMicListeners(); // clean up any existing listeners
 
             // Listener to mic chunks from main process
-            detachMicChunkRef.current = api.onMicChunk((chunk) => {
-                const normalized = normalizeArrayBuffer(chunk);
-                if (!normalized) {
-                    throw new Error("Received mic chunk in unknown format");
+            detachMicChunkRef.current = api.onMicChunk((res: MicStreamRes) => {
+                if (res.event === "speech-start") {
+                    isUserSpeaking.current = true;
+                    console.log("VAD detected speech start");
+                    interuptionHandler({ event: "speech-start" });
+                    return;
                 }
+                if (res.event === "speech-end") {
+                    isUserSpeaking.current = false;
+                    console.log("VAD detected speech end");
+                    interuptionHandler({ event: "speech-end" });
+                    return;
+                }
+                if (res.event === "speech-data" && res.chunk) {
+                    const normalized = normalizeArrayBuffer(res.chunk);
+                    if (!normalized) {
+                        throw new Error("Received mic chunk in unknown format");
+                    }
 
-                console.log("Received mic chunk:", normalized.byteLength, "bytes");
-                // chunkHandler(normalized);
+                    console.log("Received mic chunk:", normalized.byteLength, "bytes");
+                    chunkHandler(normalized);
+                }
             });
 
             // Listener to mic recording errors from main process
@@ -121,14 +133,17 @@ export const useAudioManager = () => {
                 console.error("Failed to stop mic recorder:", error);
             }
         }
-        else{
+        else {
             console.error("assistantAPI bridge is not available in renderer");
         }
     };
 
-    const playAudio = async (chunk: ArrayBuffer) => {
-        playingRef.current = true;               
-        await feedPcm(chunk); // PCM Player will handle the chunk and play it
+    const playAudio = async (audio: ArrayBuffer | Blob) => {
+        const chunk = audio instanceof Blob ? await audio.arrayBuffer() : audio;
+        if(!isUserSpeaking.current) {
+            playingRef.current = true;
+            await feedPcm(chunk); // PCM Player will handle the chunk and play it
+        }
     }
 
     const pauseAudio = async () => {
