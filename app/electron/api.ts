@@ -19,12 +19,12 @@ function registerIpcHandlers() {
     };
 
     try {
-      audioManager.startMicStream(
+      await audioManager.startMicStream({
         recorderOptions,
         event,
-        "assistant:mic-chunk",
-        "assistant:mic-error"
-      );
+        streamRendererEndPoint:"assistant:mic-chunk",
+        errorRendererEndPoint:"assistant:mic-error"
+      });
       return { ok: true };
     } catch (error) {
       audioManager.stopMicRecorder();
