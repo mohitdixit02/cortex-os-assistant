@@ -97,7 +97,7 @@ export const useAudioManager = () => {
                         throw new Error("Received mic chunk in unknown format");
                     }
 
-                    // console.log("Received mic chunk:", normalized.byteLength, "bytes");
+                    console.log("[Audio Manager] Received mic chunk:", normalized.byteLength, "bytes");
                     chunkHandler(normalized);
                 }
             });
@@ -129,6 +129,7 @@ export const useAudioManager = () => {
         if (api) {
             try {
                 await api.stopMicRecording();
+                console.log("Main process mic recording stopped successfully");
             } catch (error) {
                 console.error("Failed to stop mic recorder:", error);
             }

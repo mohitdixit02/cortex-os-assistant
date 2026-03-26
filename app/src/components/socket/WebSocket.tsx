@@ -150,6 +150,9 @@ export const useWebSocket = (
             }
 
             // trigger audio start
+            if(!ws || ws.readyState !== WebSocket.OPEN) {
+                throw new Error("WebSocket is not open for sending audio data");
+            }
             ws.send(JSON.stringify({ type: "start_conversation", mime: "audio/wav" }));
 
             // Audio manager will handle chunks as per handlers provided

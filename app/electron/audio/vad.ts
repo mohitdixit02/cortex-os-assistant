@@ -24,6 +24,7 @@ class VAD {
         onSpeechEnd: () => void
     ) {
         if (this.initialized) {
+            this.vad.start();
             return;
         }
 
