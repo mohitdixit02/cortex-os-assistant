@@ -98,7 +98,7 @@ class AudioManager {
                 return;
             }
             try {
-                console.log("[AudioManager] Received mic chunk of size:", chunk.length);
+                // console.log("[AudioManager] Received mic chunk of size:", chunk.length);
                 await this.vad.processAudioChunk(chunk);
                 if (this.isUserSpeaking) { // for now, send all chunks regardless of VAD state
                     if (this.micOwnerWebContents && !this.micOwnerWebContents.isDestroyed()) {

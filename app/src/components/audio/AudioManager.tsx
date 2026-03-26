@@ -97,7 +97,7 @@ export const useAudioManager = () => {
                         throw new Error("Received mic chunk in unknown format");
                     }
 
-                    console.log("Received mic chunk:", normalized.byteLength, "bytes");
+                    // console.log("Received mic chunk:", normalized.byteLength, "bytes");
                     chunkHandler(normalized);
                 }
             });

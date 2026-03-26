@@ -3,6 +3,9 @@ import { useAudioManager } from "../audio/AudioManager";
 import { MicStreamRes } from "../audio/AudioInterface";
 
 const ensureSocketOpen = async (socket: WebSocket) => {
+    if(!socket) {
+        throw new Error("WebSocket is not initialized");
+    }
     if (socket.readyState === WebSocket.OPEN) {
         return {
             ok: true,
@@ -29,6 +32,31 @@ const ensureSocketOpen = async (socket: WebSocket) => {
     });
 };
 
+const initializeWebSocket = (socketUrl: string, binaryType: "arraybuffer" | "blob") => {
+    const socket = new WebSocket(socketUrl);
+    socket.binaryType = binaryType;
+    return socket;
+}
+
+const configureWebSocket = async (socket: WebSocket) => {
+    if(!socket) {
+        socket = initializeWebSocket(socket.url, socket.binaryType);
+        if(!socket) {
+            throw new Error("Failed to initialize WebSocket");
+        }
+    }
+    // socket object is present, check for open state
+    try{
+        await ensureSocketOpen(socket);
+    }
+    catch(error) {
+        // fallback to reconnect WebSocket
+        socket = initializeWebSocket(socket.url, socket.binaryType);
+        await ensureSocketOpen(socket); // if this fails, it will throw and be caught by caller
+        console.log("WebSocket connected successfully");
+    }
+}
+
 type BackendListenerProps = {
     metaDataKey?: string;
     audioEndKey?: string;
@@ -41,8 +69,7 @@ export const useWebSocket = (
     if (!socketUrl) {
         throw new Error("WebSocket URL is required");
     }
-    const socket = new WebSocket(socketUrl);
-    socket.binaryType = binaryType;
+    const socket = initializeWebSocket(socketUrl, binaryType);
     const socketRef = useRef(socket);
 
     const {
@@ -105,13 +132,8 @@ export const useWebSocket = (
 
     const startAudioStreaming = async () => {
         try {
+            await configureWebSocket(socketRef.current);
             const ws = socketRef.current;
-            if (!ws) {
-                console.error("WebSocket not initialized");
-                return;
-            }
-
-            await ensureSocketOpen(ws);
             const chunkHandler = (chunk: ArrayBuffer) => {
                 if (ws.readyState === WebSocket.OPEN) {
                     console.log("Sending audio chunk of size:", chunk.byteLength);
