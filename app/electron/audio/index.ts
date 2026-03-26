@@ -85,13 +85,20 @@ class AudioManager {
             handleSpeechStart,
             handleSpeechEnd
         );
-        console.log("[AudioManager] Mic stream started; VAD ready");
+        if(this.vad.isReady()) {
+            console.log("[AudioManager] VAD is ready");
+        }
+        else{
+            console.error("[AudioManager] VAD failed to initialize");
+            return;
+        }
 
         this.micStream.on("data", async (chunk: Buffer) => {
             if (!this.micOwnerWebContents || this.micOwnerWebContents.isDestroyed()) {
                 return;
             }
             try {
+                console.log("[AudioManager] Received mic chunk of size:", chunk.length);
                 await this.vad.processAudioChunk(chunk);
                 if (this.isUserSpeaking) { // for now, send all chunks regardless of VAD state
                     if (this.micOwnerWebContents && !this.micOwnerWebContents.isDestroyed()) {

@@ -47,6 +47,10 @@ class VAD {
         await this.ready;
     }
 
+    isReady() {
+        return this.ready !== null;
+    }
+
     pause() {
         if (this.vad) {
             this.vad.pause();
