@@ -1,5 +1,6 @@
 import PCMPlayer from "pcm-player";
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { AudioConfig } from "./AudioInterface";
 
 type PcmCodec = "Int16" | "Float32";
 
@@ -7,14 +8,14 @@ export const usePCMPlayer = () => {
     // Audio Player
     const playerRef = useRef<PCMPlayer | null>(null);
     
-    // Audio Configuration for incoming audio
-    const audioConfigRef = useRef({
+    // Audio Configuration for incoming audio (Default in case AudioManager doesn't provide config)
+    const audioConfigRef = useRef<AudioConfig>({
         codec: "Float32" as PcmCodec,
         sampleRate: 24000,
         channels: 1,
     });
 
-    const resetPlayer = async (audioConfig?: { codec: PcmCodec; sampleRate: number; channels: number }) => {
+    const reInitializePlayer = async (audioConfig?: AudioConfig) => {
         console.log("Resetting PCM Player");
         if (playerRef.current) {
             playerRef.current.destroy();
@@ -23,11 +24,8 @@ export const usePCMPlayer = () => {
 
         // Update audio configuration if provided
         if (audioConfig) {
-            audioConfigRef.current = {
-                codec: audioConfig.codec || audioConfigRef.current.codec,
-                sampleRate: audioConfig.sampleRate || audioConfigRef.current.sampleRate,
-                channels: audioConfig.channels || audioConfigRef.current.channels,
-            };
+            audioConfigRef.current = audioConfig;
+            console.log("Audio Config Ref:", audioConfigRef.current);
         }
     };
 
@@ -55,7 +53,7 @@ export const usePCMPlayer = () => {
     }, [ensurePlayer, playerRef]);
 
     return {
-        resetPlayer,
+        reInitializePlayer,
         feedPcm,
         ensurePlayer
     };

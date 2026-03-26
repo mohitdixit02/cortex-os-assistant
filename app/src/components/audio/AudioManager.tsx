@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { usePCMPlayer } from "./PCMPlayer";
-import { 
-    PcmCodec ,
+import {
+    PcmCodec,
     RecorderStartResult,
     AssistantAPI,
-    MicStreamRes
+    MicStreamRes,
+    AudioConfig
 } from "./AudioInterface";
 
 const getAssistantApi = (): AssistantAPI | null => {
@@ -33,7 +34,7 @@ export const useAudioManager = () => {
     const playingRef = useRef(false);
 
     // PCM Player
-    const { resetPlayer, feedPcm } = usePCMPlayer();
+    const { reInitializePlayer, feedPcm } = usePCMPlayer();
 
     // References for mic event listeners so we can detach them later
     const detachMicChunkRef = useRef<(() => void) | null>(null);
@@ -56,12 +57,8 @@ export const useAudioManager = () => {
     };
 
     const configAudioSpec = async (
-        config: {
-            codec: PcmCodec;
-            sampleRate: number;
-            channels: number;
-        }
-    ) => { await resetPlayer(config); }
+        config: AudioConfig
+    ) => { await reInitializePlayer(config); }
 
     const startRecording = async (
         chunkHandler: (chunk: ArrayBuffer) => void,
@@ -78,10 +75,11 @@ export const useAudioManager = () => {
             detachMicListeners(); // clean up any existing listeners
 
             // Listener to mic chunks from main process
-            detachMicChunkRef.current = api.onMicChunk((res: MicStreamRes) => {
+            detachMicChunkRef.current = api.onMicChunk(async (res: MicStreamRes) => {
                 if (res.event === "speech-start") {
                     isUserSpeaking.current = true;
                     console.log("VAD detected speech start");
+                    await pauseAudio(); // pause any currently playing audio when user starts speaking
                     interuptionHandler({ event: "speech-start" });
                     return;
                 }
@@ -140,8 +138,8 @@ export const useAudioManager = () => {
     };
 
     const playAudio = async (audio: ArrayBuffer | Blob) => {
-        const chunk = audio instanceof Blob ? await audio.arrayBuffer() : audio;
-        if(!isUserSpeaking.current) {
+        if (!audio || (!(audio instanceof Blob) && !(audio instanceof ArrayBuffer))) return; const chunk = audio instanceof Blob ? await audio.arrayBuffer() : audio;
+        if (!isUserSpeaking.current) {
             playingRef.current = true;
             await feedPcm(chunk); // PCM Player will handle the chunk and play it
         }
@@ -149,12 +147,13 @@ export const useAudioManager = () => {
 
     const pauseAudio = async () => {
         playingRef.current = false;
+        await reInitializePlayer(); // reset PCM Player to clear any buffered audio
     }
 
     const closeAudioPlayer = async () => {
         playingRef.current = false;
         await stopRecording(); // ensure mic recording is stopped
-        await resetPlayer(); // reset PCM Player
+        await reInitializePlayer(); // reset PCM Player
     }
 
     return {

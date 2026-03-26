@@ -20,3 +20,9 @@ export type {
     RecorderStartResult,
     MicStreamRes
 }
+
+export type AudioConfig = {
+    codec: PcmCodec;
+    sampleRate: number;
+    channels: number;
+}
