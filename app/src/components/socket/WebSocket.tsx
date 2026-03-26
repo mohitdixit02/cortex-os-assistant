@@ -38,23 +38,18 @@ const initializeWebSocket = (socketUrl: string, binaryType: "arraybuffer" | "blo
     return socket;
 }
 
-const configureWebSocket = async (socket: WebSocket) => {
-    if(!socket) {
-        socket = initializeWebSocket(socket.url, socket.binaryType);
-        if(!socket) {
-            throw new Error("Failed to initialize WebSocket");
-        }
+const configureWebSocket = async (
+    socket: WebSocket | null,
+    socketUrl: string,
+    binaryType: "arraybuffer" | "blob"
+) => {
+    let activeSocket = socket;
+    if (!activeSocket || activeSocket.readyState === WebSocket.CLOSING || activeSocket.readyState === WebSocket.CLOSED) {
+        activeSocket = initializeWebSocket(socketUrl, binaryType);
     }
-    // socket object is present, check for open state
-    try{
-        await ensureSocketOpen(socket);
-    }
-    catch(error) {
-        // fallback to reconnect WebSocket
-        socket = initializeWebSocket(socket.url, socket.binaryType);
-        await ensureSocketOpen(socket); // if this fails, it will throw and be caught by caller
-        console.log("WebSocket connected successfully");
-    }
+    await ensureSocketOpen(activeSocket); // throws error if socket fails to open
+    console.log("WebSocket connected successfully");
+    return activeSocket;
 }
 
 type BackendListenerProps = {
@@ -69,8 +64,7 @@ export const useWebSocket = (
     if (!socketUrl) {
         throw new Error("WebSocket URL is required");
     }
-    const socket = initializeWebSocket(socketUrl, binaryType);
-    const socketRef = useRef(socket);
+    const socketRef = useRef<WebSocket | null>(initializeWebSocket(socketUrl, binaryType));
 
     const {
         startRecording,
@@ -132,8 +126,9 @@ export const useWebSocket = (
 
     const startAudioStreaming = async () => {
         try {
-            await configureWebSocket(socketRef.current);
-            const ws = socketRef.current;
+            const ws = await configureWebSocket(socketRef.current, socketUrl, binaryType);
+            socketRef.current = ws;
+            console.log("WebSocket configuration result:", ws.readyState);
             const chunkHandler = (chunk: ArrayBuffer) => {
                 if (ws.readyState === WebSocket.OPEN) {
                     console.log("Sending audio chunk of size:", chunk.byteLength);
@@ -150,7 +145,7 @@ export const useWebSocket = (
             }
 
             // trigger audio start
-            if(!ws || ws.readyState !== WebSocket.OPEN) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
                 throw new Error("WebSocket is not open for sending audio data");
             }
             ws.send(JSON.stringify({ type: "start_conversation", mime: "audio/wav" }));
