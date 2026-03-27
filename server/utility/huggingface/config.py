@@ -3,9 +3,20 @@ This module contains the configuration for Hugging Face models used in the appli
 Dictionary that maps model types (e.g., "stt", "tts", "main") to their corresponding Hugging Face model names. 
 """
 
+import torch
+
 models = {
     "stt": {
-        "name": "openai/whisper-large-v3-turbo"
+        "name": "openai/whisper-large-v3-turbo",
+        "dtype": torch.float16 if torch.cuda.is_available() else torch.float32,
+        "device": "cuda:0" if torch.cuda.is_available() else "cpu",
+        "model_np_dtype": "float32",
+        "low_cpu_mem_usage": True,
+        "use_safetensors": True,
+        "processor_return_tensors": "pt",
+        "task": "transcribe",
+        "return_timestamps": False,
+        "skip_special_tokens": True,
     },
     "tts":{
         "name":"hexgrad/Kokoro-82M"

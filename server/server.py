@@ -1,22 +1,14 @@
-import os
 import asyncio
-from dotenv import load_dotenv
+from utility.config import load_config
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from cortex.main import listen_and_respond
 import json
 import io
 import wave
 
 app = FastAPI()
 
-load_dotenv()
-cache_dir = os.getenv("HF_CACHE_DIR", "./hf_cache")
-os.environ['HF_HOME'] = cache_dir
-os.environ['TRANSFORMERS_CACHE'] = cache_dir
-os.environ['HF_DATASETS_CACHE'] = cache_dir
-os.environ["SENTENCE_TRANSFORMERS_HOME"] = cache_dir
-os.makedirs(cache_dir, exist_ok=True)
-
-from cortex.main import listen_and_respond
+load_config()
 
 def pcm16le_to_wav_bytes(pcm_bytes: bytes, sample_rate: int = 16000, channels: int = 1) -> bytes:
     with io.BytesIO() as wav_buffer:
