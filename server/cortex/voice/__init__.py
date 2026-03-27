@@ -1,12 +1,12 @@
 import asyncio
 from sensory.STT import STTClient
 from sensory.TTS import TTSClient
-from cortex.main.model import CortexMainModel
+from cortex.voice.model import VoiceMainModel
 from logger import logger
 # keep listening and processing until the program is terminated
 
 
-async def iter_model_tokens_async(model: CortexMainModel, query: str, cancel_event: asyncio.Event | None = None):
+async def iter_model_tokens_async(model: VoiceMainModel, query: str, cancel_event: asyncio.Event | None = None):
     loop = asyncio.get_running_loop()
     queue: asyncio.Queue = asyncio.Queue(maxsize=32)
     stream_done = object()
@@ -44,7 +44,7 @@ async def listen_and_respond(audio_bytes: bytes, cancel_event: asyncio.Event | N
     logger.info("Starting Cortex Main Server...")
     stt_client = STTClient()
     tts_client = TTSClient()
-    model = CortexMainModel()
+    model = VoiceMainModel()
      
     text = await stt_client.transcribe(audio_bytes)
     if not text:

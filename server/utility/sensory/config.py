@@ -18,5 +18,6 @@ STT_CONFIG = {
 TTS_CONFIG = {
     "voice": "af_heart",
     "sample_rate": 24000,
-    "channels": 1
+    "channels": 1,
+    "format": "f32le",
 }

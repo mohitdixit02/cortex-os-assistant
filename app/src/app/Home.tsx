@@ -10,7 +10,7 @@ export default function Home() {
     stopAudioStreaming,
     attachBackendListener,
     closeSocket
-  } = useWebSocket(backendUrl.replace(/^http/, "ws") + "/ws");
+  } = useWebSocket(backendUrl.replace(/^http/, "ws") + "/ws/stream");
 
   useEffect(() => {
     attachBackendListener({
