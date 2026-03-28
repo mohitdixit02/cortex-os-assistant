@@ -2,6 +2,7 @@ import asyncio
 from sensory.STT import STTClient
 from sensory.TTS import TTSClient
 from cortex.voice.model import VoiceMainModel
+from utility.main import iterate_tokens_async
 from logger import logger
 # keep listening and processing until the program is terminated
 
@@ -19,40 +20,24 @@ class VoiceClient:
         self.stt_client = STTClient()
         self.tts_client = TTSClient()
         self.model = VoiceMainModel()
-
-    async def iter_model_tokens_async(self, query: str, cancel_event: asyncio.Event | None = None):
-        loop = asyncio.get_running_loop()
-        queue: asyncio.Queue = asyncio.Queue(maxsize=32)
-        stream_done = object()
-
-        def producer():
-            try:
-                for token in self.model.stream_text_tokens(query=query):
-                    if cancel_event and cancel_event.is_set():
-                        break
-                    fut = asyncio.run_coroutine_threadsafe(queue.put(token), loop)
-                    fut.result()
-            except Exception as exc:
-                fut = asyncio.run_coroutine_threadsafe(queue.put(exc), loop)
-                fut.result()
-            finally:
-                fut = asyncio.run_coroutine_threadsafe(queue.put(stream_done), loop)
-                fut.result()
-
-        producer_task = asyncio.create_task(asyncio.to_thread(producer))
-        try:
-            while True:
-                item = await queue.get()
-                if item is stream_done:
-                    break
-                if isinstance(item, Exception):
-                    raise item
-                yield item
-        finally:
-            if cancel_event:
-                cancel_event.set()
-            await producer_task
-
+    
+    # //pending// Correct Should FLush Logic
+    def _should_flush(self, buffer: str) -> bool:
+        if not buffer:
+            return False
+        stripped = buffer.strip()
+        if not stripped:
+            return False
+        if stripped.endswith((".", "!", "?", "\n")):
+            return True
+        return len(stripped) >= 80
+    
+    async def _stream_tts(self, text: str, cancel_event: asyncio.Event | None = None):
+        async for audio_chunk in self.tts_client.get_audio_stream(text):
+            if cancel_event and cancel_event.is_set():
+                logger.info("Cancelling TTS stream due to interruption")
+                return
+            yield audio_chunk
 
     async def listen_and_respond(self, audio_bytes: bytes, cancel_event: asyncio.Event | None = None):
         logger.info("Starting Cortex Main Server...")
@@ -64,39 +49,28 @@ class VoiceClient:
         print("Transcribed Text:", text)
         pending_text = ""
 
-        def should_flush(buffer: str) -> bool:
-            if not buffer:
-                return False
-            stripped = buffer.strip()
-            if not stripped:
-                return False
-            if stripped.endswith((".", "!", "?", "\n")):
-                return True
-            return len(stripped) >= 80
-
-        async for token in self.iter_model_tokens_async(query=text, cancel_event=cancel_event):
+        # Tokens stream from Voice Main Model
+        async for token in iterate_tokens_async(
+            generator_callback=self.model.stream_text_tokens,
+            cancel_event=cancel_event,
+            query=text
+        ):
             if cancel_event and cancel_event.is_set():
                 logger.info("Cancelling token stream due to interruption")
                 return
 
             pending_text += token
 
-            if should_flush(pending_text):
+            if self._should_flush(pending_text):
                 segment = pending_text.strip()
                 pending_text = ""
                 if segment:
-                    async for audio_chunk in self.tts_client.get_audio_stream(segment):
-                        if cancel_event and cancel_event.is_set():
-                            logger.info("Cancelling audio stream due to interruption")
-                            return
+                    async for audio_chunk in self._stream_tts(segment, cancel_event):
                         yield audio_chunk
 
         remaining = pending_text.strip()
         if remaining and not (cancel_event and cancel_event.is_set()):
-            async for audio_chunk in self.tts_client.get_audio_stream(remaining):
-                if cancel_event and cancel_event.is_set():
-                    logger.info("Cancelling final audio flush due to interruption")
-                    return
+            async for audio_chunk in self._stream_tts(remaining, cancel_event):
                 yield audio_chunk
 
             

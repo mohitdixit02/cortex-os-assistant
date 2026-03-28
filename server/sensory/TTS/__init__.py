@@ -1,125 +1,49 @@
-import asyncio
-import threading
 import numpy as np
-import sounddevice as sd
 from kokoro import KPipeline
 from logger import logger
 from utility.sensory.config import TTS_CONFIG
+from utility.main import iterate_tokens_async
 
-_pipeline = KPipeline(lang_code="a")
-_state_lock = asyncio.Lock()
-_stream_lock = threading.Lock()
-_current_task = None
-_current_stop_flag = None
-_current_stream = None
 
 class TTSClient:
+    """
+        ### TTS Client
+        Main interface for handling Text-to-Speech generation\n
+        
+        `get_audio_stream(text: str)` - Asynchronously generates audio chunks for a given input text \n
+        
+        **Notes**: \n
+        - PCM chunks are generated in a streaming fashing based on the frame_samples configuration to have better control over latency and smooth interruption.     
+    """
     def __init__(self):
         logger.info("Initializing TTSClient...")
         self.voice = TTS_CONFIG.get("voice", "af_heart")
         self.sample_rate = TTS_CONFIG.get("sample_rate", 24000)
         self.channels = TTS_CONFIG.get("channels", 1)
-        
-    async def get_audio_stream(self, text: str, frame_samples: int = 2400):
-        """Yield small PCM float32 frames for websocket-friendly streaming."""
+        self.frame_samples = TTS_CONFIG.get("frame_samples")
+        self._pipeline = KPipeline(lang_code="a")
+    
+    # chunk duration (seconds) = frame_samples / sample_rate
+    def _get_audio_stream_sync(self, text: str):
+        """
+        Generates audio chunks for a given input text \n
+        Returns generator yielding PCM audio chunks as numpy arrays of shape (frame_samples,) and dtype float32.
+        """
         logger.info("Generating audio chunks for text: %s", text)
-        for _, _, audio in _pipeline(text, voice=self.voice):
+        for _, _, audio in self._pipeline(text, voice=self.voice):
             pcm = audio.detach().cpu().numpy().astype(np.float32).reshape(-1)
-            for i in range(0, len(pcm), frame_samples):
-                yield pcm[i:i + frame_samples]
+            for i in range(0, len(pcm), self.frame_samples):
+                yield pcm[i:i + self.frame_samples]
         
-    # def play_blocking(self, text: str, voice: str, stop_flag: threading.Event) -> None:
-    #     """Blocking playback path executed in a worker thread."""
-    #     global _current_stream
-    #     stream = sd.OutputStream(samplerate=self.sample_rate, channels=1, dtype="float32")
-
-    #     with _stream_lock:
-    #         _current_stream = stream
-
-    #     stream.start()
-    #     try:
-    #         for _, _, audio in _pipeline(text, voice=voice):
-    #             if stop_flag.is_set():
-    #                 break
-
-    #             chunk = audio.detach().cpu().numpy().astype(np.float32)
-    #             if chunk.ndim == 1:
-    #                 chunk = chunk.reshape(-1, 1)
-
-    #             stream.write(chunk)
-    #     finally:
-    #         with _stream_lock:
-    #             if _current_stream is stream:
-    #                 _current_stream = None
-
-    #         stream.stop()
-    #         stream.close()
-
-
-    # async def stop_speaking(self) -> None:
-    #     """Stop current playback task and audio stream (barge-in)."""
-    #     global _current_task, _current_stop_flag
-
-    #     async with _state_lock:
-    #         task = _current_task
-    #         stop_flag = _current_stop_flag
-    #         _current_task = None
-    #         _current_stop_flag = None
-
-    #     if stop_flag is not None:
-    #         stop_flag.set()
-
-    #     with _stream_lock:
-    #         if _current_stream is not None:
-    #             _current_stream.abort()
-
-    #     if task is not None:
-    #         task.cancel()
-    #         try:
-    #             await task
-    #         except asyncio.CancelledError:
-    #             pass
-
-
-    # async def play(self, text: str) -> None:
-    #     """Interrupt current speech (if any) and speak new text."""
-    #     global _current_task, _current_stop_flag
-
-    #     await self.stop_speaking()
-    #     stop_flag = threading.Event()
-    #     task = asyncio.create_task(asyncio.to_thread(_play_blocking, text, voice, stop_flag))
-
-    #     async with _state_lock:
-    #         _current_task = task
-    #         _current_stop_flag = stop_flag
-
-    #     try:
-    #         await task
-    #     except asyncio.CancelledError:
-    #         pass
-    #     finally:
-    #         async with _state_lock:
-    #             if _current_task is task:
-    #                 _current_task = None
-    #                 _current_stop_flag = None
-
-
-    # async def demo_interrupt(interrupt_after: float | None = None) -> None:
-    #     """Example: start speaking, then interrupt after 1.5 seconds."""
-    #     long_text = (
-    #         "Hello, this is a long response to demonstrate interruption. "
-    #         "If you call interrupt while this is playing, speech should stop immediately."
-    #     )
-    #     speaking_task = asyncio.create_task(speak_interruptible(long_text, VOICE))
-    #     if interrupt_after is not None:
-    #         await asyncio.sleep(interrupt_after)
-    #         await stop_speaking()
-
-    #     await speaking_task
-
-
-# if __name__ == "__main__":  
-#     # asyncio.run(play_text("Hello, Kokoro speech is now playing through your system speaker."))
-#     asyncio.run(demo_interrupt(interrupt_after=1.5))
-
+    async def get_audio_stream(self, text: str):
+        """
+        Asynchronously generates audio chunks for a given input text \n
+        **Input**: \n
+        - `text`: The input text to be converted to speech. \n
+        
+        **Yields**: \n
+        - PCM audio chunks as numpy arrays of shape (frame_samples,) and dtype float32.
+        """
+        async for chunk in iterate_tokens_async(generator_callback=self._get_audio_stream_sync, text=text):
+            yield chunk
 
