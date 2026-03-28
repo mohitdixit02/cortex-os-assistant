@@ -17,6 +17,7 @@ models = {
         "task": "transcribe",
         "return_timestamps": False,
         "skip_special_tokens": True,
+        "max_source_positions": 3000
     },
     "tts":{
         "name":"hexgrad/Kokoro-82M"

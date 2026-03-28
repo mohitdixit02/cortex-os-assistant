@@ -11,7 +11,7 @@ STT_CONFIG = {
     "overlap_s": 1.0,
     "chunk_seconds_max_limit": 10.0,
     "end_speech_silence_threshold": 0.2,
-    "chunk_batch_size": 1,
+    "chunk_batch_size": 2,
     "model_np_dtype": "float32"
 }
 
@@ -20,4 +20,5 @@ TTS_CONFIG = {
     "sample_rate": 24000,
     "channels": 1,
     "format": "f32le",
+    "frame_samples": 2400, # 100ms of audio at 24kHz - latency vs. overhead tradeoff
 }

@@ -14,3 +14,6 @@ package-lock.json
 
 # electron
 dist-electron/
+
+# test jupyter notebook
+*.ipynb

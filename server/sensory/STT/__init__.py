@@ -1,46 +1,48 @@
 from sensory.STT.model import STTModel
 from utility.sensory.config import STT_CONFIG
 from logger import logger
+import numpy as np
 import asyncio
+import time
 
 class STTClient:
+    """
+    ### Speech-to-Text (STT) Client \n
+    Main interface for handling Speech-to-Text transcription \n
+    **Key Features:** \n
+    - Transcribes raw audio bytes (PCM 16-bit) into text \n
+    - Offloads the transcription work to a separate thread for performance effeciency.
+    - Handles both short and long audio inputs with configurable chunking and batching strategies to optimize latency.
+    """
     def __init__(self):
         logger.info("Initializing STTClient with config: %s", STT_CONFIG)
         self.sample_rate = int(STT_CONFIG["sample_rate"])
         self.chunk_size_s = float(STT_CONFIG["chunk_size_s"])
-        self.overlap_s = float(STT_CONFIG["overlap_s"])
         self.chunk_seconds_max_limit = float(STT_CONFIG["chunk_seconds_max_limit"])
         self.end_speech_silence_threshold = float(STT_CONFIG["end_speech_silence_threshold"])
         self.chunk_batch_size = int(STT_CONFIG.get("chunk_batch_size", 1))
         self.model = STTModel()
         logger.info("STT model loaded locally...")
-
-    # Sync function as involves Audio decoding and model inference, which are both CPU/GPU bound and not natively async-friendly.
-    def _transcribe_sync(self, audio_bytes: bytes) -> str:
+        
+    def _batch_chunks(self, audio: np.ndarray) -> list:
         """
-            Transcribe audio bytes synchronously.
-                1. Decode incoming PCM audio bytes to numpy array.
-                2. If audio is short (<=30s), transcribe in one pass.
-                3. If audio is long (>30s), perform manual chunking with overlap and transcribe each chunk sequentially.
+        ### Batch Audio into Chunks for Transcription \n
+        For smaller audio inputs, return a list of single chunk. \n
+        If the total audio duration exceeds the `chunk_seconds_max_limit`, split the audio into contiguous chunks of `chunk_size_s` seconds. \n
+        
+        **Usage**: \n
+        - If chunk_batch_size is set to >1, these chunks can be transcribed in batches for improved efficiency. \n
+        - If chunk_batch_size is 1, chunks will be transcribed sequentially, but it will help preventing overflow for model window \n
         """
-        audio = self.model.decode_wav_bytes(audio_bytes)
         total_seconds = len(audio) / float(self.sample_rate)
-        logger.info("Transcribing local audio, duration: %.2fs", total_seconds)
-
-        # Single pass if shorter audio
         if total_seconds <= self.chunk_seconds_max_limit:
-            print("Audio duration within single pass limit, transcribing in one go...")
-            return self.model.transcribe_chunk(audio)
-
-        # Fallback for longer audio: manual chunking (no pipeline chunk_length_s warning path)
+            return [audio]
+        
         chunk_s = self.chunk_size_s
-        overlap_s = self.overlap_s
         chunk_n = int(chunk_s * self.sample_rate)
-        overlap_n = int(overlap_s * self.sample_rate)
-        step_n = max(1, chunk_n - overlap_n)
-
-        parts = []
+        step_n = max(1, chunk_n)
         chunks = []
+        
         for start in range(0, len(audio), step_n):
             end = min(start + chunk_n, len(audio))
             chunk = audio[start:end]
@@ -50,27 +52,38 @@ class STTClient:
             if end >= len(audio):
                 break
 
-        if not chunks:
-            return ""
+        return chunks
 
-        if self.chunk_batch_size > 1:
-            texts = self.model.transcribe_chunks_batched(chunks, batch_size=self.chunk_batch_size)
-            parts.extend([t for t in texts if t])
-        else:
-            for chunk in chunks:
-                txt = self.model.transcribe_chunk(chunk)
-                if txt:
-                    print("Transcribed chunk text if higher Length:", txt)
-                    parts.append(txt)
-
-        return " ".join(parts).strip()
+    # Sync function as involves Audio decoding and model inference, which are both CPU/GPU bound and not natively async-friendly.
+    def _transcribe_sync(self, audio_bytes: bytes) -> str:
+        """
+            Transcribe audio bytes synchronously.
+                1. Decode incoming PCM audio bytes to numpy array.
+                2. Batch audio into chunks based on configuration for better handling of long audio inputs.
+        """
+        audio = self.model.decode_wav_bytes(audio_bytes)
+        total_seconds = len(audio) / float(self.sample_rate)
+        logger.info("Transcribing local audio, duration: %.2fs", total_seconds)
+        
+        start_time = time.time()
+        print("STT Transcription started at: ", time.strftime("%H:%M:%S", time.localtime(start_time)))
+        
+        audio_chunks = self._batch_chunks(audio)
+        output = self.model.transcribe_chunks(audio_chunks, batch_size=self.chunk_batch_size)
+        final_text = " ".join(output).strip()
+        print("STT Transcription completed at: ", time.strftime("%H:%M:%S", time.localtime(time.time())))
+        print("Total transcription time: ", time.time() - start_time)
+        print("Combined Text:", final_text)
+        return final_text
     
     async def transcribe(self, audio_bytes: bytes) -> str:
         """
-            ***Transcribe Audio Bytes to Text Asynchronously*** \n
-            Offloads the CPU/GPU-bound transcription work to a separate thread \n
+            ### Transcribe Audio Bytes to Text Asynchronously
             **Input**: Raw audio bytes - PCM (16-bit) \n
-            **Output**: Transcribed text - String
+            **Output**: Transcribed text - String \n
+            **Key Features**: \n
+            - Offloads the transcription work to a separate thread for performance effeciency.
+            - Handles both short and long audio inputs with configurable chunking and batching strategies to optimize latency.
         """
         logger.info("Transcribing audio bytes size: %d", len(audio_bytes))
         return await asyncio.to_thread(self._transcribe_sync, audio_bytes)
