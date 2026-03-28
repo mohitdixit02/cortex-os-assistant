@@ -91,11 +91,11 @@ class StreamEvent:
         self.is_user_speaking = speaking
     
     # ***** Response Task Management ***** #
-    def startStreamResponse(self, websocket: WebSocket, streamResponse: Callable):
+    def startStreamResponse(self, streamResponse: Callable, *args, **kwargs):
         """**Start the asynchronous task for generating and sending responses based on the current conversation state.** \n
         This method initializes the response task and cancellation event, and should be called when starting to process a new conversation or after an interruption."""
         self.response_cancel_event = asyncio.Event()
-        self.response_task = asyncio.create_task(streamResponse(self, websocket=websocket))
+        self.response_task = asyncio.create_task(streamResponse(*args, **kwargs))
         self.resetAudioBuffer()
 
 class ResponseKey(str, Enum):
@@ -141,11 +141,6 @@ EVENT_RESPONSE_MAP = {
         "message": "No audio data received"
     }
 }
-
-async def send_json(payload: dict, websocket: WebSocket, streamEvent: StreamEvent):
-    """Helper function to send JSON responses through the WebSocket connection in a thread-safe manner."""
-    async with streamEvent.getLock():
-        await websocket.send_json(payload)
         
 class StreamEventResponse:
     """
@@ -158,13 +153,11 @@ class StreamEventResponse:
         self.streamEvent = streamEvent
     
     async def send_response(self, response: str):
-        """Send a standardized JSON response based on the provided response key. \n"""
+        """Send a standardized JSON response based on the provided response key (thread-safe) \n"""
         if response not in EVENT_RESPONSE_MAP.keys():
             raise ValueError(f"Invalid response key: {response}")
         
         response = EVENT_RESPONSE_MAP[response]
-        await send_json(
-            payload=response, 
-            websocket=self.websocket, 
-            streamEvent=self.streamEvent
-        )
+
+        async with self.streamEvent.getLock():
+            await self.websocket.send_json(response)

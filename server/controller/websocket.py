@@ -1,8 +1,7 @@
 from fastapi.routing import APIRouter
 from fastapi import WebSocket, WebSocketDisconnect
-from utility.sensory.config import TTS_CONFIG
 from service.stream.event import StreamEvent, ResponseKey, StreamEventResponse
-from service.stream.main import stream_response
+from service.stream.main import StreamClient
 import json
 
 router = APIRouter()
@@ -17,6 +16,10 @@ async def ws_stream(websocket: WebSocket):
     await websocket.accept()
     streamEvent = StreamEvent()
     streamEventResponse = StreamEventResponse(
+        websocket=websocket,
+        streamEvent=streamEvent
+    )
+    streamClient = StreamClient(
         websocket=websocket,
         streamEvent=streamEvent
     )
@@ -72,8 +75,7 @@ async def ws_stream(websocket: WebSocket):
                     else:
                         await streamEvent.cancel("new speech-end request")
                         streamEvent.startStreamResponse(
-                            websocket=websocket,
-                            streamResponse=stream_response
+                            streamResponse=streamClient.stream_response
                         )
 
             if msg_type == "end_conversation":
