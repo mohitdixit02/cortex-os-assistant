@@ -65,6 +65,7 @@ export const useWebSocket = (
         throw new Error("WebSocket URL is required");
     }
     const socketRef = useRef<WebSocket | null>(initializeWebSocket(socketUrl, binaryType));
+    const isStreamingRef = useRef(false);
 
     const {
         startRecording,
@@ -80,6 +81,10 @@ export const useWebSocket = (
         audioEndKey = "done"
     }: BackendListenerProps) => {
         socketRef.current?.addEventListener("message", async (event) => {
+            if (!isStreamingRef.current) {
+                console.warn("Received message while not streaming, ignoring:", event.data);
+                return;
+            }
             if (typeof event.data === "string") {
                 const data = JSON.parse(event.data) as {
                     type?: string;
@@ -117,6 +122,7 @@ export const useWebSocket = (
     const closeSocket = (socketEndResponse: string = "close_connection") => {
         return () => {
             closeAudioPlayer();
+            isStreamingRef.current = false;
             if (socketRef.current?.readyState === WebSocket.OPEN) {
                 socketRef.current.send(JSON.stringify({ type: socketEndResponse }));
             }
@@ -149,6 +155,7 @@ export const useWebSocket = (
                 throw new Error("WebSocket is not open for sending audio data");
             }
             ws.send(JSON.stringify({ type: "start_conversation", mime: "audio/wav" }));
+            isStreamingRef.current = true;
 
             // Audio manager will handle chunks as per handlers provided
             startRecording(
@@ -164,7 +171,8 @@ export const useWebSocket = (
 
     const stopAudioStreaming = async () => {
         const ws = socketRef.current;
-        await stopRecording();
+        await closeAudioPlayer();
+        isStreamingRef.current = false;
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: "end_conversation" }));
         }
