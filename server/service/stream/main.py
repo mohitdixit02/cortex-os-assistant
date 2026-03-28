@@ -4,7 +4,7 @@ import wave
 
 from fastapi import WebSocket
 from cortex.voice import VoiceClient
-from utility.sensory.config import TTS_CONFIG
+from utility.sensory.config import STT_CONFIG, TTS_CONFIG
 from service.stream.event import StreamEvent
     
 class StreamClient:
@@ -38,8 +38,8 @@ class StreamClient:
         This is necessary because STT model expects WAV format for transcription, but the audio data is collected in raw PCM format for streaming efficiency.
         """
         
-        channels = TTS_CONFIG["channels"]
-        sample_rate = TTS_CONFIG["sample_rate"]
+        channels = STT_CONFIG["channels"]
+        sample_rate = STT_CONFIG["sample_rate"]
         
         with io.BytesIO() as wav_buffer:
             with wave.open(wav_buffer, "wb") as wav_file:
@@ -49,12 +49,12 @@ class StreamClient:
                 wav_file.writeframes(pcm_bytes)
             return wav_buffer.getvalue()
 
-    async def stream_response(self):
+    async def stream_response(self, audio_bytes: bytes):
         """
         **Process the complete audio buffer through the Cortex model and stream back TTS audio chunks in real-time.** \n
         """
         try:
-            wav_bytes = self.pcm16le_to_wav_bytes(self.streamEvent.getAudioBufferBytes())
+            wav_bytes = self.pcm16le_to_wav_bytes(audio_bytes)
             await self._send_json(
                 {
                     "type": "audio_meta",

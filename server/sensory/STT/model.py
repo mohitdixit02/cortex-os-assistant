@@ -1,6 +1,7 @@
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor
 from logger import logger
 from utility.huggingface.config import models
+from utility.sensory.config import STT_CONFIG
 import io
 import soundfile as sf
 import numpy as np
@@ -16,6 +17,7 @@ class STTModel:
         self.model_cfg = models.get("stt", {})
         self.np_dtype = np.dtype(self.model_cfg.get("model_np_dtype", "float32"))
         self.processor = AutoProcessor.from_pretrained(self.model_cfg.get("name"))
+        self.sample_rate = STT_CONFIG.get("sample_rate")
         self.model = AutoModelForSpeechSeq2Seq.from_pretrained(
             self.model_cfg.get("name"),
             torch_dtype=self.model_cfg.get("dtype"),
@@ -36,12 +38,12 @@ class STTModel:
             audio = audio.mean(axis=1)
 
         # Warn if sample rate doesn't match expected config (model can still process but quality may degrade)
-        if sr != self.model_cfg.get("sample_rate"):
+        if sr != self.sample_rate:
             logger.warning(
                 "Incoming sample rate %s does not match STT_CONFIG sample rate %s. "
                 "Transcription quality may degrade unless you resample.",
                 sr,
-                self.model_cfg.get("sample_rate"),
+                self.sample_rate,
             )
 
         if not isinstance(audio, np.ndarray):
@@ -58,7 +60,7 @@ class STTModel:
         # Expects Normalized 1D array
         inputs = self.processor(
             audio=audio_chunk,
-            sampling_rate=self.model_cfg.get("sample_rate"),
+            sampling_rate=self.sample_rate,
             return_tensors=self.model_cfg.get("processor_return_tensors")
         )
 
@@ -92,7 +94,7 @@ class STTModel:
 
             inputs = self.processor(
                 audio=batch,
-                sampling_rate=self.model_cfg.get("sample_rate"),
+                sampling_rate=self.sample_rate,
                 return_tensors=self.model_cfg.get("processor_return_tensors"),
                 padding=True,
             )

@@ -1,7 +1,7 @@
 import asyncio
 from fastapi import WebSocket
 from enum import Enum
-from typing import Callable
+from typing import Awaitable, Callable
 
 class StreamEvent:
     """
@@ -91,12 +91,11 @@ class StreamEvent:
         self.is_user_speaking = speaking
     
     # ***** Response Task Management ***** #
-    def startStreamResponse(self, streamResponse: Callable, *args, **kwargs):
+    def startStreamResponse(self, streamResponse: Callable[..., Awaitable[None]], *args, **kwargs):
         """**Start the asynchronous task for generating and sending responses based on the current conversation state.** \n
         This method initializes the response task and cancellation event, and should be called when starting to process a new conversation or after an interruption."""
         self.response_cancel_event = asyncio.Event()
         self.response_task = asyncio.create_task(streamResponse(*args, **kwargs))
-        self.resetAudioBuffer()
 
 class ResponseKey(str, Enum):
     """

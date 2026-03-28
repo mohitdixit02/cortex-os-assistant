@@ -29,6 +29,7 @@ class STTClient:
 
         # Single pass if shorter audio
         if total_seconds <= self.chunk_seconds_max_limit:
+            print("Audio duration within single pass limit, transcribing in one go...")
             return self.model.transcribe_chunk(audio)
 
         # Fallback for longer audio: manual chunking (no pipeline chunk_length_s warning path)
@@ -59,6 +60,7 @@ class STTClient:
             for chunk in chunks:
                 txt = self.model.transcribe_chunk(chunk)
                 if txt:
+                    print("Transcribed chunk text if higher Length:", txt)
                     parts.append(txt)
 
         return " ".join(parts).strip()

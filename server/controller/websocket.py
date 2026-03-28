@@ -73,9 +73,12 @@ async def ws_stream(websocket: WebSocket):
                         print("No audio data received during interruption, sending error response")
                         await streamEventResponse.send_response(response=ResponseKey.NO_AUDIO)
                     else:
+                        audio_snapshot = streamEvent.getAudioBufferBytes()
+                        streamEvent.resetAudioBuffer()
                         await streamEvent.cancel("new speech-end request")
                         streamEvent.startStreamResponse(
-                            streamResponse=streamClient.stream_response
+                            streamResponse=streamClient.stream_response,
+                            audio_bytes=audio_snapshot,
                         )
 
             if msg_type == "end_conversation":
