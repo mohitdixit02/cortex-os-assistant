@@ -7,7 +7,8 @@ import torch
 
 models = {
     "stt": {
-        "name": "openai/whisper-large-v3-turbo",
+        # "name": "openai/whisper-large-v3-turbo",
+        "name": "openai/whisper-small",
         "dtype": torch.float16 if torch.cuda.is_available() else torch.float32,
         "device": "cuda:0" if torch.cuda.is_available() else "cpu",
         "model_np_dtype": "float32",

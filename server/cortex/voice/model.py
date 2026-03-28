@@ -73,12 +73,12 @@ class VoiceMainModel:
     def stream_text_tokens(self, query: str):
         logger.info("Streaming response tokens for query: %s", query)
         prompt = ChatPromptTemplate.from_messages([
-            SystemMessagePromptTemplate.from_template("You are a helpful assistant that provides concise and accurate answers to user queries. Don't reply in more than 20 words."),
+            SystemMessagePromptTemplate.from_template("You are a helpful friend wit cool vibe that provides answers to user queries. Don't reply in more than 100 words."),
             HumanMessagePromptTemplate.from_template("{query}")
         ])
         formatted_prompt = prompt.format_messages(query=query)
-        # for chunk in self.model.stream(formatted_prompt):
-        for chunk in demo_response():
+        for chunk in self.model.stream(formatted_prompt):
+        # for chunk in demo_response():
             token = self._chunk_to_text(chunk)
             if token:
                 yield token
