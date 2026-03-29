@@ -12,7 +12,7 @@ async def iterate_tokens_async(
     ***Useful for bridging synchronous token generators (like model inference) into an asynchronous workflow***
     
     **Parameters:** \n
-    - `generator_callback`: A callable that initiates the token streaming. Return an asynchronous generator of tokens (by `yield`)
+    - `generator_callback`: A callable that initiates the token streaming. Must return a synchronous generator of tokens (by `yield`)
     - `cancel_event`: An optional `asyncio.Event` that can be set to signal cancellation of the token streaming. If this event is set, the method will stop yielding tokens and exit.
     
     **Note:** 

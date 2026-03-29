@@ -1,11 +1,11 @@
 import asyncio
 from sensory.STT import STTClient
 from sensory.TTS import TTSClient
-from cortex.voice.model import VoiceMainModel
+from cortex.main.model import CortexMainModel
 from utility.main import iterate_tokens_async
 from nltk.tokenize import sent_tokenize
 from typing import AsyncGenerator
-from cortex.main.task import MainTaskQueue, TaskStatus
+from cortex.main.task import MainTaskQueue, TaskStatus, TaskItem
 from logger import logger
 # keep listening and processing until the program is terminated
 
@@ -19,52 +19,61 @@ class MainClient:
     """
     
     def __init__(self):
-        # self.stt_client = STTClient()
-        # self.tts_client = TTSClient()
-        self.model = VoiceMainModel()
+        self.model = CortexMainModel()
         
     async def listen_task_queue(self):
         """
-        Main loop to listen for incoming tasks from the TaskQueue and process them accordingly. \n
-        This function will continuously run in the background, awaiting new tasks and dispatching them to the appropriate handlers based on their type or content. \n
-        **Key Features:** \n 
-        - Continuously listens for new tasks without blocking the main thread, allowing for responsive handling of incoming requests. \n
+        ## Task Queue Listener \n
+        Listens for incoming tasks from the TaskQueue and process them accordingly. \n
+        This function will continuously run in the background on main thread, awaiting new tasks and dispatching them to the appropriate handlers based on their type or content. \n
+        
+        **Initialize it using asyncio.create_task()** in the respective entry point
         """
         
         while True:        
             logger.info("Waiting for tasks in the MainTaskQueue...")
             task = await MainTaskQueue.pick_task()
-            logger.info("Received task: %s with payload: %s", task.task_name, task.payload)
-            if task.task_name == "TextResponseTask":
-                logger.info("Processing TextResponseTask with query: %s", task.payload.get("query"))
-                query = task.payload["query"]
-                response_ans = ""
-                async for response in self.handle_text_response(query):
-                    response_ans += response
+            logger.info("Received task: %s with id: %s", task.task_name, task.task_id)
+            updated_task = await self._handle_task_queue(task)
+            
+            if updated_task.status not in [TaskStatus.COMPLETED, TaskStatus.FAILED]:
+                logger.warning("Task %s is still in progress. Current status: %s", task.task_id, updated_task.status)
+                continue  # Skip updating the task status until it's completed or failed
                 
-                task.result = response_ans
+            await MainTaskQueue.submit_task(
+                task_id=task.task_id,
+                status=TaskStatus.COMPLETED if updated_task.result else TaskStatus.FAILED,
+                status_message=updated_task.result
+            )
+            logger.info("Completed Task with id: %s and name: %s", task.task_id, task.task_name)
                 
-                await MainTaskQueue.submit_task(
-                    task_id=task.task_id,
-                    status=TaskStatus.COMPLETED,
-                    status_message=response_ans
-                )
-                logger.info("Completed TextResponseTask with response: %s", response_ans)
-                
-    async def handle_text_response(self, query: str) -> AsyncGenerator[str, None]:
+    async def _handle_task_queue(self, taskItem: TaskItem) -> TaskItem:
         """
-        Handles a text response task by processing the input query through the Cortex model and yielding the generated response tokens. \n
+        ### Task Handler \n
+        **Handles tasks retrieved from the `TaskQueue`.**
+        It processes the task item received from the Task Queue based on the paramaters (like paylaod or taskname) and responsds with the updated task item object. \n
         **Input**: \n
-        - `query`: The input text query that needs to be processed and responded to. \n
+        - `TaskItem`: The task item to be processed (received from the Task Queue) \n
         
-        **Yields**: \n
-        - Generated response tokens as they are produced by the model, allowing for streaming responses back to the client.
+        **Returns**: \n
+        - `TaskItem`: The updated task item object after processing.
         """
-
-        dummy_response = "Hello bro, I am also fine, how can I help you today?"
-        yield dummy_response    
-    # async def listen_and_respond(self, audio_bytes: bytes, cancel_event: asyncio.Event | None = None):
-    #     return ""    
+        try:
+            payload = taskItem.payload
+            query = payload.get("query", "")
+            logger.info("Processing task with query: %s", query)
             
-            
-         
+            generator = self.model.stream_text_tokens(query)
+            print(type(generator))
+            taskItem.result = {
+                "response_type": "text_stream",
+                "response": generator
+            }
+            taskItem.status = TaskStatus.COMPLETED
+            return taskItem
+        except Exception as e:
+            logger.exception("Error processing task: %s", e)
+            taskItem.status = TaskStatus.FAILED
+            taskItem.result = str(e)
+            return taskItem
+   

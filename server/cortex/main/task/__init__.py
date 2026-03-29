@@ -120,6 +120,7 @@ class TaskQueue:
             payload=payload,
             metadata=dict(metadata),
             task_name=task_name,
+            status=TaskStatus.QUEUED
         )
         fut = asyncio.run_coroutine_threadsafe(self._add_task_to_queue(item), self.loop)
         return await asyncio.wrap_future(fut)

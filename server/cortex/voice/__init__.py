@@ -122,24 +122,40 @@ class VoiceClient:
         immediate_response = "Ok sure, I am looking into it now."
         yield immediate_response
 
-    async def handle_task_queue(self, taskItem: TaskItem):
+    async def handle_task_queue(self, taskItem: TaskItem, cancel_event: asyncio.Event | None = None) -> AsyncGenerator[bytes, None]:
         print("task name: ", taskItem.task_name)
         print("task status: ", taskItem.status)
         print("task payload: ", taskItem.result)
+        async for token in iterate_tokens_async(
+            generator_callback=lambda: taskItem.result["response"],
+            cancel_event=cancel_event,
+        ):
+            if cancel_event and cancel_event.is_set():
+                logger.info("Cancelling token stream due to interruption")
+                return
+
+            pending_text += token
+            segment, pending_text = self._get_stream_ready_text(pending_text)
+            yield segment
+
+        remaining = pending_text.strip()
+        if remaining and not (cancel_event and cancel_event.is_set()):
+            yield remaining
         
     async def process_tasks(self):
         """
         ### Background Task Processor \n
-        Continuously runs in the background to process tasks from the `TaskQueue`. \n
-        This function can be started as an independent asyncio task when the server starts, allowing it to handle any tasks that are added to the queue by the main processing functions or other parts of the application. \n
-        
-        **Functionality**: \n
-        - Waits for tasks to be added to the `TaskQueue` and processes them as they come in. \n
-        - Can be extended to handle different types of tasks based on their `task_name` or other metadata.
+        Continuously runs in the background on main thread to process tasks from the `TaskQueue`. \n
+        This function can be started as an independent asyncio task when the server starts, allowing it to handle any tasks that are added to the queue. \n
         """
         logger.info("VoiceClient.process_tasks is idle; MainClient.listen_task_queue handles background processing.")
         # Wait for this exact task id to avoid mixing responses across requests.
         while True:
-            taskItem = await MainTaskQueue.wait_completed_task()
-            await self.handle_task_queue(taskItem)
+            try:
+                taskItem = await MainTaskQueue.wait_completed_task()
+                await self.handle_task_queue(taskItem)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception("Unhandled error in VoiceClient.process_tasks")
          

@@ -24,6 +24,38 @@ class CortexMainModel:
         
     def get_model(self):
         return self.model
+    
+    def _chunk_to_text(self, chunk: Any) -> str:
+        if chunk is None:
+            return ""
+        if isinstance(chunk, str):
+            return chunk
+        content = getattr(chunk, "content", "")
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts = []
+            for item in content:
+                if isinstance(item, str):
+                    parts.append(item)
+                elif isinstance(item, dict):
+                    text = item.get("text")
+                    if isinstance(text, str):
+                        parts.append(text)
+            return "".join(parts)
+        return str(content) if content else ""
 
+    def stream_text_tokens(self, query: str):
+        logger.info("Streaming response tokens for query: %s", query)
+        prompt = ChatPromptTemplate.from_messages([
+            SystemMessagePromptTemplate.from_template("You are a helpful friend wit cool vibe that provides answers to user queries. Don't reply in more than 100 words."),
+            HumanMessagePromptTemplate.from_template("{query}")
+        ])
+        formatted_prompt = prompt.format_messages(query=query)
+        for chunk in self.model.stream(formatted_prompt):
+        # for chunk in demo_response():
+            token = self._chunk_to_text(chunk)
+            if token:
+                yield token
         
        
