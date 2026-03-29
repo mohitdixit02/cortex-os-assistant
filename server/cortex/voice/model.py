@@ -8,6 +8,7 @@ from numpy.linalg import norm
 from logger import logger
 from utility.huggingface.config import models
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from utility.huggingface.request import HuggingFaceRequest
 
 # class QueryTypeStructModel(BaseModel):
 #     type: Annotated[Literal["casual", "query"], Field(description="Type of the user query")]
@@ -90,4 +91,48 @@ class VoiceMainModel:
         logger.info("Generating response...")
         return self.stream_text_tokens(query)
         
-       
+class EmotionDetectionModel:
+    """
+    ## Emotion Detection Model
+    Model for detecting emotion from input text using LLM
+    
+    **Functions**:
+    - `get_emotion(text: str) -> Dict[str, Any]` : Detects emotion from the input text.
+    """
+    def __init__(self):
+        logger.info("Initializing generation model...")
+        self.model_config = models.get("voice_emotion", {})
+        
+    def get_model(self):
+        return self.model
+    
+    def get_emotion(self, text: str) -> Dict[str, Any]:
+        """
+        Detects Emotion from the input text using LLM \n
+        **Input**: \n
+        - `text`: The input text for which to detect emotion. \n
+        **Returns**: \n
+        - A dictionary containing the detected emotion label and its corresponding confidence score. \n
+         For example: `{"label": "joy", "score": 0.95}`
+        """
+        logger.info("Detecting emotion for text: %s", text)
+        res = HuggingFaceRequest(
+            feature="voice_emotion",
+            data=text
+        )
+        logger.info("Emotion detection result: %s", res)
+        output = sorted(res, key=lambda x: x["score"], reverse=True)
+        if output:
+            top_emotion = output[0]
+            top_emotion_score = top_emotion["score"]
+            logger.info("Top detected emotion: %s with score %.4f", top_emotion["label"], top_emotion["score"])
+            return {
+                "label": top_emotion["label"],
+                "score": top_emotion_score
+            }
+        else:
+            logger.warning("No emotions detected, returning 'neutral'")
+            return {
+                "label": "neutral",
+                "score": 1.0
+            }

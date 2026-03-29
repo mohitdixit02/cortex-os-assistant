@@ -28,5 +28,11 @@ models = {
         "task":"conversational",
         "max_new_tokens":500,
         "temperature":0.2,
+    },
+    "voice_emotion":{
+        "name":"boltuix/bert-emotion",
+        "task":"text-classification",
+        "max_new_tokens":50,
+        "temperature":0.2,
     }
 }
