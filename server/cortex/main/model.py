@@ -9,6 +9,16 @@ from logger import logger
 from utility.huggingface.config import models
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 
+text = """
+    Hi, It is Cortex Main Model. I am main Orchestrator for handling user queries and generating responses. I can understand and respond to a wide range of queries, providing concise and accurate answers.
+"""
+
+def demo_response(chunk_size: int = 24):
+    """Yield small text chunks to simulate token streaming in tests."""
+    cleaned = " ".join(text.split())
+    for i in range(0, len(cleaned), chunk_size):
+        yield cleaned[i:i + chunk_size]
+
 class CortexMainModel:
     def __init__(self):
         logger.info("Initializing generation model...")
@@ -46,14 +56,15 @@ class CortexMainModel:
         return str(content) if content else ""
 
     def stream_text_tokens(self, query: str):
+        """Cortex Model"""
         logger.info("Streaming response tokens for query: %s", query)
         prompt = ChatPromptTemplate.from_messages([
             SystemMessagePromptTemplate.from_template("You are a helpful friend wit cool vibe that provides answers to user queries. Don't reply in more than 100 words."),
             HumanMessagePromptTemplate.from_template("{query}")
         ])
         formatted_prompt = prompt.format_messages(query=query)
-        for chunk in self.model.stream(formatted_prompt):
-        # for chunk in demo_response():
+        # for chunk in self.model.stream(formatted_prompt):
+        for chunk in demo_response():
             token = self._chunk_to_text(chunk)
             if token:
                 yield token

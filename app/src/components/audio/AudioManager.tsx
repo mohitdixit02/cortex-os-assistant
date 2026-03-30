@@ -147,11 +147,11 @@ export const useAudioManager = () => {
 
     const pauseAudio = async () => {
         playingRef.current = false;
-        await reInitializePlayer(); // reset PCM Player to clear any buffered audio
     }
-
+    
     const closeAudioPlayer = async () => {
         await pauseAudio();
+        await reInitializePlayer(); // reset PCM Player to clear any buffered audio
         await stopRecording(); // ensure mic recording is stopped
     }
 

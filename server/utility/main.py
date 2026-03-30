@@ -55,7 +55,5 @@ async def iterate_tokens_async(
                 raise item
             yield item
     finally:
-        if cancel_event:
-            cancel_event.set()
         await producer_task
     

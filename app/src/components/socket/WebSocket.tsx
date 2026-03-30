@@ -81,6 +81,7 @@ export const useWebSocket = (
         audioEndKey = "done"
     }: BackendListenerProps) => {
         socketRef.current?.addEventListener("message", async (event) => {
+            console.log("Received message from WebSocket:", event.data);
             if (!isStreamingRef.current) {
                 console.warn("Received message while not streaming, ignoring:", event.data);
                 return;
@@ -102,7 +103,8 @@ export const useWebSocket = (
                     });
                 }
                 if (data.type === audioEndKey) {
-                    await pauseAudio();
+                    console.log("Received audio end signal from backend");
+                    // await pauseAudio();
                 }
                 return;
             }

@@ -103,3 +103,4 @@ async def ws_stream(websocket: WebSocket):
             pass
     finally:
         await streamEvent.cancel("websocket endpoint finalized")
+        await streamClient.shutdown()

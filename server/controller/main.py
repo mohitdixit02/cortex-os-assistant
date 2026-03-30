@@ -5,14 +5,9 @@ from pydantic import BaseModel
 from cortex.voice import VoiceClient
 from fastapi.responses import StreamingResponse
 from logger import logger
-from cortex.main import MainClient
 
 router = APIRouter()
 voice_client = VoiceClient()
-main_client = MainClient()
-
-asyncio.create_task(voice_client.process_tasks())
-asyncio.create_task(main_client.listen_task_queue())
 
 class QueryRequest(BaseModel):
     query: str

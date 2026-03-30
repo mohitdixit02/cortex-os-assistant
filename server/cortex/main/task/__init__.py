@@ -26,7 +26,7 @@ class TaskItem:
     `task_id:` Unique identifier for the task. If not provided, a UUID will be generated. \n
     `payload:` The actual data or parameters associated with the task\n
     `status:` Current status of the task, which can be "queued", "processing", "completed", or "failed". \n
-    `result:` The output or result produced by the worker after processing the task. \
+    `result:` The output or result produced by the worker after processing the task. \n
     `error:` If the task fails, this field can store the error message or exception details. \n
     `metadata:` Store any additional information related to the task
     """

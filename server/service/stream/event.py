@@ -52,7 +52,7 @@ class StreamEvent:
         
     def isCancelEventSet(self) -> bool:
         """Check if the response cancel event is set, indicating that the current response task should be cancelled."""
-        return self.response_cancel_event.is_set()
+        return bool(self.response_cancel_event and self.response_cancel_event.is_set())
     
     def getLock(self) -> asyncio.Lock:
         """Get the asyncio lock for synchronizing send operations. This lock should be acquired before sending any messages to ensure thread safety."""
@@ -143,8 +143,13 @@ EVENT_RESPONSE_MAP = {
         
 class StreamEventResponse:
     """
+    ### Stream Event Response \n
     Helper class for sending standardized JSON responses based on predefined response keys. \n
     Check ***`ResponseKey`*** Class for available response keys and their corresponding payloads. \n
+    
+    **`__init__()`** requires:
+    - The current `Websocket object` on which responses will be sent back to the client.
+    - The corresponding `StreamEvent object` for handling streaming events.
     """
     
     def __init__(self, websocket: WebSocket | None = None, streamEvent: StreamEvent | None = None):
