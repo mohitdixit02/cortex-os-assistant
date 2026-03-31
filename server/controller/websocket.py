@@ -54,6 +54,17 @@ async def ws_stream(websocket: WebSocket):
                 print("Received start signal, initializing audio buffer")
                 streamEvent.resetAudioBuffer()
                 await streamEventResponse.send_response(response=ResponseKey.CONVERSATION_START)
+
+            if msg_type == "playback_done":
+                stream_id = payload.get("streamId")
+                try:
+                    stream_id = int(stream_id) if stream_id is not None else None
+                except (TypeError, ValueError):
+                    stream_id = None
+                accepted = streamEvent.markPlaybackDone(stream_id=stream_id)
+                if not accepted:
+                    print(f"Ignoring playback_done for stale streamId={stream_id}")
+                continue
             
             if msg_type == "interruption":
                 event = payload.get("event")

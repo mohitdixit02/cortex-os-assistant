@@ -67,10 +67,13 @@ class AudioStreamBridge:
         logger.info("[Audio Bridge] Audio Bridge Stream Lock Status: %s", "Locked" if self._stream_lock.locked() else "Unlocked")
 
         async with self._stream_lock:
+            stream_id = self.streamEvent.beginPlaybackTracking()
+            sent_done = False
             try:
                 await self.send_json(
                     {
                         "type": "audio_meta",
+                        "streamId": stream_id,
                         "sampleRate": TTS_CONFIG["sample_rate"],
                         "channels": TTS_CONFIG["channels"],
                         "format": TTS_CONFIG["format"],
@@ -99,7 +102,8 @@ class AudioStreamBridge:
 
                 logger.info("[Audio Bridge] Audio streaming completed successfully: %s", audio_chunk_generator.__name__)
                 if not self.streamEvent.isCancelEventSet():
-                    await self.send_json({"type": "done"})
+                    await self.send_json({"type": "done", "streamId": stream_id})
+                    sent_done = True
                 else:
                     print("Audio streaming completed but cancel event was set, not sending done signal")
             except asyncio.CancelledError:
@@ -109,5 +113,8 @@ class AudioStreamBridge:
                 print("Response streaming error:", e)
                 await self.send_json({"type": "error", "message": str(e)})
                 return {"status": "error", "message": str(e)}
+            finally:
+                if not sent_done:
+                    self.streamEvent.forcePlaybackDone()
 
             return {"status": "completed", "message": "Audio streaming completed successfully."}

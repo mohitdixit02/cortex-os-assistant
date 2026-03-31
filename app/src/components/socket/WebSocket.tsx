@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useRef } from "react";
 import { useAudioManager } from "../audio/AudioManager";
 import { MicStreamRes } from "../audio/AudioInterface";
 
@@ -66,13 +66,21 @@ export const useWebSocket = (
     }
     const socketRef = useRef<WebSocket | null>(initializeWebSocket(socketUrl, binaryType));
     const isStreamingRef = useRef(false);
+    const playbackDrainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const streamPlaybackRef = useRef({
+        streamId: null as number | null,
+        sampleRate: 24000,
+        channels: 1,
+        bytesPerSample: 4,
+        firstChunkAtMs: 0,
+        totalSamples: 0,
+    });
 
     const {
         startRecording,
         stopRecording,
         playAudio,
         configAudioSpec,
-        pauseAudio,
         closeAudioPlayer
     } = useAudioManager();
 
@@ -80,6 +88,11 @@ export const useWebSocket = (
         metaDataKey = "audio_meta",
         audioEndKey = "done"
     }: BackendListenerProps) => {
+        if (playbackDrainTimerRef.current) {
+            clearTimeout(playbackDrainTimerRef.current);
+            playbackDrainTimerRef.current = null;
+        }
+
         socketRef.current?.addEventListener("message", async (event) => {
             console.log("Received message from WebSocket:", event.data);
             if (!isStreamingRef.current) {
@@ -89,27 +102,79 @@ export const useWebSocket = (
             if (typeof event.data === "string") {
                 const data = JSON.parse(event.data) as {
                     type?: string;
+                    streamId?: number;
                     sampleRate?: number;
                     channels?: number;
                     format?: string;
                 };
                 if (data.type === metaDataKey) {
+                    const isInt16 = (data.format || "f32le").toLowerCase().includes("16");
                     configAudioSpec({
-                        codec: (data.format || "f32le").toLowerCase().includes("16")
+                        codec: isInt16
                             ? "Int16"
                             : "Float32",
                         sampleRate: Number(data.sampleRate) || 24000,
                         channels: Number(data.channels) || 1,
                     });
+
+                    if (playbackDrainTimerRef.current) {
+                        clearTimeout(playbackDrainTimerRef.current);
+                        playbackDrainTimerRef.current = null;
+                    }
+
+                    streamPlaybackRef.current = {
+                        streamId: typeof data.streamId === "number" ? data.streamId : null,
+                        sampleRate: Number(data.sampleRate) || 24000,
+                        channels: Number(data.channels) || 1,
+                        bytesPerSample: isInt16 ? 2 : 4,
+                        firstChunkAtMs: 0,
+                        totalSamples: 0,
+                    };
                 }
                 if (data.type === audioEndKey) {
                     console.log("Received audio end signal from backend");
-                    // await pauseAudio();
+                    const now = Date.now();
+                    const playbackState = streamPlaybackRef.current;
+                    const totalDurationMs = playbackState.sampleRate > 0
+                        ? (playbackState.totalSamples / playbackState.sampleRate) * 1000
+                        : 0;
+                    const elapsedMs = playbackState.firstChunkAtMs > 0
+                        ? now - playbackState.firstChunkAtMs
+                        : 0;
+                    const remainingMs = Math.max(0, totalDurationMs - elapsedMs);
+                    const drainSafetyMs = 180;
+                    const ackAfterMs = Math.max(40, Math.ceil(remainingMs + drainSafetyMs));
+                    const doneStreamId = typeof data.streamId === "number"
+                        ? data.streamId
+                        : playbackState.streamId;
+
+                    if (playbackDrainTimerRef.current) {
+                        clearTimeout(playbackDrainTimerRef.current);
+                    }
+
+                    playbackDrainTimerRef.current = setTimeout(() => {
+                        const ws = socketRef.current;
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({
+                                type: "playback_done",
+                                streamId: doneStreamId,
+                            }));
+                        }
+                    }, ackAfterMs);
                 }
                 return;
             }
 
             if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
+                const playbackState = streamPlaybackRef.current;
+                const chunkByteLength = event.data instanceof Blob ? event.data.size : event.data.byteLength;
+                const denominator = playbackState.bytesPerSample * Math.max(playbackState.channels, 1);
+                const chunkSamples = denominator > 0 ? chunkByteLength / denominator : 0;
+                if (playbackState.firstChunkAtMs === 0) {
+                    playbackState.firstChunkAtMs = Date.now();
+                }
+                playbackState.totalSamples += chunkSamples;
+
                 await playAudio(event.data);
                 return;
             }
@@ -123,6 +188,10 @@ export const useWebSocket = (
 
     const closeSocket = (socketEndResponse: string = "close_connection") => {
         return () => {
+            if (playbackDrainTimerRef.current) {
+                clearTimeout(playbackDrainTimerRef.current);
+                playbackDrainTimerRef.current = null;
+            }
             closeAudioPlayer();
             isStreamingRef.current = false;
             if (socketRef.current?.readyState === WebSocket.OPEN) {

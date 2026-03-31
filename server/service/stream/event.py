@@ -20,6 +20,9 @@ class StreamEvent:
     send_lock: asyncio.Lock
     response_task: asyncio.Task | None
     response_cancel_event: asyncio.Event | None
+    playback_done_event: asyncio.Event
+    awaiting_playback_stream_id: int | None
+    stream_seq: int
 
     def __init__(self):
         self.is_user_speaking = False
@@ -27,6 +30,53 @@ class StreamEvent:
         self.send_lock = asyncio.Lock()
         self.response_task = None
         self.response_cancel_event = None
+        self.playback_done_event = asyncio.Event()
+        self.playback_done_event.set()
+        self.awaiting_playback_stream_id = None
+        self.stream_seq = 0
+
+    # ***** Playback ACK Management ***** #
+    def beginPlaybackTracking(self) -> int:
+        """Start waiting for playback completion ACK for a newly-started audio stream."""
+        self.stream_seq += 1
+        self.awaiting_playback_stream_id = self.stream_seq
+        self.playback_done_event.clear()
+        return self.stream_seq
+
+    def markPlaybackDone(self, stream_id: int | None = None) -> bool:
+        """Mark playback as completed. If stream_id is provided, it must match the pending stream."""
+        if self.awaiting_playback_stream_id is None:
+            self.playback_done_event.set()
+            return True
+
+        if stream_id is not None and stream_id != self.awaiting_playback_stream_id:
+            return False
+
+        self.awaiting_playback_stream_id = None
+        self.playback_done_event.set()
+        return True
+
+    def forcePlaybackDone(self) -> None:
+        """Unblock playback waiters when a stream ends without a playback ACK path (e.g. cancellation)."""
+        self.awaiting_playback_stream_id = None
+        self.playback_done_event.set()
+
+    def isAwaitingPlaybackAck(self) -> bool:
+        return self.awaiting_playback_stream_id is not None
+
+    async def waitForPlaybackDone(self, timeout_s: float | None = None) -> bool:
+        """Wait until the client acknowledges playback completion."""
+        if self.playback_done_event.is_set():
+            return True
+
+        try:
+            if timeout_s is None:
+                await self.playback_done_event.wait()
+            else:
+                await asyncio.wait_for(self.playback_done_event.wait(), timeout=timeout_s)
+            return True
+        except asyncio.TimeoutError:
+            return False
     
     # ***** Response Event Management ***** #
     async def cancel(self, reason: str):

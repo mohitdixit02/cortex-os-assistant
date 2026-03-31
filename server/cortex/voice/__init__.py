@@ -83,7 +83,7 @@ class VoiceClient:
         self, 
         audio_bytes: bytes,
         submit_task: bool = True
-        ) -> Optional[str]:
+        ) -> AsyncGenerator[bytes, None]:
         """
         ### Listen and Reply with Audio Stream
         Processes the incoming audio bytes, transcribes them, and generates a immediate fallback response through the model, streaming back TTS audio chunks. \n
@@ -185,7 +185,6 @@ class VoiceClient:
                 async for audio_chunk in self._stream_tts(remaining, cancel_event=cancel_event):
                     yield audio_chunk
 
-        await asyncio.sleep(30)  # Simulate some delay before streaming the response
         await self.audioBridge.stream_audio_websocket(audio_chunk_generator=_generator)
 
     async def stream_task_result(self, task_id: str) -> None:
@@ -214,6 +213,19 @@ class VoiceClient:
         async with self._pending_task_ids_lock:
             self._pending_task_ids.discard(task_id)
 
+    async def _wait_for_client_playback_completion(self, timeout_s: float = 15.0) -> None:
+        """Wait until client confirms previous stream playback is complete before sending next stream."""
+        if self.streamEvent is None:
+            return
+        if not self.streamEvent.isAwaitingPlaybackAck():
+            return
+
+        completed = await self.streamEvent.waitForPlaybackDone(timeout_s=timeout_s)
+        if not completed:
+            logger.warning(
+                "Timed out waiting for client playback completion ACK; continuing stream scheduling"
+            )
+
     async def run_auto_task_stream(self, poll_interval_s: float = 0.05) -> None:
         """Automatically stream completed results for tasks submitted by this connection."""
         while True:
@@ -235,10 +247,12 @@ class VoiceClient:
                     continue
 
                 if task_item.status in (TaskStatus.COMPLETED, TaskStatus.FAILED):
+                    await self._wait_for_client_playback_completion()
                     await self._handle_task_queue(task_item)
                     await self._unregister_pending_task(task_id)
 
             await asyncio.sleep(poll_interval_s)
+        
     
     # Will be used later for text based queries from UI
     # async def read_and_respond(self, query: str) -> AsyncGenerator[str, None]:
