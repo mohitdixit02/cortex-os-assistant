@@ -1,6 +1,12 @@
+from sqlmodel import create_engine, Session
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+DB_URL = os.getenv("DB_URL")
+
 from .enums import (
     AIClientType,
-    MoodTrend,
     PreferenceLevel,
     RoleType,
     TaskStatus,
@@ -18,6 +24,9 @@ from .models import (
     UserShortTermMemory,
 )
 
+engine = create_engine(DB_URL, echo=True)
+session = Session(engine)
+
 __all__ = [
     "RoleType",
     "AIClientType",
@@ -33,4 +42,5 @@ __all__ = [
     "UserKnowledgeBase",
     "Tool",
     "Task",
+    "session",
 ]

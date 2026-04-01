@@ -27,11 +27,6 @@ class TraitCategory(str, Enum):
     FACT = "FACT"
     STRICT_PREFERENCE = "STRICT_PREFERENCE"
 
-class MoodTrend(str, Enum):
-    STABLE = "STABLE"
-    INCREASING = "INCREASING"
-    DECREASING = "DECREASING"
-
 class TaskStatus(str, Enum):
     INITIALIZED = "INITIALIZED"
     QUEUED = "QUEUED"
