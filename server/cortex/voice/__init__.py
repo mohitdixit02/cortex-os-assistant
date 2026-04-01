@@ -115,9 +115,15 @@ class VoiceClient:
             print("Casual response:", casual_response)
             tokens = re.split(r'(\s+)', casual_response)
         else:
+            emotion = self.emotion_model.get_emotion(query)
             task_item = await MainTaskQueue.add_task(
                 payload={"query": query},
-                task_name="TextResponseTask"
+                task_name="audio_query",
+                metadata={
+                    "emotion": emotion,
+                    "user_id": 1234,
+                    "session_id": "abcd-1234",
+                }
             )
             await self._register_pending_task(task_item.task_id)
             fallback_response = self.model.stream_fallback_response(query)

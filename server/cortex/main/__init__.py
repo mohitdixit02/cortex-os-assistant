@@ -63,6 +63,8 @@ class MainClient:
             query = payload.get("query", "")
             logger.info("Processing task with query: %s", query)
             
+            # Orchestrator code
+            
             generator = self.model.stream_text_tokens(query)
             print(type(generator))
             taskItem.result = {
