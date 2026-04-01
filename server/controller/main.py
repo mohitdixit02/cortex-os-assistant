@@ -2,12 +2,15 @@ import asyncio
 
 from fastapi.routing import APIRouter
 from pydantic import BaseModel
-from cortex.voice import VoiceClient
+from service.stream.main import StreamClient
 from fastapi.responses import StreamingResponse
 from logger import logger
 
 router = APIRouter()
-voice_client = VoiceClient()
+stream_client = StreamClient(
+    websocket=None,  
+    streamEvent=None  
+)
 
 class QueryRequest(BaseModel):
     query: str
@@ -22,7 +25,7 @@ async def query_endpoint(request: QueryRequest):
     logger.info("Processing query: %s", request.query)
     
     response = ""
-    async for token in voice_client.read_and_respond(request.query):
+    async for token in stream_client.read_flow(request.query):
         response += token
         logger.info("Generated token: %s", token)
         

@@ -24,7 +24,6 @@ __all__ = [
     "PreferenceLevel",
     "TimeOfDay",
     "TraitCategory",
-    "MoodTrend",
     "TaskStatus",
     "User",
     "ChatSession",

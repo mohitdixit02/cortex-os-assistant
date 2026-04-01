@@ -64,3 +64,8 @@ class StreamClient:
                 await self._auto_stream_task
             except asyncio.CancelledError:
                 pass
+            
+    # Dummy Flow Test
+    async def read_flow(self, query: str):
+        async for token in self.voiceClient.read_and_respond(query):
+            yield token

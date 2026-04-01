@@ -15,5 +15,8 @@ package-lock.json
 # electron
 dist-electron/
 
-# test jupyter notebook
+# test jupyter notebook + temp files
 *.ipynb
+temp.md
+postgres_data/
+docker-compose.yml

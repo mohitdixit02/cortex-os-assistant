@@ -9,6 +9,7 @@ from logger import logger
 from utility.huggingface.config import models
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from utility.huggingface.request import HuggingFaceRequest
+from cortex.voice.prompts import VoiceClientRouteQuery, get_voice_client_prompts
 
 # class QueryTypeStructModel(BaseModel):
 #     type: Annotated[Literal["casual", "query"], Field(description="Type of the user query")]
@@ -42,8 +43,6 @@ class VoiceMainModel:
             max_new_tokens=model_config.get("max_new_tokens", 200),
             temperature=model_config.get("temperature", 0.2)
         ))
-        # self.template_provider = TemplateProvider()
-        # self.str_parser = StrOutputParser()
         
     def get_model(self):
         return self.model
@@ -67,28 +66,39 @@ class VoiceMainModel:
                         parts.append(text)
             return "".join(parts)
         return str(content) if content else ""
-
-    def stream_text_tokens(self, query: str):
+    
+    def get_response_route(self, query: str) -> VoiceClientRouteQuery:
         """Voice Model"""
         logger.info("Streaming response tokens for query: %s", query)
-        prompt = ChatPromptTemplate.from_messages([
-            SystemMessagePromptTemplate.from_template("You are a helpful friend wit cool vibe that provides answers to user queries. Don't reply in more than 100 words."),
-            HumanMessagePromptTemplate.from_template("{query}")
-        ])
-        formatted_prompt = prompt.format_messages(query=query)
-        # for chunk in self.model.stream(formatted_prompt):
-        for chunk in demo_response():
-            token = self._chunk_to_text(chunk)
-            if token:
-                yield token
-        
-    async def generate(
-        self,
-        query: str,
-    ):
-        logger.info("Generating response...")
-        return self.stream_text_tokens(query)
-        
+        formatted_prompt, parser = get_voice_client_prompts(
+            type="route_query",
+            query=query
+        )
+        chain = formatted_prompt | self.model | parser
+        res = chain.invoke({"user_query": query})
+        return res
+
+    def stream_text_tokens(self, query: str):
+        """Streaming Tokens for Casual Response from Voice Model"""
+        formatted_prompt = get_voice_client_prompts(
+            type="casual_response",
+            query=query
+        )
+        chain = self.model | StrOutputParser()
+        res = chain.invoke(formatted_prompt)
+        return res
+    
+    def stream_fallback_response(self, query: str):
+        """Streaming Tokens for Fallback Response from Voice Model"""
+        formatted_prompt = get_voice_client_prompts(
+            type="fallback_response",
+            query=query
+        )
+        chain = self.model | StrOutputParser()
+        res = chain.invoke(formatted_prompt)
+        return res
+
+
 class EmotionDetectionModel:
     """
     ## Emotion Detection Model
