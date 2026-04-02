@@ -1,9 +1,5 @@
 from sqlmodel import create_engine, Session
-import os
-from dotenv import load_dotenv
-load_dotenv()
-
-DB_URL = os.getenv("DB_URL")
+from utility.config import env
 
 from .enums import (
     AIClientType,
@@ -24,7 +20,7 @@ from .models import (
     UserShortTermMemory,
 )
 
-engine = create_engine(DB_URL, echo=True)
+engine = create_engine(env.DB_URL, echo=True)
 session = Session(engine)
 
 __all__ = [

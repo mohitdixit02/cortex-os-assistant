@@ -1,12 +1,10 @@
-import os
 import requests
-from dotenv import load_dotenv
 from typing import Literal
 from utility.huggingface.config import models
 from huggingface_hub import InferenceClient
-load_dotenv()
+from utility.config import env
 
-HUGGINGFACE_API_KEY = os.environ["HF_TOKEN"]
+HUGGINGFACE_API_KEY = env.HF_TOKEN
 
 def HuggingFaceRequest(
     feature: Literal["tts", "stt", "embedding", "voice_emotion"], # Literal needs to update later

@@ -1,18 +1,22 @@
 from cortex.graph.state import ConversationState, EmotionalProfile, UserKnowledge, UserSTM, MessageHistory
+from cortex.memory.model import MemoryModel
 from sqlmodel import Session
 from db.req import (
-    get_one
+    get_one,
+    get_similar
 )
 from db import (
     UserShortTermMemory,
     UserEmotionalProfile,
     UserKnowledgeBase,
-    TimeOfDay
+    TimeOfDay,
+    Message
 )
 
 class MemoryClient:
     def __init__(self, session: Session):
         self.session = session
+        self.model = MemoryModel()
         
     def _get_time_behavior(self, timestamp) -> TimeOfDay:
         """
@@ -36,6 +40,7 @@ class MemoryClient:
         """
         Build the Short Term Memory (STM) based on the recent interactions and context. \n
         """
+        
         return state
     
     def build_ltm(
@@ -46,6 +51,20 @@ class MemoryClient:
         Build the Long Term Memory (LTM) based on the historical interactions and context. \n
         """
         return
+    
+    def initialize_conversation_state(
+        self,
+        
+    ) -> ConversationState:
+        """
+        Initialize the conversation state for a new conversation session. \n
+        This can include setting default values, fetching any relevant historical data, and preparing the state object for use in the conversation workflow. \n
+        """
+        return ConversationState(
+            user_id="",
+            session_id="",
+            query=""
+        )
        
     def fetch_relevant_stm(
         self,
@@ -105,9 +124,26 @@ class MemoryClient:
         """
         Fetch relevant Long Term Memory (LTM) based on the historical interactions and context. \n
         """
+        
+        #/pending/ Have to make sure the use of Category in the concept
         user_id = state.user_id
-        res = self.session.exec(
-        return
+        query_embedding = self.model.generate_embeddings(state.query)
+        res = get_similar(
+            session=self.session,
+            model=UserKnowledgeBase,
+            query_embedding=query_embedding,
+            top_k=5,
+            user_id=user_id
+        )
+        state.knowledge_base = [
+            UserKnowledge(
+                category=item.category,
+                strictness=item.strictness,
+                content=item.content,
+                score=item.score
+            ) for item, score in res
+        ] if res else None
+        return state.knowledge_base
     def fetch_relevant_message_history(
         self,
         state: ConversationState
@@ -115,7 +151,25 @@ class MemoryClient:
         """
         Fetch the relevant message history based on the current conversation context. \n
         """
-        return
+        user_id = state.user_id
+        session_id = state.session_id
+        query_embedding = self.model.generate_embeddings(state.query)
+        res = get_similar(
+            session=self.session,
+            model=Message,
+            query_embedding=query_embedding,
+            top_k=5,
+            user_id=user_id,
+            session_id=session_id
+        )
+        res = [{
+                "role": item.role,
+                "content": item.content,
+                "timestamp": item.timestamp
+            } for item, score in res
+        ] if res else None
+        state.message_history = MessageHistory(messages=res) if res else None
+        return state.message_history
     
 __all__ = [
     "MemoryClient"
