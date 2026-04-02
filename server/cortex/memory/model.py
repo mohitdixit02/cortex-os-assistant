@@ -2,7 +2,7 @@ from langchain_huggingface import HuggingFaceEndpointEmbeddings, ChatHuggingFace
 from cortex.memory.prompts import get_memory_client_prompts
 from utility.huggingface.config import models
 from utility.config import env
-from cortex.graph.state import ConversationState, EmotionalProfile, UserSTM, MemoryEmotionalProfile
+from cortex.graph.state import ConversationState, EmotionalProfile, UserSTM, MemoryEmotionalProfile, UserKnowledge, MemoryUserKnowledgeList
 class MemoryModel:
     def __init__(self):
         self.embd_model = HuggingFaceEndpointEmbeddings(
@@ -65,6 +65,7 @@ class MemoryModel:
         Must include:
         - query
         - query_emotion \n
+        - previous STM memory (if available)
         **Output:** \n
         Updated `EmotionalProfile` object
         - Include new `mood_type`, `time_behavior`, `emotional_level`, `logical_level`, `social_level` \n
@@ -97,11 +98,38 @@ class MemoryModel:
             "previous_emotional_profile": prev_emotional_profile.model_dump_json() if prev_emotional_profile else ""
         })
         state.emotional_profile = EmotionalProfile(
-            mood_type=res.mood_type,
-            time_behavior=res.time_behavior,
+            mood_type=user_emotion,
+            time_behavior=time_of_day,
             emotional_level=res.emotional_level,
             logical_level=res.logical_level,
             social_level=res.social_level,
             context_summary=res.context_summary
         )
         return state.emotional_profile
+    
+    def build_user_knowledge_base(self, state: ConversationState):
+        """
+        Build the user's knowledge base based on the historical interactions and context. \n
+        """
+        query = state.query
+        prev_stm = state.short_term_memory
+        user_emotion = state.query_emotion
+
+        formatted_prompt, parser = get_memory_client_prompts(
+            type="build_user_knowledge"
+        )
+        chain = formatted_prompt | self.model | parser
+        res = chain.invoke({
+            "user_query": query,
+            "stm_summary": prev_stm.stm_summary if prev_stm else "",
+            "session_preferences": prev_stm.session_preferences if prev_stm else {},
+            "user_emotion": user_emotion
+        })
+        state.knowledge_base = [
+            UserKnowledge(
+                category=item.category,
+                strictness=item.strictness,
+                content=item.content,
+            ) for item in res.root
+        ] if res and res.root else None
+        return state.knowledge_base

@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS messages (
     ai_client ai_client_type,
     is_tool_used BOOLEAN NOT NULL DEFAULT FALSE,
     tool_id VARCHAR(255),
-    embedding VECTOR(1536),
+    embedding VECTOR,
     created_at TIMESTAMPTZ NOT NULL
 );
 
@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS user_knowledge_base (
     strictness preference_level,
     content TEXT NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    embedding VECTOR(1536),
+    embedding VECTOR,
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL
 );

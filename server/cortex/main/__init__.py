@@ -2,9 +2,12 @@ import asyncio
 from sensory.STT import STTClient
 from sensory.TTS import TTSClient
 from cortex.main.model import CortexMainModel
+from cortex.graph.state import ConversationState
+from cortex.graph import state
 from utility.main import iterate_tokens_async
 from nltk.tokenize import sent_tokenize
 from typing import AsyncGenerator
+from cortex.graph.workflow import build_memory_workflow
 from cortex.main.task import MainTaskQueue, TaskStatus, TaskItem
 from logger import logger
 # keep listening and processing until the program is terminated
@@ -20,6 +23,43 @@ class MainClient:
     
     def __init__(self):
         self.model = CortexMainModel()
+        
+    def initialize_conversation_state(
+        self,
+        taskItem: TaskItem
+    ) -> ConversationState:
+        """
+        Initialize the conversation state for a new conversation session. \n
+        **Input**: \n
+        - `taskItem`: The task item containing the initial query and metadata for the conversation. \n
+        **Returns**: \n
+        - `ConversationState`: The initialized conversation state object with default or extracted values from the task item.
+        """
+        print("***** Task Item >> ", taskItem)
+        print("***** Task Metadata >> ", taskItem.metadata)
+        user_id = taskItem.metadata.get("user_id")
+        session_id = taskItem.metadata.get("session_id")
+        
+        if not user_id or not session_id:
+            logger.error("Missing user_id or session_id in task metadata. Cannot initialize conversation state.")
+            raise ValueError("Missing user_id or session_id in task metadata.")
+        
+        query = taskItem.payload.get("query")
+        
+        if not query:
+            logger.error("Missing query in task payload. Cannot initialize conversation state.")
+            raise ValueError("Missing query in task payload.")
+        
+        emotion = taskItem.payload.get("emotion", "neutral")
+        logger.info("Initializing conversation state for user_id: %s, session_id: %s, query: %s, emotion: %s", user_id, session_id, query, emotion)
+        
+        state = ConversationState(
+            user_id=user_id,
+            session_id=session_id,
+            query=query,
+            query_emotion=emotion
+        )
+        return state
         
     async def listen_task_queue(self):
         """
@@ -43,9 +83,10 @@ class MainClient:
             await MainTaskQueue.submit_task(
                 task_id=task.task_id,
                 status=TaskStatus.COMPLETED if updated_task.result else TaskStatus.FAILED,
-                status_message=updated_task.result
+                status_message=updated_task.result if updated_task.result else updated_task.error
             )
             logger.info("Completed Task with id: %s and name: %s", task.task_id, task.task_name)
+            logger.info("Task Status: %s", updated_task.status)
                 
     async def _handle_task_queue(self, taskItem: TaskItem) -> TaskItem:
         """
@@ -65,17 +106,21 @@ class MainClient:
             
             # Orchestrator code
             
-            generator = self.model.stream_text_tokens(query)
-            print(type(generator))
+            # entry
+            state = self.initialize_conversation_state(taskItem)
+            # graph invoke - langgraph
+            res = build_memory_workflow.invoke(state)
+            print("Workflow Result:", res)
+            
             taskItem.result = {
                 "response_type": "text_stream",
-                "response": generator
+                "response": "This is a dummy response for the query: {}".format(query)
             }
             taskItem.status = TaskStatus.COMPLETED
             return taskItem
         except Exception as e:
             logger.exception("Error processing task: %s", e)
             taskItem.status = TaskStatus.FAILED
-            taskItem.result = str(e)
+            taskItem.error = str(e)
             return taskItem
    

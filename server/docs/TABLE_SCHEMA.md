@@ -35,7 +35,7 @@ role: Enum(RoleType)
 ai_client: Enum(AIClientType) (Nullable)
 is_tool_used: Boolean (Default: False)
 tool_id: String (Nullable)
-embedding: Vector(1536) — For pgvector search <!-- NOT SuRE HAVE TO CHECK-->
+embedding: Vector — For pgvector search (variable dimensions)
 created_at: Timestamp
 
 ### UserShortTermMemory (STM)
@@ -66,7 +66,7 @@ category: Enum(TraitCategory)
 strictness: Enum(PreferenceLevel) (Nullable)
 content: Text — e.g., "Does not like being interrupted during work"
 is_active: Boolean (Default: True)
-embedding: Vector(1536) — Used for finding relevant preferences during a query
+embedding: Vector — Used for finding relevant preferences during a query (variable dimensions)
 created_at: Timestamp
 updated_at: Timestamp
 

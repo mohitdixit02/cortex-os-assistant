@@ -1,7 +1,5 @@
-from __future__ import annotations
-
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, List, Optional
 from uuid import UUID, uuid4
 
 from pgvector.sqlalchemy import Vector
@@ -38,11 +36,11 @@ class User(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
     deleted_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
 
-    chat_sessions: list[ChatSession] = Relationship(back_populates="user")
-    messages: list[Message] = Relationship(back_populates="user")
-    short_term_memories: list[UserShortTermMemory] = Relationship(back_populates="user")
-    emotional_profiles: list[UserEmotionalProfile] = Relationship(back_populates="user")
-    knowledge_traits: list[UserKnowledgeBase] = Relationship(back_populates="user")
+    chat_sessions: List["ChatSession"] = Relationship(back_populates="user")
+    messages: List["Message"] = Relationship(back_populates="user")
+    short_term_memories: List["UserShortTermMemory"] = Relationship(back_populates="user")
+    emotional_profiles: List["UserEmotionalProfile"] = Relationship(back_populates="user")
+    knowledge_traits: List["UserKnowledgeBase"] = Relationship(back_populates="user")
 
 
 class ChatSession(SQLModel, table=True):
@@ -59,10 +57,10 @@ class ChatSession(SQLModel, table=True):
     created_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
 
-    user: User = Relationship(back_populates="chat_sessions")
-    messages: list[Message] = Relationship(back_populates="session")
-    short_term_memories: list[UserShortTermMemory] = Relationship(back_populates="session")
-    emotional_profiles: list[UserEmotionalProfile] = Relationship(back_populates="session")
+    user: "User" = Relationship(back_populates="chat_sessions")
+    messages: List["Message"] = Relationship(back_populates="session")
+    short_term_memories: List["UserShortTermMemory"] = Relationship(back_populates="session")
+    emotional_profiles: List["UserEmotionalProfile"] = Relationship(back_populates="session")
 
 
 class Message(SQLModel, table=True):
@@ -86,12 +84,12 @@ class Message(SQLModel, table=True):
     )
     is_tool_used: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, default=False))
     tool_id: Optional[str] = Field(default=None, sa_column=Column(String(255), nullable=True))
-    embedding: Optional[list[float]] = Field(default=None, sa_column=Column(Vector(1536), nullable=True))
+    embedding: Optional[list[float]] = Field(default=None, sa_column=Column(Vector(), nullable=True))
     created_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False, index=True))
 
-    session: ChatSession = Relationship(back_populates="messages")
-    user: User = Relationship(back_populates="messages")
-    tasks: list[Task] = Relationship(back_populates="message")
+    session: "ChatSession" = Relationship(back_populates="messages")
+    user: "User" = Relationship(back_populates="messages")
+    tasks: List["Task"] = Relationship(back_populates="message")
 
 
 class UserShortTermMemory(SQLModel, table=True):
@@ -112,8 +110,8 @@ class UserShortTermMemory(SQLModel, table=True):
     created_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
 
-    user: User = Relationship(back_populates="short_term_memories")
-    session: ChatSession = Relationship(back_populates="short_term_memories")
+    user: "User" = Relationship(back_populates="short_term_memories")
+    session: "ChatSession" = Relationship(back_populates="short_term_memories")
 
 
 class UserEmotionalProfile(SQLModel, table=True):
@@ -143,8 +141,8 @@ class UserEmotionalProfile(SQLModel, table=True):
     context_summary: str = Field(sa_column=Column(Text, nullable=False))
     created_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
 
-    user: User = Relationship(back_populates="emotional_profiles")
-    session: ChatSession = Relationship(back_populates="emotional_profiles")
+    user: "User" = Relationship(back_populates="emotional_profiles")
+    session: "ChatSession" = Relationship(back_populates="emotional_profiles")
 
 
 class UserKnowledgeBase(SQLModel, table=True):
@@ -164,11 +162,11 @@ class UserKnowledgeBase(SQLModel, table=True):
     )
     content: str = Field(sa_column=Column(Text, nullable=False))
     is_active: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, default=True, index=True))
-    embedding: Optional[list[float]] = Field(default=None, sa_column=Column(Vector(1536), nullable=True))
+    embedding: Optional[list[float]] = Field(default=None, sa_column=Column(Vector(), nullable=True))
     created_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
 
-    user: User = Relationship(back_populates="knowledge_traits")
+    user: "User" = Relationship(back_populates="knowledge_traits")
 
 
 class Tool(SQLModel, table=True):
@@ -185,7 +183,7 @@ class Tool(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
     deleted_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
 
-    tasks: list[Task] = Relationship(back_populates="tool")
+    tasks: List["Task"] = Relationship(back_populates="tool")
 
 
 class Task(SQLModel, table=True):
@@ -209,8 +207,8 @@ class Task(SQLModel, table=True):
     created_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
 
-    message: Message = Relationship(back_populates="tasks")
-    tool: Tool = Relationship(back_populates="tasks")
+    message: "Message" = Relationship(back_populates="tasks")
+    tool: "Tool" = Relationship(back_populates="tasks")
 
 
 Index("ix_messages_session_created", Message.__table__.c.session_id, Message.__table__.c.created_at)

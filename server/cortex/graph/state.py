@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 from typing import Any, Optional, Annotated
 from enum import Enum
 from db.enums import TimeOfDay, TraitCategory, PreferenceLevel
@@ -19,7 +19,7 @@ class EmotionalProfile(BaseModel):
 class UserKnowledge(BaseModel):
     """Represents a piece of knowledge about the user that can be used to personalize responses."""
     category: TraitCategory
-    strictness: Optional[PreferenceLevel] = None
+    strictness: PreferenceLevel
     content: str
     score: Optional[float] = None
 
@@ -56,4 +56,14 @@ class MemoryEmotionalProfile(BaseModel):
     logical_level: Annotated[int, Field(ge=0, le=10)]
     social_level: Annotated[int, Field(ge=0, le=10)]
     context_summary: str
-    
+
+class MemoryUserKnowledge(BaseModel):
+    """Represents a piece of user knowledge stored in memory for long-term personalization."""
+    category: Annotated[TraitCategory, Field(description="Category of the user knowledge")]
+    strictness: Annotated[PreferenceLevel, Field(description="Strictness level of the user knowledge")] = None
+    content: Annotated[str, Field(description="Detailed information about the user preference, habit, or fact that can be useful for response generation. Be specific and concise in describing it. If it's a fact, provide clear and relevant information about the user.")]
+
+
+class MemoryUserKnowledgeList(RootModel[list[MemoryUserKnowledge]]):
+    """Root model for a list of long-term memory knowledge items."""
+    pass

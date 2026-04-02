@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Literal, Sequence, TypeVar
 
-from sqlalchemy import inspect, select
+from sqlalchemy import func, inspect, select
 from sqlalchemy.sql.elements import ColumnElement
 from sqlmodel import Session, SQLModel
 
@@ -198,6 +198,7 @@ def get_similar(
 
     # Skip rows where embedding is missing so distance operators are valid.
     statement = statement.where(embedding_col.is_not(None))
+    statement = statement.where(func.vector_dims(embedding_col) == len(query_vector))
     
     #Sort by distance (closest first) and apply pagination
     statement = statement.order_by(distance_expr).offset(offset).limit(top_k)

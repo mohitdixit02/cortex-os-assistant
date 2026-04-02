@@ -61,12 +61,16 @@ class AudioStreamBridge:
         """
         logger.info("[Audio Bridge] Starting audio streaming to client through WebSocket...")
         logger.info("[Audio Bridge] Audio chunk generator provided: %s", audio_chunk_generator)
-        logger.info("[Audio Bridge] StreamEvent response cancel event status: %s", self.streamEvent.response_cancel_event.is_set() if self.streamEvent.response_cancel_event else "No cancel event")
-        logger.info("[Audio Bridge] StreamEvent lock status: %s", "Locked" if self.streamEvent.send_lock.locked() else "Unlocked")
-        logger.info("[Audio Bridge] StreamEvent isCancelEventSet: %s", self.streamEvent.isCancelEventSet())
-        logger.info("[Audio Bridge] Audio Bridge Stream Lock Status: %s", "Locked" if self._stream_lock.locked() else "Unlocked")
+        logger.info("[Audio Bridge] StreamEvent response cancel event status: %s", self.streamEvent.response_cancel_event.is_set() if self.streamEvent else "No cancel event")
+        logger.info("[Audio Bridge] StreamEvent lock status: %s", "Locked" if self.streamEvent and self.streamEvent.send_lock.locked() else "Unlocked" if self.streamEvent else "No stream event")
+        logger.info("[Audio Bridge] StreamEvent isCancelEventSet: %s", self.streamEvent.isCancelEventSet() if self.streamEvent else "No stream event")
+        logger.info("[Audio Bridge] Audio Bridge Stream Lock Status: %s", "Locked" if self.streamEvent and self._stream_lock.locked() else "Unlocked")
 
         async with self._stream_lock:
+            if self.streamEvent is None:
+                logger.error("[Audio Bridge] StreamEvent is None, cannot stream audio.")
+                return {"status": "error", "message": "StreamEvent is not available for streaming."}
+            
             stream_id = self.streamEvent.beginPlaybackTracking()
             sent_done = False
             try:

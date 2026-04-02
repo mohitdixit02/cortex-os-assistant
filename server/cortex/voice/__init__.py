@@ -31,10 +31,10 @@ class VoiceClient:
     def __init__(self, audioBridge: AudioStreamBridge | None = None, streamEvent: StreamEvent | None = None):
         self.audioBridge = audioBridge
         self.streamEvent = streamEvent
-        self.stt_client = STTClient()
-        self.tts_client = TTSClient()
+        # self.stt_client = STTClient()
+        # self.tts_client = TTSClient()
         self.model = VoiceMainModel()
-        self.emotion_model = EmotionDetectionModel()
+        # self.emotion_model = EmotionDetectionModel()
         self._queue_cancel_event = asyncio.Event()
         self._pending_task_ids: set[str] = set()
         self._pending_task_ids_lock = asyncio.Lock()
@@ -121,8 +121,8 @@ class VoiceClient:
                 task_name="audio_query",
                 metadata={
                     "emotion": emotion,
-                    "user_id": 1234,
-                    "session_id": "abcd-1234",
+                    "user_id": "11111111-1111-1111-1111-111111111111",
+                    "session_id": "22222222-2222-2222-2222-222222222222",
                 }
             )
             await self._register_pending_task(task_item.task_id)
@@ -284,24 +284,38 @@ class VoiceClient:
         
         # self.emotion_model.get_emotion(query)
         
-        route_res = self.model.get_response_route(query)
-        logger.info("Determined route type: %s", route_res.request_type)
-        if route_res.request_type == "casual":
-            casual_response = self.model.stream_text_tokens(query)
-            print("Casual response:", casual_response)
-            tokens = re.split(r'(\s+)', casual_response)
-            for token in tokens:
-                yield token
-        else:
-            await MainTaskQueue.add_task(
-                payload={"query": query},
-                task_name="TextResponseTask"
-            )
-            fallback_response = self.model.stream_fallback_response(query)
-            print("Fallback response:", fallback_response)
-            tokens = re.split(r'(\s+)', fallback_response)
-            for token in tokens:
-                yield token
+        # route_res = self.model.get_response_route(query)
+        # logger.info("Determined route type: %s", route_res.request_type)
+        # if route_res.request_type == "casual":
+        #     casual_response = self.model.stream_text_tokens(query)
+        #     print("Casual response:", casual_response)
+        #     tokens = re.split(r'(\s+)', casual_response)
+        #     for token in tokens:
+        #         yield token
+        # else:
+        #     await MainTaskQueue.add_task(
+        #         payload={"query": query},
+        #         task_name="TextResponseTask"
+        #     )
+        #     fallback_response = self.model.stream_fallback_response(query)
+        #     print("Fallback response:", fallback_response)
+        #     tokens = re.split(r'(\s+)', fallback_response)
+        #     for token in tokens:
+        #         yield token
+        
+        task_item = await MainTaskQueue.add_task(
+            payload={
+                "query": query,
+                "emotion": "sad",
+            },
+            task_name="audio_query",
+            user_id="11111111-1111-1111-1111-111111111111",
+            session_id="22222222-2222-2222-2222-222222222222"
+        )
+        await self._register_pending_task(task_item.task_id)
+        tokens = re.split(r'(\s+)', query)
+        for token in tokens:
+            yield token
 
     async def _handle_task_queue(self, taskItem: TaskItem, cancel_event: asyncio.Event | None = None) -> None:
         """**Handles tasks retrieved from the `TaskQueue`.**\n
@@ -316,12 +330,14 @@ class VoiceClient:
                 return
             if taskItem.status is TaskStatus.COMPLETED:
                 logger.info("Task %s completed with result: %s", taskItem.task_id, taskItem.result)
-                if taskItem.result and taskItem.result.get("response_type") == "text_stream":
-                    await self._stream_audio_queue_response(taskItem)
-                    return
-                else:
-                    logger.warning("Task %s has unsupported or missing response type in result: %s", taskItem.task_id, taskItem.result)
-                    return
+                await self._stream_audio_queue_response(taskItem)
+                return
+                # if taskItem.result and taskItem.result.get("response_type") == "text_stream":
+                #     await self._stream_audio_queue_response(taskItem)
+                #     return
+                # else:
+                #     logger.warning("Task %s has unsupported or missing response type in result: %s", taskItem.task_id, taskItem.result)
+                #     return
             logger.warning("Task %s is in unexpected status: %s", taskItem.task_id, taskItem.status)
             return
         except Exception as e:

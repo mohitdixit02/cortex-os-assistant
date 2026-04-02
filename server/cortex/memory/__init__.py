@@ -1,6 +1,7 @@
 from cortex.graph.state import ConversationState, EmotionalProfile, UserKnowledge, UserSTM, MessageHistory
 from cortex.memory.model import MemoryModel
 from sqlmodel import Session
+from logger import logger
 from db.req import (
     get_one,
     get_similar
@@ -33,6 +34,7 @@ class MemoryClient:
         else:
             return TimeOfDay.NIGHT
     
+    # ******************** Build Memory State Functions ********************
     def build_stm(
         self,
         state: ConversationState
@@ -40,32 +42,89 @@ class MemoryClient:
         """
         Build the Short Term Memory (STM) based on the recent interactions and context. \n
         """
-        
-        return state
+        # query = "I like drinking Tea!"
+        state.final_response = "Oh, nice, I also enjoy a good cup of tea. Do you have a favorite type or flavor?"
+        short_term_memory = self.model.build_stm(
+            state=state
+        )
+        logger.info(f"Built STM: {short_term_memory}")
+        return {
+            "final_response": state.final_response,
+            "short_term_memory": short_term_memory,
+        }
     
-    def build_ltm(
+    def build_emotional_profile(
         self,
         state: ConversationState
     ):
         """
-        Build the Long Term Memory (LTM) based on the historical interactions and context. \n
+        Build the Emotional Profile based on the historical interactions and context. \n
         """
-        return
-    
-    def initialize_conversation_state(
-        self,
-        
-    ) -> ConversationState:
-        """
-        Initialize the conversation state for a new conversation session. \n
-        This can include setting default values, fetching any relevant historical data, and preparing the state object for use in the conversation workflow. \n
-        """
-        return ConversationState(
-            user_id="",
-            session_id="",
-            query=""
+        state.query_time = self._get_time_behavior(state.query_timestamp)
+        emotional_profile = self.model.build_emotional_profile(
+            state=state
         )
-       
+        logger.info(f"Built Emotional Profile: {emotional_profile}")
+        return {
+            "query_time": state.query_time,
+            "emotional_profile": emotional_profile,
+        }
+    
+    def build_user_knowledge_base(
+        self,
+        state: ConversationState
+    ):
+        """
+        Build the user's knowledge base based on the historical interactions and context. \n
+        """
+        knowledge_base = self.model.build_user_knowledge_base(
+            state=state
+        )
+        logger.info(f"Built User Knowledge Base: {knowledge_base}")
+        return {
+            "knowledge_base": knowledge_base,
+        }
+        
+    def persist_memory_state(
+        self,
+        state: ConversationState
+    ):
+        """
+        Persist the relevant memory states (STM, Emotional Profile, Knowledge Base) to the database for long-term storage and future retrieval. \n
+        """
+        if state.short_term_memory:
+            self.session.add(UserShortTermMemory(
+                user_id=state.user_id,
+                session_id=state.session_id,
+                stm_summary=state.short_term_memory.stm_summary,
+                session_preferences=state.short_term_memory.session_preferences
+            ))
+        if state.emotional_profile:
+            print(f"Persisting Emotional Profile to DB: {state.emotional_profile}")
+            self.session.add(UserEmotionalProfile(
+                user_id=state.user_id,
+                session_id=state.session_id,
+                mood_type=state.emotional_profile.mood_type,
+                time_behavior=state.emotional_profile.time_behavior,
+                emotional_level=state.emotional_profile.emotional_level,
+                logical_level=state.emotional_profile.logical_level,
+                social_level=state.emotional_profile.social_level,
+                context_summary=state.emotional_profile.context_summary
+            ))
+        if state.knowledge_base:
+            for item in state.knowledge_base:
+                self.session.add(UserKnowledgeBase(
+                    user_id=state.user_id,
+                    category=item.category,
+                    strictness=item.strictness,
+                    content=item.content,
+                    is_active=True,
+                    embedding=self.model.generate_embeddings(item.content)
+                ))
+        self.session.commit()
+
+
+    # ******************** Fetch Memory State Functions ********************
     def fetch_relevant_stm(
         self,
         state: ConversationState
@@ -86,7 +145,9 @@ class MemoryClient:
             stm_summary=res.stm_summary,
             session_preferences=res.session_preferences
         ) if res else None
-        return state.short_term_memory
+        return {
+            "short_term_memory": state.short_term_memory,
+        }
     
     def fetch_emotional_profile(
         self,
@@ -98,7 +159,7 @@ class MemoryClient:
         """
         user_id = state.user_id
         session_id = state.session_id
-        time_behaviour = self._get_time_behavior(state.query_timestamp)
+        time_behavior = self._get_time_behavior(state.query_timestamp)
         mood = state.query_emotion
         res = get_one(
             session=self.session,
@@ -106,17 +167,20 @@ class MemoryClient:
             user_id=state.user_id,
             session_id=session_id,
             mood_type=mood,
-            time_behaviour=time_behaviour
+            time_behavior=time_behavior
         )
         state.emotional_profile = EmotionalProfile(
             mood_type=res.mood_type,
-            time_behavior=res.time_behaviour,
+            time_behavior=res.time_behavior,
             emotional_level=res.emotional_level,
             logical_level=res.logical_level,
             social_level=res.social_level,
             context_summary=res.context_summary
         ) if res else None
-        return state.emotional_profile
+        return {
+            "emotional_profile": state.emotional_profile,
+        }
+    
     def fetch_relevant_ltm(
         self,
         state: ConversationState
@@ -140,10 +204,13 @@ class MemoryClient:
                 category=item.category,
                 strictness=item.strictness,
                 content=item.content,
-                score=item.score
+                score=score
             ) for item, score in res
         ] if res else None
-        return state.knowledge_base
+        return {
+            "knowledge_base": state.knowledge_base,
+        }
+    
     def fetch_relevant_message_history(
         self,
         state: ConversationState
@@ -169,7 +236,9 @@ class MemoryClient:
             } for item, score in res
         ] if res else None
         state.message_history = MessageHistory(messages=res) if res else None
-        return state.message_history
+        return {
+            "message_history": state.message_history,
+        }
     
 __all__ = [
     "MemoryClient"
