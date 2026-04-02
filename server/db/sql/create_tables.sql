@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     status task_status NOT NULL,
     payload JSONB NOT NULL,
     status_response JSONB,
-    metadata JSONB,
+    task_metadata JSONB,
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL
 );

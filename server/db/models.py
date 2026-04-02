@@ -205,7 +205,7 @@ class Task(SQLModel, table=True):
     status: TaskStatus = Field(sa_column=Column(SAEnum(TaskStatus, name="task_status"), nullable=False, index=True))
     payload: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
     status_response: Optional[dict[str, Any]] = Field(default=None, sa_column=Column(JSONB, nullable=True))
-    metadata: Optional[dict[str, Any]] = Field(default=None, sa_column=Column(JSONB, nullable=True))
+    task_metadata: Optional[dict[str, Any]] = Field(default=None, sa_column=Column(JSONB, nullable=True))
     created_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
 

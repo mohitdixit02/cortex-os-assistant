@@ -1,6 +1,6 @@
 from langchain_huggingface import HuggingFaceEndpointEmbeddings, ChatHuggingFace, HuggingFaceEndpoint
 from cortex.memory.prompts import get_memory_client_prompts
-from utility.cortex.config import models
+from utility.huggingface.config import models
 from utility.config import env
 from cortex.graph.state import ConversationState, EmotionalProfile, UserSTM, MemoryEmotionalProfile
 class MemoryModel:
@@ -50,7 +50,7 @@ class MemoryModel:
             "ai_response": final_response,
             "user_emotion": user_emotion,
             "previous_stm_memory": prev_stm.stm_summary if prev_stm else "",
-            "previous_session_preferences": prev_stm.session_preferences if prev_stm else ""
+            "previous_session_preferences": prev_stm.session_preferences if prev_stm else {}
         })
         state.short_term_memory = UserSTM(
             stm_summary=res.stm_summary,
@@ -92,7 +92,7 @@ class MemoryModel:
             "user_query": query,
             "user_emotion": user_emotion,
             "stm_summary": prev_stm.stm_summary if prev_stm else "",
-            "session_preferences": prev_stm.session_preferences if prev_stm else "",
+            "session_preferences": prev_stm.session_preferences if prev_stm else {},
             "user_time_of_day": time_of_day,
             "previous_emotional_profile": prev_emotional_profile.model_dump_json() if prev_emotional_profile else ""
         })

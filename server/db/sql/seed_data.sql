@@ -137,7 +137,7 @@ INSERT INTO tools (
 ON CONFLICT (tool_id) DO NOTHING;
 
 INSERT INTO tasks (
-    task_id, message_id, tool_id, task_name, status, payload, status_response, metadata, created_at, updated_at
+    task_id, message_id, tool_id, task_name, status, payload, status_response, task_metadata, created_at, updated_at
 ) VALUES
 (
     '88888888-8888-8888-8888-888888888881',
