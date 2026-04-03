@@ -304,17 +304,19 @@ class VoiceClient:
         #     for token in tokens:
         #         yield token
         
+        casual_response = "Ok sure, I will look into that for you."
         task_item = await MainTaskQueue.add_task(
             payload={
                 "query": query,
-                "emotion": "sad",
+                "emotion": "neutral",
             },
             task_name="audio_query",
             user_id="11111111-1111-1111-1111-111111111111",
-            session_id="22222222-2222-2222-2222-222222222222"
+            session_id="22222222-2222-2222-2222-222222222222",
+            voice_client_response=casual_response
         )
         await self._register_pending_task(task_item.task_id)
-        tokens = re.split(r'(\s+)', query)
+        tokens = re.split(r'(\s+)', casual_response)
         for token in tokens:
             yield token
 

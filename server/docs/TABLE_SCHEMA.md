@@ -82,7 +82,7 @@ deleted_at: Timestamp (Nullable for Soft Delete)
 ### Tasks Table (The Queue)
 task_id: UUID (PK)
 message_id: UUID (FK -> Messages.message_id) — Links the task to the specific user request.
-tool_id: UUID (FK -> Tools.tool_id)
+tool_id: UUID (FK -> Tools.tool_id, Nullable)
 task_name: String
 status: Enum(INITIALIZED, QUEUED, PROCESSING, COMPLETED, FAILED)
 payload: JSON — The input arguments (e.g., {"number": "123", "text": "Hi"}).

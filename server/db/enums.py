@@ -6,7 +6,7 @@ class RoleType(str, Enum):
 
 class AIClientType(str, Enum):
     VOICE_CLIENT = "VOICE_CLIENT"
-    CORE_MAIN_CLIENT = "CORE_MAIN_CLIENT"
+    CORTEX_MAIN_CLIENT = "CORTEX_MAIN_CLIENT"
 
 class PreferenceLevel(str, Enum):
     MUST = "MUST"

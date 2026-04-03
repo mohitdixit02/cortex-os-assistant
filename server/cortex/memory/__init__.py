@@ -1,18 +1,23 @@
 from cortex.graph.state import ConversationState, EmotionalProfile, UserKnowledge, UserSTM, MessageHistory
 from cortex.memory.model import MemoryModel
+from cortex.memory.saver import MemorySaver
 from sqlalchemy.engine import Engine
 from sqlmodel import Session
 from utility.logger import get_logger
 from db.req import (
     get_one,
-    get_similar
+    get_similar,
+    create_one,
+    create_many
 )
 from db import (
     UserShortTermMemory,
     UserEmotionalProfile,
     UserKnowledgeBase,
     TimeOfDay,
-    Message
+    Message,
+    RoleType,
+    AIClientType
 )
 
 class MemoryClient:
@@ -20,6 +25,13 @@ class MemoryClient:
         self.engine = engine
         self.model = MemoryModel()
         self.logger = get_logger("CORTEX_MEMORY")
+        self.memory_saver = MemorySaver(engine=engine, model=self.model)
+        
+    def get_memory_saver(self):
+        """
+        Returns the `Memory saver` initialized with the DB engine and model from the Memory Client. \n
+        """
+        return self.memory_saver
         
     def _get_time_behavior(self, timestamp) -> TimeOfDay:
         """
@@ -96,15 +108,20 @@ class MemoryClient:
         """
         with Session(self.engine) as session:
             if state.short_term_memory:
-                session.add(UserShortTermMemory(
+                userSTM = UserShortTermMemory(
                     user_id=state.user_id,
                     session_id=state.session_id,
                     stm_summary=state.short_term_memory.stm_summary,
                     session_preferences=state.short_term_memory.session_preferences
-                ))
+                )
+                create_one(
+                    session=session,
+                    obj_in=userSTM,
+                    commit=True
+                )
             if state.emotional_profile:
                 self.logger.info(f"Persisting Emotional Profile to DB: {state.emotional_profile}")
-                session.add(UserEmotionalProfile(
+                userEmotionalProfile = UserEmotionalProfile(
                     user_id=state.user_id,
                     session_id=state.session_id,
                     mood_type=state.emotional_profile.mood_type,
@@ -113,38 +130,39 @@ class MemoryClient:
                     logical_level=state.emotional_profile.logical_level,
                     social_level=state.emotional_profile.social_level,
                     context_summary=state.emotional_profile.context_summary
-                ))
+                )
+                create_one(
+                    session=session,
+                    obj_in=userEmotionalProfile,
+                    commit=True
+                )
             if state.knowledge_base:
+                user_knowledge_items = []
                 for item in state.knowledge_base:
-                    session.add(UserKnowledgeBase(
-                        user_id=state.user_id,
-                        category=item.category,
-                        strictness=item.strictness,
-                        content=item.content,
-                        is_active=True,
-                        embedding=self.model.generate_embeddings(item.content)
-                    ))
-            session.commit()
-            
-    def persist_message_history(
-        self,
-        state: ConversationState
-    ):
-        """
-        Persist the relevant message history to the database for long-term storage and future retrieval. \n
-        """
-        with Session(self.engine) as session:
-            if state.message_history:
-                for message in state.message_history.messages:
-                    session.add(Message(
-                        user_id=state.user_id,
-                        session_id=state.session_id,
-                        role=message["role"],
-                        content=message["content"],
-                        timestamp=message["timestamp"],
-                        embedding=self.model.generate_embeddings(message["content"])
-                    ))
-            session.commit()
+                    user_knowledge_items.append(
+                        UserKnowledgeBase(
+                            user_id=state.user_id,
+                            category=item.category,
+                            strictness=item.strictness,
+                            content=item.content,
+                            is_active=True,
+                            embedding=self.model.generate_embeddings(item.content)
+                        )
+                    )
+                create_many(
+                    session=session,
+                    objects=user_knowledge_items,
+                    commit=True
+                )
+            if state.final_response:
+                self.logger.info(f"Persisting Final Response to DB: {state.final_response}")
+                self.memory_saver.save_message(
+                    session_id=state.session_id,
+                    user_id=state.user_id,
+                    content=state.final_response,
+                    role=RoleType.AI,
+                    ai_client=AIClientType.CORTEX_MAIN_CLIENT
+                )
 
 
     # ******************** Fetch Memory State Functions ********************

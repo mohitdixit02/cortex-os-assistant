@@ -6,15 +6,8 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, Literal, Optional
 from utility.cortex.config import task_queue_config
-from enum import Enum
-
-class TaskStatus(Enum):
-    """Enumeration for Task Statuses in the Task Queue."""
-    INITIALIZED = "initialized"
-    QUEUED = "queued"
-    PROCESSING = "processing"
-    COMPLETED = "completed"
-    FAILED = "failed"
+from cortex.graph.workflow import memory_client
+from db import Message, RoleType, AIClientType, Task, TaskStatus
 
 @dataclass
 class TaskItem:
@@ -74,6 +67,7 @@ class TaskQueue:
         self._ready.wait() # Flag for Queues and Loop are ready or not
         self.logger = get_logger("TASK_QUEUE")
         self.logger.info("TaskQueue initialized...")
+        self.memory_saver = memory_client.get_memory_saver()
 
     def _run_loop(self) -> None:
         """
@@ -100,8 +94,7 @@ class TaskQueue:
     # so we use wrap_future to await it, making it non-blocking
     async def add_task(
         self, 
-        payload: Any, 
-        task_id: Optional[str] = None, 
+        payload: Any,
         task_name: Optional[str] = None, 
         **metadata: Any
         ) -> TaskItem:
@@ -116,13 +109,53 @@ class TaskQueue:
         - `metadata`: Additional key-value pairs that can be associated with the task for tracking or processing purposes. \n
         - `task_name`: An optional human-readable name for the task \n
         """
+        user_id = metadata.get("user_id")
+        session_id = metadata.get("session_id")
+        voice_client_response = metadata.get("voice_client_response")
+        
+        if not user_id or not session_id:
+            self.logger.error("Missing User ID or Session ID in task metadata")
+            raise ValueError("Missing User ID or Session ID in task metadata")
+        
+        user_msg = self.memory_saver.save_message(
+            session_id=session_id,
+            user_id=user_id,
+            content=payload.get("query", ""),
+            role=RoleType.USER,
+            ai_client=None,
+            is_tool_used=False,
+            tool_id=None
+        )
+        
+        self.memory_saver.save_message(
+            session_id=session_id,
+            user_id=user_id,
+            content=voice_client_response if voice_client_response else "",
+            role=RoleType.AI,
+            ai_client=AIClientType.VOICE_CLIENT,
+            is_tool_used=False,
+            tool_id=None
+        )
+        
+        task_obj = self.memory_saver.add_new_task(
+            message_id=user_msg.message_id,
+            tool_id=None,
+            task_name=task_name or "Unnamed Task",
+            status=TaskStatus.QUEUED,
+            payload=payload,
+            status_response=None,
+            task_metadata=dict(metadata)
+        )
+        
         item = TaskItem(
-            task_id=task_id or str(uuid.uuid4()),
+            task_id=task_obj.task_id,
             payload=payload,
             metadata=dict(metadata),
             task_name=task_name,
             status=TaskStatus.QUEUED
         )
+        
+        self.logger.info("Added new task with id: %s, user_id: %s, session_id: %s", item.task_id, user_id, session_id)
         fut = asyncio.run_coroutine_threadsafe(self._add_task_to_queue(item), self.loop)
         return await asyncio.wrap_future(fut)
 
@@ -140,6 +173,11 @@ class TaskQueue:
 
         task.status = TaskStatus.PROCESSING
         task.started_at = time.time()
+        
+        self.memory_saver.update_task(
+            task_id=task.task_id,
+            status=TaskStatus.PROCESSING,
+        )
         return task
 
     async def pick_task(self, timeout: Optional[float] = None) -> Optional[TaskItem]:
@@ -172,6 +210,12 @@ class TaskQueue:
         task.error = error
         task.finished_at = time.time()
         await self._completed_queue.put(task)
+        
+        self.memory_saver.update_task(
+            task_id=task_id,
+            status=status,
+            status_response={"result": result} if status == TaskStatus.COMPLETED else {"error": error}
+        )
         return task
     
     async def submit_task(

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, RootModel
 from typing import Any, Optional, Annotated
 from enum import Enum
-from db.enums import TimeOfDay, TraitCategory, PreferenceLevel
+from db.enums import TimeOfDay, TraitCategory, PreferenceLevel, RoleType, AIClientType
 from datetime import datetime, timezone
 
 UTC_NOW = lambda: datetime.now(timezone.utc)
@@ -31,6 +31,22 @@ class UserSTM(BaseModel):
 class MessageHistory(BaseModel):
     """Relevant Message History for the current conversation"""
     messages: list[dict[str, str]]
+    
+class MessageState(BaseModel):
+    """Represents the state of a single message in the conversation"""
+    message_id: str
+    session_id: str
+    user_id: str
+    content: str
+    role: RoleType
+    ai_client: Optional[AIClientType] = None
+    is_tool_used: Optional[bool] = None
+    tool_id: Optional[str] = None
+    embedding: Optional[list[float]] = None
+
+class MessageStateList(RootModel[list[MessageState]]):
+    """Root model for a list of message states."""
+    pass
 
 class ConversationState(BaseModel):
     """
@@ -46,7 +62,7 @@ class ConversationState(BaseModel):
     emotional_profile: Optional[EmotionalProfile] = None
     knowledge_base: Optional[list[UserKnowledge]] = None
     short_term_memory: Optional[UserSTM] = None
-    message_history: Optional[MessageHistory] = None
+    message_history: Optional[MessageStateList] = None
     final_response: Optional[str] = None
     
 # ******************** Memory State Models ********************

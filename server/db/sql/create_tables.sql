@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS tools (
 CREATE TABLE IF NOT EXISTS tasks (
     task_id UUID PRIMARY KEY,
     message_id UUID NOT NULL REFERENCES messages(message_id) ON DELETE CASCADE,
-    tool_id UUID NOT NULL REFERENCES tools(tool_id) ON DELETE RESTRICT,
+    tool_id UUID REFERENCES tools(tool_id) ON DELETE RESTRICT,
     task_name VARCHAR(255) NOT NULL,
     status task_status NOT NULL,
     payload JSONB NOT NULL,

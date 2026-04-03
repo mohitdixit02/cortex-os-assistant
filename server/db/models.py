@@ -196,8 +196,9 @@ class Task(SQLModel, table=True):
     message_id: UUID = Field(
         sa_column=Column(PGUUID(as_uuid=True), ForeignKey("messages.message_id", ondelete="CASCADE"), nullable=False, index=True)
     )
-    tool_id: UUID = Field(
-        sa_column=Column(PGUUID(as_uuid=True), ForeignKey("tools.tool_id", ondelete="RESTRICT"), nullable=False, index=True)
+    tool_id: Optional[UUID] = Field(
+        default=None,
+        sa_column=Column(PGUUID(as_uuid=True), ForeignKey("tools.tool_id", ondelete="RESTRICT"), nullable=True, index=True)
     )
     task_name: str = Field(sa_column=Column(String(255), nullable=False))
     status: TaskStatus = Field(sa_column=Column(SAEnum(TaskStatus, name="task_status"), nullable=False, index=True))
@@ -208,7 +209,7 @@ class Task(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     message: "Message" = Relationship(back_populates="tasks")
-    tool: "Tool" = Relationship(back_populates="tasks")
+    tool: Optional["Tool"] = Relationship(back_populates="tasks")
 
 
 Index("ix_messages_session_created", Message.__table__.c.session_id, Message.__table__.c.created_at)
