@@ -1,7 +1,7 @@
 import asyncio
 import threading
 import time
-from logger import logger
+from utility.logger import get_logger
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, Literal, Optional
@@ -72,7 +72,8 @@ class TaskQueue:
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
         self._thread.start()
         self._ready.wait() # Flag for Queues and Loop are ready or not
-        logger.info("TaskQueue initialized...")
+        self.logger = get_logger("TASK_QUEUE")
+        self.logger.info("TaskQueue initialized...")
 
     def _run_loop(self) -> None:
         """

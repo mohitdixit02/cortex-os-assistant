@@ -1,6 +1,6 @@
 import numpy as np
 from kokoro import KPipeline
-from logger import logger
+from utility.logger import get_logger
 from utility.sensory.config import TTS_CONFIG
 from utility.main import iterate_tokens_async
 
@@ -16,7 +16,8 @@ class TTSClient:
         - PCM chunks are generated in a streaming fashing based on the frame_samples configuration to have better control over latency and smooth interruption.     
     """
     def __init__(self):
-        logger.info("Initializing TTSClient...")
+        self.logger = get_logger("SENSORY")
+        self.logger.info("Initializing TTSClient...")
         self.voice = TTS_CONFIG.get("voice", "af_heart")
         self.sample_rate = TTS_CONFIG.get("sample_rate", 24000)
         self.channels = TTS_CONFIG.get("channels", 1)
@@ -29,7 +30,7 @@ class TTSClient:
         Generates audio chunks for a given input text \n
         Returns generator yielding PCM audio chunks as numpy arrays of shape (frame_samples,) and dtype float32.
         """
-        logger.info("Generating audio chunks for text: %s", text)
+        self.logger.info("Generating audio chunks for text: %s", text)
         for _, _, audio in self._pipeline(text, voice=self.voice):
             pcm = audio.detach().cpu().numpy().astype(np.float32).reshape(-1)
             for i in range(0, len(pcm), self.frame_samples):

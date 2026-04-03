@@ -5,7 +5,7 @@ from typing import TypedDict, Annotated, Literal, Optional, Dict, Any
 import numpy as np
 from numpy import dot
 from numpy.linalg import norm
-from logger import logger
+from utility.logger import get_logger
 from utility.huggingface.config import models
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 
@@ -21,7 +21,8 @@ def demo_response(chunk_size: int = 24):
 
 class CortexMainModel:
     def __init__(self):
-        logger.info("Initializing generation model...")
+        self.logger = get_logger("CORTEX_MAIN")
+        self.logger.info("Initializing generation model...")
         model_config = models.get("main", {})
         self.model = ChatHuggingFace(llm=HuggingFaceEndpoint(
             repo_id=model_config.get("name"),
@@ -57,7 +58,7 @@ class CortexMainModel:
 
     def stream_text_tokens(self, query: str):
         """Cortex Model"""
-        logger.info("Streaming response tokens for query: %s", query)
+        self.logger.info("Streaming response tokens for query: %s", query)
         prompt = ChatPromptTemplate.from_messages([
             SystemMessagePromptTemplate.from_template("You are a helpful friend wit cool vibe that provides answers to user queries. Don't reply in more than 100 words."),
             HumanMessagePromptTemplate.from_template("{query}")

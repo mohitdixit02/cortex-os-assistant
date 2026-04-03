@@ -9,7 +9,7 @@ from nltk.tokenize import sent_tokenize
 from typing import AsyncGenerator
 from cortex.graph.workflow import build_memory_workflow, main_workflow
 from cortex.task import MainTaskQueue, TaskStatus, TaskItem
-from logger import logger
+from utility.logger import get_logger
 # keep listening and processing until the program is terminated
 
 class MainClient:
@@ -23,6 +23,7 @@ class MainClient:
     
     def __init__(self):
         self.model = CortexMainModel()
+        self.logger = get_logger("CORTEX_MAIN")
         
     def initialize_conversation_state(
         self,
@@ -35,23 +36,23 @@ class MainClient:
         **Returns**: \n
         - `ConversationState`: The initialized conversation state object with default or extracted values from the task item.
         """
-        print("***** Task Item >> ", taskItem)
-        print("***** Task Metadata >> ", taskItem.metadata)
+        self.logger.info("***** Task Item >> %s", taskItem)
+        self.logger.info("***** Task Metadata >> %s", taskItem.metadata)
         user_id = taskItem.metadata.get("user_id")
         session_id = taskItem.metadata.get("session_id")
         
         if not user_id or not session_id:
-            logger.error("Missing user_id or session_id in task metadata. Cannot initialize conversation state.")
+            self.logger.error("Missing user_id or session_id in task metadata. Cannot initialize conversation state.")
             raise ValueError("Missing user_id or session_id in task metadata.")
         
         query = taskItem.payload.get("query")
         
         if not query:
-            logger.error("Missing query in task payload. Cannot initialize conversation state.")
+            self.logger.error("Missing query in task payload. Cannot initialize conversation state.")
             raise ValueError("Missing query in task payload.")
         
         emotion = taskItem.payload.get("emotion", "neutral")
-        logger.info("Initializing conversation state for user_id: %s, session_id: %s, query: %s, emotion: %s", user_id, session_id, query, emotion)
+        self.logger.info("Initializing conversation state for user_id: %s, session_id: %s, query: %s, emotion: %s", user_id, session_id, query, emotion)
         
         state = ConversationState(
             user_id=user_id,
@@ -71,13 +72,13 @@ class MainClient:
         """
         
         while True:        
-            logger.info("Waiting for tasks in the MainTaskQueue...")
+            self.logger.info("Waiting for tasks in the MainTaskQueue...")
             task = await MainTaskQueue.pick_task()
-            logger.info("Received task: %s with id: %s", task.task_name, task.task_id)
+            self.logger.info("Received task: %s with id: %s", task.task_name, task.task_id)
             updated_task = await self._handle_task_queue(task)
             
             if updated_task.status not in [TaskStatus.COMPLETED, TaskStatus.FAILED]:
-                logger.warning("Task %s is still in progress. Current status: %s", task.task_id, updated_task.status)
+                self.logger.warning("Task %s is still in progress. Current status: %s", task.task_id, updated_task.status)
                 continue  # Skip updating the task status until it's completed or failed
                 
             await MainTaskQueue.submit_task(
@@ -85,8 +86,8 @@ class MainClient:
                 status=TaskStatus.COMPLETED if updated_task.result else TaskStatus.FAILED,
                 status_message=updated_task.result if updated_task.result else updated_task.error
             )
-            logger.info("Completed Task with id: %s and name: %s", task.task_id, task.task_name)
-            logger.info("Task Status: %s", updated_task.status)
+            self.logger.info("Completed Task with id: %s and name: %s", task.task_id, task.task_name)
+            self.logger.info("Task Status: %s", updated_task.status)
                 
     async def _handle_task_queue(self, taskItem: TaskItem) -> TaskItem:
         """
@@ -102,7 +103,7 @@ class MainClient:
         try:
             payload = taskItem.payload
             query = payload.get("query", "")
-            logger.info("Processing task with query: %s", query)
+            self.logger.info("Processing task with query: %s", query)
             
             # Orchestrator code
             
@@ -111,7 +112,7 @@ class MainClient:
             # graph invoke - langgraph
             # res = build_memory_workflow.invoke(state)
             res = main_workflow.invoke(state)
-            print("Workflow Result:", res)
+            self.logger.info("Workflow Result: %s", res)
             
             taskItem.result = {
                 "response_type": "text_stream",
@@ -120,7 +121,7 @@ class MainClient:
             taskItem.status = TaskStatus.COMPLETED
             return taskItem
         except Exception as e:
-            logger.exception("Error processing task: %s", e)
+            self.logger.exception("Error processing task: %s", e)
             taskItem.status = TaskStatus.FAILED
             taskItem.error = str(e)
             return taskItem

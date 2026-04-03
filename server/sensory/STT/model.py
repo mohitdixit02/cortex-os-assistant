@@ -1,5 +1,5 @@
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor
-from logger import logger
+from utility.logger import get_logger
 from utility.huggingface.config import models
 from utility.sensory.config import STT_CONFIG
 import io
@@ -21,7 +21,8 @@ class STTModel:
     - `decode_wav_bytes`: Converts incoming PCM audio bytes to a numpy array of dimensions (n_samples,) required for the Hugging Face processor. \n
     """
     def __init__(self):
-        logger.info("Initializing STTModel...")
+        self.logger = get_logger("SENSORY")
+        self.logger.info("Initializing STTModel...")
         self.model_cfg = models.get("stt", {})
         self.np_dtype = np.dtype(self.model_cfg.get("model_np_dtype", "float32"))
         self.processor = AutoProcessor.from_pretrained(self.model_cfg.get("name"))
@@ -33,7 +34,7 @@ class STTModel:
             use_safetensors=True,
         ).to(self.model_cfg.get("device"))
         self.max_source_positions = int(self.model_cfg.get("max_source_positions"))
-        logger.info("STT model loaded..")
+        self.logger.info("STT model loaded..")
 
     def _normalize_input_features(self, input_features: torch.Tensor) -> torch.Tensor:
         """
@@ -46,7 +47,7 @@ class STTModel:
         if current_frames < target_frames:
             input_features = F.pad(input_features, (0, target_frames - current_frames))
         elif current_frames > target_frames:
-            logger.error(
+            self.logger.error(
                 "Input mel features exceed model limit: got %s, max %s. "
                 "Reduce chunk duration or split audio before transcription.",
                 current_frames,
@@ -71,7 +72,7 @@ class STTModel:
 
         # Warn if sample rate doesn't match expected config (model can still process but quality may degrade)
         if sr != self.sample_rate:
-            logger.warning(
+            self.logger.warning(
                 "Incoming sample rate %s does not match STT_CONFIG sample rate %s. "
                 "Transcription quality may degrade unless you resample.",
                 sr,

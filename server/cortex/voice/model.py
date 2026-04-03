@@ -5,7 +5,7 @@ from typing import TypedDict, Annotated, Literal, Optional, Dict, Any
 import numpy as np
 from numpy import dot
 from numpy.linalg import norm
-from logger import logger
+from utility.logger import get_logger
 from utility.huggingface.config import models
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from utility.huggingface.request import HuggingFaceRequest
@@ -35,7 +35,8 @@ def demo_response(chunk_size: int = 24):
     
 class VoiceMainModel:
     def __init__(self):
-        logger.info("Initializing generation model...")
+        self.logger = get_logger("CORTEX_VOICE")
+        self.logger.info("Initializing generation model...")
         model_config = models.get("main", {})
         self.model = ChatHuggingFace(llm=HuggingFaceEndpoint(
             repo_id=model_config.get("name"),
@@ -69,7 +70,7 @@ class VoiceMainModel:
     
     def get_response_route(self, query: str) -> VoiceClientRouteQuery:
         """Voice Model"""
-        logger.info("Streaming response tokens for query: %s", query)
+        self.logger.info("Streaming response tokens for query: %s", query)
         formatted_prompt, parser = get_voice_client_prompts(
             type="route_query",
             query=query
@@ -108,7 +109,8 @@ class EmotionDetectionModel:
     - `get_emotion(text: str) -> Dict[str, Any]` : Detects emotion from the input text.
     """
     def __init__(self):
-        logger.info("Initializing generation model...")
+        self.logger = get_logger("CORTEX_VOICE")
+        self.logger.info("Initializing generation model...")
         self.model_config = models.get("voice_emotion", {})
         
     def get_model(self):
@@ -123,23 +125,23 @@ class EmotionDetectionModel:
         - A dictionary containing the detected emotion label and its corresponding confidence score. \n
          For example: `{"label": "joy", "score": 0.95}`
         """
-        logger.info("Detecting emotion for text: %s", text)
+        self.logger.info("Detecting emotion for text: %s", text)
         res = HuggingFaceRequest(
             feature="voice_emotion",
             data=text
         )
-        logger.info("Emotion detection result: %s", res)
+        self.logger.info("Emotion detection result: %s", res)
         output = sorted(res, key=lambda x: x["score"], reverse=True)
         if output:
             top_emotion = output[0]
             top_emotion_score = top_emotion["score"]
-            logger.info("Top detected emotion: %s with score %.4f", top_emotion["label"], top_emotion["score"])
+            self.logger.info("Top detected emotion: %s with score %.4f", top_emotion["label"], top_emotion["score"])
             return {
                 "label": top_emotion["label"],
                 "score": top_emotion_score
             }
         else:
-            logger.warning("No emotions detected, returning 'neutral'")
+            self.logger.warning("No emotions detected, returning 'neutral'")
             return {
                 "label": "neutral",
                 "score": 1.0

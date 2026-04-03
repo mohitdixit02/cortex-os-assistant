@@ -2,7 +2,7 @@ from cortex.graph.state import ConversationState, EmotionalProfile, UserKnowledg
 from cortex.memory.model import MemoryModel
 from sqlalchemy.engine import Engine
 from sqlmodel import Session
-from logger import logger
+from utility.logger import get_logger
 from db.req import (
     get_one,
     get_similar
@@ -19,6 +19,7 @@ class MemoryClient:
     def __init__(self, engine: Engine):
         self.engine = engine
         self.model = MemoryModel()
+        self.logger = get_logger("CORTEX_MEMORY")
         
     def _get_time_behavior(self, timestamp) -> TimeOfDay:
         """
@@ -48,7 +49,7 @@ class MemoryClient:
         short_term_memory = self.model.build_stm(
             state=state
         )
-        logger.info(f"Built STM: {short_term_memory}")
+        self.logger.info(f"Built STM: {short_term_memory}")
         return {
             "final_response": state.final_response,
             "short_term_memory": short_term_memory,
@@ -65,7 +66,7 @@ class MemoryClient:
         emotional_profile = self.model.build_emotional_profile(
             state=state
         )
-        logger.info(f"Built Emotional Profile: {emotional_profile}")
+        self.logger.info(f"Built Emotional Profile: {emotional_profile}")
         return {
             "query_time": state.query_time,
             "emotional_profile": emotional_profile,
@@ -81,7 +82,7 @@ class MemoryClient:
         knowledge_base = self.model.build_user_knowledge_base(
             state=state
         )
-        logger.info(f"Built User Knowledge Base: {knowledge_base}")
+        self.logger.info(f"Built User Knowledge Base: {knowledge_base}")
         return {
             "knowledge_base": knowledge_base,
         }
@@ -102,7 +103,7 @@ class MemoryClient:
                     session_preferences=state.short_term_memory.session_preferences
                 ))
             if state.emotional_profile:
-                print(f"Persisting Emotional Profile to DB: {state.emotional_profile}")
+                self.logger.info(f"Persisting Emotional Profile to DB: {state.emotional_profile}")
                 session.add(UserEmotionalProfile(
                     user_id=state.user_id,
                     session_id=state.session_id,
@@ -163,7 +164,7 @@ class MemoryClient:
                 user_id=user_id,
                 session_id=session_id,
             )
-        print(f"Fetched STM from DB: {res}")
+        self.logger.info(f"Fetched STM from DB: {res}")
         state.short_term_memory = UserSTM(
             stm_summary=res.stm_summary,
             session_preferences=res.session_preferences

@@ -1,6 +1,6 @@
 from sensory.STT.model import STTModel
 from utility.sensory.config import STT_CONFIG
-from logger import logger
+from utility.logger import get_logger
 import numpy as np
 import asyncio
 import time
@@ -15,14 +15,15 @@ class STTClient:
     - Handles both short and long audio inputs with configurable chunking and batching strategies to optimize latency.
     """
     def __init__(self):
-        logger.info("Initializing STTClient with config: %s", STT_CONFIG)
+        self.logger = get_logger("SENSORY")
+        self.logger.info("Initializing STTClient with config: %s", STT_CONFIG)
         self.sample_rate = int(STT_CONFIG["sample_rate"])
         self.chunk_size_s = float(STT_CONFIG["chunk_size_s"])
         self.chunk_seconds_max_limit = float(STT_CONFIG["chunk_seconds_max_limit"])
         self.end_speech_silence_threshold = float(STT_CONFIG["end_speech_silence_threshold"])
         self.chunk_batch_size = int(STT_CONFIG.get("chunk_batch_size", 1))
         self.model = STTModel()
-        logger.info("STT model loaded locally...")
+        self.logger.info("STT model loaded locally...")
         
     def _batch_chunks(self, audio: np.ndarray) -> list:
         """
@@ -63,17 +64,17 @@ class STTClient:
         """
         audio = self.model.decode_wav_bytes(audio_bytes)
         total_seconds = len(audio) / float(self.sample_rate)
-        logger.info("Transcribing local audio, duration: %.2fs", total_seconds)
+        self.logger.info("Transcribing local audio, duration: %.2fs", total_seconds)
         
         start_time = time.time()
-        print("STT Transcription started at: ", time.strftime("%H:%M:%S", time.localtime(start_time)))
+        self.logger.info("STT Transcription started at: %s", time.strftime("%H:%M:%S", time.localtime(start_time)))
         
         audio_chunks = self._batch_chunks(audio)
         output = self.model.transcribe_chunks(audio_chunks, batch_size=self.chunk_batch_size)
         final_text = " ".join(output).strip()
-        print("STT Transcription completed at: ", time.strftime("%H:%M:%S", time.localtime(time.time())))
-        print("Total transcription time: ", time.time() - start_time)
-        print("Combined Text:", final_text)
+        self.logger.info("STT Transcription completed at: %s", time.strftime("%H:%M:%S", time.localtime(time.time())))
+        self.logger.info("Total transcription time: %f", time.time() - start_time)
+        self.logger.info("Combined Text: %s", final_text)
         return final_text
     
     async def transcribe(self, audio_bytes: bytes) -> str:
@@ -85,5 +86,5 @@ class STTClient:
             - Offloads the transcription work to a separate thread for performance effeciency.
             - Handles both short and long audio inputs with configurable chunking and batching strategies to optimize latency.
         """
-        logger.info("Transcribing audio bytes size: %d", len(audio_bytes))
+        self.logger.info("Transcribing audio bytes size: %d", len(audio_bytes))
         return await asyncio.to_thread(self._transcribe_sync, audio_bytes)
