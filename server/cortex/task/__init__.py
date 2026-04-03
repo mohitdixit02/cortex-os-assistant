@@ -1,13 +1,13 @@
 import asyncio
 import threading
 import time
+from cortex.memory.embedding import EmbeddingModel
 from utility.logger import get_logger
-import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, Literal, Optional
 from utility.cortex.config import task_queue_config
-from cortex.graph.workflow import memory_client
-from db import Message, RoleType, AIClientType, Task, TaskStatus
+from cortex.memory.saver import MemorySaver
+from db import Message, RoleType, AIClientType, Task, TaskStatus, engine
 
 @dataclass
 class TaskItem:
@@ -67,7 +67,7 @@ class TaskQueue:
         self._ready.wait() # Flag for Queues and Loop are ready or not
         self.logger = get_logger("TASK_QUEUE")
         self.logger.info("TaskQueue initialized...")
-        self.memory_saver = memory_client.get_memory_saver()
+        self.memory_saver = MemorySaver(engine=engine, model=EmbeddingModel())
 
     def _run_loop(self) -> None:
         """

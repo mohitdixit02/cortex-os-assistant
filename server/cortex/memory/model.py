@@ -5,11 +5,6 @@ from utility.config import env
 from cortex.graph.state import ConversationState, EmotionalProfile, UserSTM, MemoryEmotionalProfile, UserKnowledge, MemoryUserKnowledgeList
 class MemoryModel:
     def __init__(self):
-        self.embd_model = HuggingFaceEndpointEmbeddings(
-            model="sentence-transformers/all-MiniLM-L6-v2",
-            task="feature-extraction",
-            huggingfacehub_api_token=env.HF_TOKEN
-        )
         model_config = models.get("main", {})
         self.model = ChatHuggingFace(llm=HuggingFaceEndpoint(
             repo_id=model_config.get("name"),
@@ -17,12 +12,6 @@ class MemoryModel:
             max_new_tokens=model_config.get("max_new_tokens", 200),
             temperature=model_config.get("temperature", 0.2)
         ))
-        
-    def generate_embeddings(self, text: str) -> list[float]:
-        """
-        Generate embeddings for the given text using the model. \n
-        """
-        return self.embd_model.embed_query(text)
     
     def build_stm(self, state: ConversationState):
         """

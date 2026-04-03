@@ -1,5 +1,6 @@
 from cortex.graph.state import ConversationState, EmotionalProfile, UserKnowledge, UserSTM, MessageHistory
 from cortex.memory.model import MemoryModel
+from cortex.memory.embedding import EmbeddingModel
 from cortex.memory.saver import MemorySaver
 from sqlalchemy.engine import Engine
 from sqlmodel import Session
@@ -24,14 +25,9 @@ class MemoryClient:
     def __init__(self, engine: Engine):
         self.engine = engine
         self.model = MemoryModel()
+        self.embd_model = EmbeddingModel()
         self.logger = get_logger("CORTEX_MEMORY")
-        self.memory_saver = MemorySaver(engine=engine, model=self.model)
-        
-    def get_memory_saver(self):
-        """
-        Returns the `Memory saver` initialized with the DB engine and model from the Memory Client. \n
-        """
-        return self.memory_saver
+        self.memory_saver = MemorySaver(engine=engine, model=self.embd_model)
         
     def _get_time_behavior(self, timestamp) -> TimeOfDay:
         """
@@ -146,7 +142,7 @@ class MemoryClient:
                             strictness=item.strictness,
                             content=item.content,
                             is_active=True,
-                            embedding=self.model.generate_embeddings(item.content)
+                            embedding=self.embd_model.generate_embeddings(item.content)
                         )
                     )
                 create_many(
@@ -221,6 +217,7 @@ class MemoryClient:
             context_summary=res.context_summary
         ) if res else None
         return {
+            "query_time": time_behavior,
             "emotional_profile": state.emotional_profile,
         }
     
@@ -234,7 +231,7 @@ class MemoryClient:
         
         #/pending/ Have to make sure the use of Category in the concept
         user_id = state.user_id
-        query_embedding = self.model.generate_embeddings(state.query)
+        query_embedding = self.embd_model.generate_embeddings(state.query)
         with Session(self.engine) as session:
             res = get_similar(
                 session=session,
@@ -264,7 +261,7 @@ class MemoryClient:
         """
         user_id = state.user_id
         session_id = state.session_id
-        query_embedding = self.model.generate_embeddings(state.query)
+        query_embedding = self.embd_model.generate_embeddings(state.query)
         with Session(self.engine) as session:
             res = get_similar(
                 session=session,

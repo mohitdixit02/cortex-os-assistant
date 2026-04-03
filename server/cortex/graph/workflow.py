@@ -1,11 +1,13 @@
 from cortex.memory import MemoryClient
 from langgraph.graph import StateGraph, START, END
-from .state import ConversationState
+from cortex.main.orchestrator import Orchestrator
+from cortex.graph.state import ConversationState
 from db import engine
 
 memory_client = MemoryClient(
     engine=engine
 )
+orchestrator = Orchestrator()
 
 # Build Memory for the conversation
 memory_graph = StateGraph(ConversationState)
@@ -29,22 +31,33 @@ main_graph = StateGraph(ConversationState)
 
 main_graph.add_node("fetch_stm", memory_client.fetch_relevant_stm)
 main_graph.add_node("fetch_emotional_profile", memory_client.fetch_emotional_profile)
-main_graph.add_node("fetch_user_knowledge_base", memory_client.fetch_relevant_knowledge_base)
+main_graph.add_node("plan_main_orchestration", orchestrator.build_main_orchestration_plan)
+# main_graph.add_node("fetch_user_knowledge_base", memory_client.fetch_relevant_knowledge_base)
 main_graph.add_node("build_memory_workflow", build_memory_workflow)
-main_graph.add_node("pass_node", lambda state: state)
+# main_graph.add_node("pass_node", lambda state: state)
 
 main_graph.add_edge(START, "fetch_stm")
 main_graph.add_edge(START, "fetch_emotional_profile")
-main_graph.add_edge(START, "fetch_user_knowledge_base")
-main_graph.add_edge("fetch_stm", "pass_node")
-main_graph.add_edge("fetch_emotional_profile", "pass_node")
-main_graph.add_edge("fetch_user_knowledge_base", "pass_node")
-main_graph.add_edge("pass_node", "build_memory_workflow")
+main_graph.add_edge("fetch_stm", "plan_main_orchestration")
+main_graph.add_edge("fetch_emotional_profile", "plan_main_orchestration")
+main_graph.add_edge("plan_main_orchestration", "build_memory_workflow")
+# main_graph.add_edge(START, "fetch_user_knowledge_base")
+# main_graph.add_edge("fetch_stm", "pass_node")
+# main_graph.add_edge("fetch_emotional_profile", "pass_node")
+# main_graph.add_edge("fetch_user_knowledge_base", "pass_node")
+# main_graph.add_edge("pass_node", "build_memory_workflow")
 
 main_workflow = main_graph.compile()
+
+print(main_workflow.get_graph(xray=True).draw_ascii())
 
 __all__ = [
     "main_workflow",
     "build_memory_workflow",
     "memory_client",
 ]
+
+main_graph.add_edge("build_memory_workflow", "build_stm")
+
+def node11(state):
+    pass

@@ -1,15 +1,11 @@
-import asyncio
-from sensory.STT import STTClient
-from sensory.TTS import TTSClient
-from cortex.main.model import CortexMainModel
 from cortex.graph.state import ConversationState
-from cortex.graph import state
 from utility.main import iterate_tokens_async
 from nltk.tokenize import sent_tokenize
 from typing import AsyncGenerator
 from cortex.graph.workflow import build_memory_workflow, main_workflow
 from cortex.task import MainTaskQueue, TaskStatus, TaskItem
 from utility.logger import get_logger
+from pprint import pprint
 # keep listening and processing until the program is terminated
 
 class MainClient:
@@ -22,7 +18,6 @@ class MainClient:
     """
     
     def __init__(self):
-        self.model = CortexMainModel()
         self.logger = get_logger("CORTEX_MAIN")
         
     def initialize_conversation_state(
@@ -106,13 +101,11 @@ class MainClient:
             self.logger.info("Processing task with query: %s", query)
             
             # Orchestrator code
-            
-            # entry
             state = self.initialize_conversation_state(taskItem)
-            # graph invoke - langgraph
-            # res = build_memory_workflow.invoke(state)
             res = main_workflow.invoke(state)
-            self.logger.info("Workflow Result: %s", res)
+            print("\n\n***** Orchestration Workflow Result *****\n\n")
+            pprint("Workflow Result: %s", res)
+            print("\n\n\n\n")
             
             taskItem.result = {
                 "response_type": "text_stream",

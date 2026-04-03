@@ -34,7 +34,7 @@ class VoiceClient:
         # self.stt_client = STTClient()
         # self.tts_client = TTSClient()
         self.model = VoiceMainModel()
-        # self.emotion_model = EmotionDetectionModel()
+        self.emotion_model = EmotionDetectionModel()
         self._queue_cancel_event = asyncio.Event()
         self._pending_task_ids: set[str] = set()
         self._pending_task_ids_lock = asyncio.Lock()
@@ -283,7 +283,7 @@ class VoiceClient:
         """
         self.logger.info("Starting Cortex Main Server for text response...")
         
-        # self.emotion_model.get_emotion(query)
+        emotion =self.emotion_model.get_emotion(query)
         
         # route_res = self.model.get_response_route(query)
         # logger.info("Determined route type: %s", route_res.request_type)
@@ -308,7 +308,7 @@ class VoiceClient:
         task_item = await MainTaskQueue.add_task(
             payload={
                 "query": query,
-                "emotion": "neutral",
+                "emotion": emotion.get("label", "neutral")
             },
             task_name="audio_query",
             user_id="11111111-1111-1111-1111-111111111111",

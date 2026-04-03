@@ -1,6 +1,8 @@
 from langchain_huggingface import HuggingFacePipeline, HuggingFaceEmbeddings, HuggingFaceEndpoint, ChatHuggingFace, HuggingFaceEndpointEmbeddings
 from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
 from pydantic import BaseModel, Field
+from cortex.graph.state import ConversationState, OrchestrationState
+from cortex.main.prompts import get_main_client_prompts
 from typing import TypedDict, Annotated, Literal, Optional, Dict, Any
 import numpy as np
 from numpy import dot
@@ -8,6 +10,8 @@ from numpy.linalg import norm
 from utility.logger import get_logger
 from utility.huggingface.config import models
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from cortex.main.tools import AVAILABLE_TOOLS
+import json
 
 text = """
     Hi, It is Cortex Main Model. I am main Orchestrator for handling user queries and generating responses. I can understand and respond to a wide range of queries, providing concise and accurate answers.
@@ -69,5 +73,21 @@ class CortexMainModel:
             token = self._chunk_to_text(chunk)
             if token:
                 yield token
-        
-       
+                
+    def build_main_orchestration_plan(self, state: ConversationState):
+        formatted_prompt, parser = get_main_client_prompts(
+            type="main_orchestration",
+        )
+        chain = formatted_prompt | self.model | parser
+        available_tools = "".join([f"{tool.tool_name}: {tool.tool_description}" for tool in AVAILABLE_TOOLS])
+        res = chain.invoke({
+            "available_tools": available_tools,
+            "user_query": state.query,
+            "stm_summary": state.short_term_memory.stm_summary if state.short_term_memory else "",
+            "stm_preferences": state.short_term_memory.session_preferences if state.short_term_memory else {},
+            "user_mood": state.query_emotion,
+            "user_time": state.query_time,
+            "user_emotional_profile": state.emotional_profile.model_dump_json() if state.emotional_profile else None
+        })
+        self.logger.info("Orchestration plan generated: %s", res)
+        return res
