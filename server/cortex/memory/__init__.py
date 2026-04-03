@@ -1,5 +1,6 @@
 from cortex.graph.state import ConversationState, EmotionalProfile, UserKnowledge, UserSTM, MessageHistory
 from cortex.memory.model import MemoryModel
+from sqlalchemy.engine import Engine
 from sqlmodel import Session
 from logger import logger
 from db.req import (
@@ -15,8 +16,8 @@ from db import (
 )
 
 class MemoryClient:
-    def __init__(self, session: Session):
-        self.session = session
+    def __init__(self, engine: Engine):
+        self.engine = engine
         self.model = MemoryModel()
         
     def _get_time_behavior(self, timestamp) -> TimeOfDay:
@@ -92,36 +93,57 @@ class MemoryClient:
         """
         Persist the relevant memory states (STM, Emotional Profile, Knowledge Base) to the database for long-term storage and future retrieval. \n
         """
-        if state.short_term_memory:
-            self.session.add(UserShortTermMemory(
-                user_id=state.user_id,
-                session_id=state.session_id,
-                stm_summary=state.short_term_memory.stm_summary,
-                session_preferences=state.short_term_memory.session_preferences
-            ))
-        if state.emotional_profile:
-            print(f"Persisting Emotional Profile to DB: {state.emotional_profile}")
-            self.session.add(UserEmotionalProfile(
-                user_id=state.user_id,
-                session_id=state.session_id,
-                mood_type=state.emotional_profile.mood_type,
-                time_behavior=state.emotional_profile.time_behavior,
-                emotional_level=state.emotional_profile.emotional_level,
-                logical_level=state.emotional_profile.logical_level,
-                social_level=state.emotional_profile.social_level,
-                context_summary=state.emotional_profile.context_summary
-            ))
-        if state.knowledge_base:
-            for item in state.knowledge_base:
-                self.session.add(UserKnowledgeBase(
+        with Session(self.engine) as session:
+            if state.short_term_memory:
+                session.add(UserShortTermMemory(
                     user_id=state.user_id,
-                    category=item.category,
-                    strictness=item.strictness,
-                    content=item.content,
-                    is_active=True,
-                    embedding=self.model.generate_embeddings(item.content)
+                    session_id=state.session_id,
+                    stm_summary=state.short_term_memory.stm_summary,
+                    session_preferences=state.short_term_memory.session_preferences
                 ))
-        self.session.commit()
+            if state.emotional_profile:
+                print(f"Persisting Emotional Profile to DB: {state.emotional_profile}")
+                session.add(UserEmotionalProfile(
+                    user_id=state.user_id,
+                    session_id=state.session_id,
+                    mood_type=state.emotional_profile.mood_type,
+                    time_behavior=state.emotional_profile.time_behavior,
+                    emotional_level=state.emotional_profile.emotional_level,
+                    logical_level=state.emotional_profile.logical_level,
+                    social_level=state.emotional_profile.social_level,
+                    context_summary=state.emotional_profile.context_summary
+                ))
+            if state.knowledge_base:
+                for item in state.knowledge_base:
+                    session.add(UserKnowledgeBase(
+                        user_id=state.user_id,
+                        category=item.category,
+                        strictness=item.strictness,
+                        content=item.content,
+                        is_active=True,
+                        embedding=self.model.generate_embeddings(item.content)
+                    ))
+            session.commit()
+            
+    def persist_message_history(
+        self,
+        state: ConversationState
+    ):
+        """
+        Persist the relevant message history to the database for long-term storage and future retrieval. \n
+        """
+        with Session(self.engine) as session:
+            if state.message_history:
+                for message in state.message_history.messages:
+                    session.add(Message(
+                        user_id=state.user_id,
+                        session_id=state.session_id,
+                        role=message["role"],
+                        content=message["content"],
+                        timestamp=message["timestamp"],
+                        embedding=self.model.generate_embeddings(message["content"])
+                    ))
+            session.commit()
 
 
     # ******************** Fetch Memory State Functions ********************
@@ -134,12 +156,13 @@ class MemoryClient:
         """
         user_id = state.user_id
         session_id = state.session_id
-        res = get_one(
-            session=self.session,
-            model=UserShortTermMemory,
-            user_id=user_id,
-            session_id=session_id,
-        )
+        with Session(self.engine) as session:
+            res = get_one(
+                session=session,
+                model=UserShortTermMemory,
+                user_id=user_id,
+                session_id=session_id,
+            )
         print(f"Fetched STM from DB: {res}")
         state.short_term_memory = UserSTM(
             stm_summary=res.stm_summary,
@@ -161,14 +184,15 @@ class MemoryClient:
         session_id = state.session_id
         time_behavior = self._get_time_behavior(state.query_timestamp)
         mood = state.query_emotion
-        res = get_one(
-            session=self.session,
-            model=UserEmotionalProfile,
-            user_id=state.user_id,
-            session_id=session_id,
-            mood_type=mood,
-            time_behavior=time_behavior
-        )
+        with Session(self.engine) as session:
+            res = get_one(
+                session=session,
+                model=UserEmotionalProfile,
+                user_id=state.user_id,
+                session_id=session_id,
+                mood_type=mood,
+                time_behavior=time_behavior
+            )
         state.emotional_profile = EmotionalProfile(
             mood_type=res.mood_type,
             time_behavior=res.time_behavior,
@@ -181,7 +205,7 @@ class MemoryClient:
             "emotional_profile": state.emotional_profile,
         }
     
-    def fetch_relevant_ltm(
+    def fetch_relevant_knowledge_base(
         self,
         state: ConversationState
     ):
@@ -192,13 +216,14 @@ class MemoryClient:
         #/pending/ Have to make sure the use of Category in the concept
         user_id = state.user_id
         query_embedding = self.model.generate_embeddings(state.query)
-        res = get_similar(
-            session=self.session,
-            model=UserKnowledgeBase,
-            query_embedding=query_embedding,
-            top_k=5,
-            user_id=user_id
-        )
+        with Session(self.engine) as session:
+            res = get_similar(
+                session=session,
+                model=UserKnowledgeBase,
+                query_embedding=query_embedding,
+                top_k=5,
+                user_id=user_id
+            )
         state.knowledge_base = [
             UserKnowledge(
                 category=item.category,
@@ -221,14 +246,15 @@ class MemoryClient:
         user_id = state.user_id
         session_id = state.session_id
         query_embedding = self.model.generate_embeddings(state.query)
-        res = get_similar(
-            session=self.session,
-            model=Message,
-            query_embedding=query_embedding,
-            top_k=5,
-            user_id=user_id,
-            session_id=session_id
-        )
+        with Session(self.engine) as session:
+            res = get_similar(
+                session=session,
+                model=Message,
+                query_embedding=query_embedding,
+                top_k=5,
+                user_id=user_id,
+                session_id=session_id
+            )
         res = [{
                 "role": item.role,
                 "content": item.content,

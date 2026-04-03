@@ -20,8 +20,7 @@ from .models import (
     UserShortTermMemory,
 )
 
-engine = create_engine(env.DB_URL, echo=True)
-session = Session(engine)
+engine = create_engine(env.DB_URL, echo=False)
 
 __all__ = [
     "RoleType",
@@ -38,5 +37,5 @@ __all__ = [
     "UserKnowledgeBase",
     "Tool",
     "Task",
-    "session",
+    "engine",
 ]

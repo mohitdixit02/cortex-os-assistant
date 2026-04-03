@@ -7,7 +7,7 @@ from utility.main import iterate_tokens_async
 from nltk.tokenize import sent_tokenize
 from typing import AsyncGenerator, Optional
 from logger import logger
-from cortex.main.task import MainTaskQueue, TaskStatus, TaskItem
+from cortex.task import MainTaskQueue, TaskStatus, TaskItem
 from fastapi import WebSocket
 from service.stream.event import StreamEvent
 from utility.sensory.config import STT_CONFIG, TTS_CONFIG

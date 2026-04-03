@@ -7,8 +7,8 @@ from cortex.graph import state
 from utility.main import iterate_tokens_async
 from nltk.tokenize import sent_tokenize
 from typing import AsyncGenerator
-from cortex.graph.workflow import build_memory_workflow
-from cortex.main.task import MainTaskQueue, TaskStatus, TaskItem
+from cortex.graph.workflow import build_memory_workflow, main_workflow
+from cortex.task import MainTaskQueue, TaskStatus, TaskItem
 from logger import logger
 # keep listening and processing until the program is terminated
 
@@ -109,7 +109,8 @@ class MainClient:
             # entry
             state = self.initialize_conversation_state(taskItem)
             # graph invoke - langgraph
-            res = build_memory_workflow.invoke(state)
+            # res = build_memory_workflow.invoke(state)
+            res = main_workflow.invoke(state)
             print("Workflow Result:", res)
             
             taskItem.result = {

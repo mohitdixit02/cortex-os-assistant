@@ -3,9 +3,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Literal, Sequence, TypeVar
 
-from sqlalchemy import func, inspect, select
+from sqlalchemy import func, inspect
 from sqlalchemy.sql.elements import ColumnElement
-from sqlmodel import Session, SQLModel
+from sqlmodel import Session, SQLModel, select
 
 ModelT = TypeVar("ModelT", bound=SQLModel)
 UTC_NOW = lambda: datetime.now(timezone.utc)
