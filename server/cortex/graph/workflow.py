@@ -3,6 +3,8 @@ from langgraph.graph import StateGraph, START, END
 from cortex.main.orchestrator import Orchestrator
 from cortex.graph.state import ConversationState
 from db import engine
+from PIL import Image
+import io
 
 memory_client = MemoryClient(
     engine=engine
@@ -32,15 +34,22 @@ main_graph = StateGraph(ConversationState)
 main_graph.add_node("fetch_stm", memory_client.fetch_relevant_stm)
 main_graph.add_node("fetch_emotional_profile", memory_client.fetch_emotional_profile)
 main_graph.add_node("plan_main_orchestration", orchestrator.build_main_orchestration_plan)
-# main_graph.add_node("fetch_user_knowledge_base", memory_client.fetch_relevant_knowledge_base)
 main_graph.add_node("build_memory_workflow", build_memory_workflow)
+main_graph.add_node("fetch_user_knowledge_base", memory_client.fetch_relevant_knowledge_base)
+main_graph.add_node("fetch_message_history", memory_client.fetch_relevant_message_history)
+main_graph.add_node("plan_evaluation", orchestrator.evaluate_plan)
 # main_graph.add_node("pass_node", lambda state: state)
 
 main_graph.add_edge(START, "fetch_stm")
 main_graph.add_edge(START, "fetch_emotional_profile")
 main_graph.add_edge("fetch_stm", "plan_main_orchestration")
 main_graph.add_edge("fetch_emotional_profile", "plan_main_orchestration")
-main_graph.add_edge("plan_main_orchestration", "build_memory_workflow")
+main_graph.add_edge("plan_main_orchestration", "fetch_user_knowledge_base")
+main_graph.add_edge("plan_main_orchestration", "fetch_message_history")
+main_graph.add_edge("fetch_user_knowledge_base", "plan_evaluation")
+main_graph.add_edge("fetch_message_history", "plan_evaluation")
+main_graph.add_conditional_edges("plan_evaluation", orchestrator.route_condition_orchestration_evaluation)
+
 # main_graph.add_edge(START, "fetch_user_knowledge_base")
 # main_graph.add_edge("fetch_stm", "pass_node")
 # main_graph.add_edge("fetch_emotional_profile", "pass_node")
@@ -49,7 +58,10 @@ main_graph.add_edge("plan_main_orchestration", "build_memory_workflow")
 
 main_workflow = main_graph.compile()
 
-print(main_workflow.get_graph(xray=True).draw_ascii())
+# print(main_workflow.get_graph(xray=True).draw_ascii())
+image_data = main_workflow.get_graph(xray=True).draw_mermaid_png()
+img = Image.open(io.BytesIO(image_data))
+img.show()
 
 __all__ = [
     "main_workflow",
@@ -61,3 +73,4 @@ main_graph.add_edge("build_memory_workflow", "build_stm")
 
 def node11(state):
     pass
+main_graph.add_edge("plan_evaluation", "build_memory_workflow")

@@ -79,13 +79,11 @@ class MemoryUserKnowledgeList(RootModel[list[MemoryUserKnowledge]]):
 class UserKnowledgeRetrievalState(BaseModel):
     """Represents the state of user knowledge retrieval process  decided by the Orchestartor based on the user query and context."""
     selected_categories: Annotated[list[TraitCategory], Field(description="List of categories for which to retrieve knowledge")]
-    knowledge_base: Annotated[Optional[list[UserKnowledge]], Field(description="Relevant User Knowledge")] = None
 
 class MessageRetrievalState(BaseModel):
     """Represents the state of message retrieval process decided by the Orchestartor based on the user query and context."""
     is_referred: Annotated[bool, Field(description="Whether the user query is referring to any past message in the conversation or not")]
     referred_message_keywords: Annotated[Optional[str], Field(description="Keywords from the referred message")] = None
-    retrieved_messages: Annotated[Optional[MessageStateList], Field(description="List of retrieved messages")] = None
 
 class CortexTool(BaseModel):
     """Represents a tool that can be used by the Cortex Main Client to process user queries and generate responses."""
@@ -100,6 +98,13 @@ class ToolSelectionState(BaseModel):
     is_tool_required: Annotated[bool, Field(description="Whether any tool is required to process the user query or not")]
     selected_tools: Annotated[Optional[Dict[str, str]], Field(description="Dict of selected tool Id as keys and one line reason of why it is required as values")] = None
 
+class PlanEvaluationState(BaseModel):
+    """Represents the state of Plan evaluation done by Evaluator over Orchestrator's plan"""
+    is_feedback_required: Annotated[bool, Field(description="Whether user feedback is required for the current response or plan or not")]
+    user_knowledge_retrieval_feedback: Annotated[Optional[list[str]], Field(description="List of Feedbacks on user knowledge retrieval part of the plan")] = None
+    message_retrieval_feedback: Annotated[Optional[list[str]], Field(description="List of Feedbacks on message retrieval part of the plan")] = None
+    iteration_count: Annotated[Optional[int], Field(description="Number of iterations or attempts made to generate the response")] = 0
+
 class OrchestrationState(BaseModel):
     """
     Represents the overall `orchestration state` decided by the `Orchestartor` based on the user query and context. \n
@@ -111,9 +116,7 @@ class OrchestrationState(BaseModel):
     user_knowledge_retrieval_state: Optional[UserKnowledgeRetrievalState] = None
     message_retrieval_state: Optional[MessageRetrievalState] = None
     tool_selection_state: Optional[ToolSelectionState] = None
-    # current_feedback: Optional[str] = None
-    # feedback_history: Optional[list[str]] = None
-    # iteration_count: Optional[int] = None
+    feedback_by_evaluator: Optional[PlanEvaluationState] = None
     
 """
     Main Conversation State Model
@@ -132,4 +135,7 @@ class ConversationState(BaseModel):
     query_time: Optional[TimeOfDay] = None
     emotional_profile: Optional[EmotionalProfile] = None
     short_term_memory: Optional[UserSTM] = None
+    knowledge_base: Optional[list[UserKnowledge]] = None
+    message_history: Optional[MessageStateList] = None
     orchestration_state: Optional[OrchestrationState] = None
+    final_response: Optional[str] = None

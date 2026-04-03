@@ -80,6 +80,17 @@ class CortexMainModel:
         )
         chain = formatted_prompt | self.model | parser
         available_tools = "".join([f"{tool.tool_name}: {tool.tool_description}" for tool in AVAILABLE_TOOLS])
+        
+        if state.orchestration_state and state.orchestration_state.feedback_by_evaluator and state.orchestration_state.feedback_by_evaluator.user_knowledge_retrieval_feedback:
+            user_knowledge_retrieval_feedback = "\n".join(state.orchestration_state.feedback_by_evaluator.user_knowledge_retrieval_feedback)
+        else:
+            user_knowledge_retrieval_feedback = ""
+            
+        if state.orchestration_state and state.orchestration_state.feedback_by_evaluator and state.orchestration_state.feedback_by_evaluator.message_retrieval_feedback:
+            message_retrieval_feedback = "\n".join(state.orchestration_state.feedback_by_evaluator.message_retrieval_feedback)
+        else:
+            message_retrieval_feedback = ""
+
         res = chain.invoke({
             "available_tools": available_tools,
             "user_query": state.query,
@@ -87,7 +98,41 @@ class CortexMainModel:
             "stm_preferences": state.short_term_memory.session_preferences if state.short_term_memory else {},
             "user_mood": state.query_emotion,
             "user_time": state.query_time,
-            "user_emotional_profile": state.emotional_profile.model_dump_json() if state.emotional_profile else None
+            "user_emotional_profile": state.emotional_profile.model_dump_json() if state.emotional_profile else None,
+            "user_knowledge_retrieval_feedback": user_knowledge_retrieval_feedback,
+            "message_retrieval_feedback": message_retrieval_feedback,
         })
         self.logger.info("Orchestration plan generated: %s", res)
+        return res
+    
+    def evaluate_orchestration_plan(self, state: ConversationState):
+        formatted_prompt, parser = get_main_client_prompts(
+            type="plan_evaluation",
+        )
+        chain = formatted_prompt | self.model | parser
+        if state.knowledge_base:
+            retrieved_user_knowledge = [item.model_dump() for item in state.knowledge_base]
+        else:
+            retrieved_user_knowledge = None
+        
+        if state.message_history and state.message_history.root:
+            retrieved_messages = [msg.model_dump() for msg in state.message_history.root]
+        else:
+            retrieved_messages = None
+            
+        if state.orchestration_state and state.orchestration_state.feedback_by_evaluator:
+            feedback_by_evaluator = state.orchestration_state.feedback_by_evaluator.model_dump()
+        else:
+            feedback_by_evaluator = None
+
+        res = chain.invoke({
+            "user_query": state.query,
+            "orchestration_plan": state.orchestration_state.model_dump_json() if state.orchestration_state else None,
+            "retrieved_user_knowledge": json.dumps(retrieved_user_knowledge) if retrieved_user_knowledge else None,
+            "retrieved_messages": json.dumps(retrieved_messages) if retrieved_messages else None,
+            "previous_feedback": json.dumps(feedback_by_evaluator) if feedback_by_evaluator else None,
+            "user_mood": state.query_emotion,
+            "user_emotional_profile": state.emotional_profile.model_dump_json() if state.emotional_profile else None,
+        })
+        self.logger.info("Plan evaluation result: %s", res)
         return res

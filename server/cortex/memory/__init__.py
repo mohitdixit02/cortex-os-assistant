@@ -1,4 +1,12 @@
-from cortex.graph.state import ConversationState, EmotionalProfile, UserKnowledge, UserSTM, MessageHistory
+from cortex.graph.state import (
+    ConversationState,
+    EmotionalProfile,
+    UserKnowledge,
+    UserSTM,
+    MessageHistory,
+    MessageState,
+    MessageStateList,
+)
 from cortex.memory.model import MemoryModel
 from cortex.memory.embedding import EmbeddingModel
 from cortex.memory.saver import MemorySaver
@@ -228,28 +236,37 @@ class MemoryClient:
         """
         Fetch relevant Long Term Memory (LTM) based on the historical interactions and context. \n
         """
-        
-        #/pending/ Have to make sure the use of Category in the concept
         user_id = state.user_id
         query_embedding = self.embd_model.generate_embeddings(state.query)
-        with Session(self.engine) as session:
-            res = get_similar(
-                session=session,
-                model=UserKnowledgeBase,
-                query_embedding=query_embedding,
-                top_k=5,
-                user_id=user_id
-            )
-        state.knowledge_base = [
+        if state.orchestration_state and state.orchestration_state.user_knowledge_retrieval_state and state.orchestration_state.user_knowledge_retrieval_state.selected_categories:
+            categories = state.orchestration_state.user_knowledge_retrieval_state.selected_categories
+        else:
+            categories = []
+        
+        knowledge_base = []
+        for category in categories:            
+            with Session(self.engine) as session:
+                res = get_similar(
+                    session=session,
+                    model=UserKnowledgeBase,
+                    query_embedding=query_embedding,
+                    top_k=5,
+                    user_id=user_id,
+                    category=category
+                )
+            knowledge_base.extend(res)
+        
+        knowledge_base = [
             UserKnowledge(
                 category=item.category,
                 strictness=item.strictness,
                 content=item.content,
                 score=score
-            ) for item, score in res
-        ] if res else None
+            ) for item, score in knowledge_base
+        ] if knowledge_base else None
+
         return {
-            "knowledge_base": state.knowledge_base,
+            "knowledge_base": knowledge_base,
         }
     
     def fetch_relevant_message_history(
@@ -261,25 +278,51 @@ class MemoryClient:
         """
         user_id = state.user_id
         session_id = state.session_id
-        query_embedding = self.embd_model.generate_embeddings(state.query)
+        if state.orchestration_state and state.orchestration_state.message_retrieval_state and state.orchestration_state.message_retrieval_state.referred_message_keywords:
+            keywords = state.orchestration_state.message_retrieval_state.referred_message_keywords
+        else:
+            keywords = []
+
+        keyword_text = keywords if isinstance(keywords, str) else " ".join(keywords)
+        keyword_embedding = self.embd_model.generate_embeddings(keyword_text)
+        messages = []
         with Session(self.engine) as session:
             res = get_similar(
                 session=session,
                 model=Message,
-                query_embedding=query_embedding,
+                query_embedding=keyword_embedding,
                 top_k=5,
                 user_id=user_id,
                 session_id=session_id
             )
-        res = [{
-                "role": item.role,
-                "content": item.content,
-                "timestamp": item.timestamp
-            } for item, score in res
-        ] if res else None
-        state.message_history = MessageHistory(messages=res) if res else None
+            
+        
+        # rows = session.exec(statement).all()
+        # return [(row[0], float(row[1])) for row in rows]
+                # res = [{
+                #         "role": item.role,
+                #         "content": item.content,
+                #         "timestamp": item.timestamp
+                #     } for item, score in res
+                # ] if res else None
+            messages.extend(res)
+
+        message_states = [
+            MessageState(
+                message_id=str(item.message_id),
+                session_id=str(item.session_id),
+                user_id=str(item.user_id),
+                content=item.content,
+                role=item.role,
+                ai_client=item.ai_client,
+            )
+            for item, _score in messages
+        ] if messages else None
+
+        message_history = MessageStateList(root=message_states) if message_states else None
+
         return {
-            "message_history": state.message_history,
+            "message_history": message_history,
         }
     
 __all__ = [
