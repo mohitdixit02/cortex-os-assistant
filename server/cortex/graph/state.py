@@ -76,14 +76,14 @@ class MemoryUserKnowledgeList(RootModel[list[MemoryUserKnowledge]]):
 """
     Orchestration State Models
 """
-class UserKnowledgeRetrievalState(BaseModel):
-    """Represents the state of user knowledge retrieval process  decided by the Orchestartor based on the user query and context."""
-    selected_categories: Annotated[list[TraitCategory], Field(description="List of categories for which to retrieve knowledge")]
+# class UserKnowledgeRetrievalState(BaseModel):
+#     """Represents the state of user knowledge retrieval process  decided by the Orchestartor based on the user query and context."""
+#     selected_categories: Annotated[list[TraitCategory], Field(description="List of categories for which to retrieve knowledge")]
 
-class MessageRetrievalState(BaseModel):
-    """Represents the state of message retrieval process decided by the Orchestartor based on the user query and context."""
-    is_referred: Annotated[bool, Field(description="Whether the user query is referring to any past message in the conversation or not")]
-    referred_message_keywords: Annotated[Optional[str], Field(description="Keywords from the referred message")] = None
+# class MessageRetrievalState(BaseModel):
+#     """Represents the state of message retrieval process decided by the Orchestartor based on the user query and context."""
+#     is_referred: Annotated[bool, Field(description="Whether the user query is referring to any past message in the conversation or not")]
+#     referred_message_keywords: Annotated[Optional[str], Field(description="Keywords from the referred message")] = None
 
 class CortexTool(BaseModel):
     """Represents a tool that can be used by the Cortex Main Client to process user queries and generate responses."""
@@ -93,10 +93,10 @@ class CortexTool(BaseModel):
     tool_input_format: Optional[dict[str, Any]] = None
     tool_output_format: Optional[dict[str, Any]] = None
 
-class ToolSelectionState(BaseModel):
-    """Represents the state of tool selection process decided by the Orchestartor based on the user query and context."""
-    is_tool_required: Annotated[bool, Field(description="Whether any tool is required to process the user query or not")]
-    selected_tools: Annotated[Optional[Dict[str, str]], Field(description="Dict of selected tool Id as keys and one line reason of why it is required as values")] = None
+# class ToolSelectionState(BaseModel):
+#     """Represents the state of tool selection process decided by the Orchestartor based on the user query and context."""
+#     is_tool_required: Annotated[bool, Field(description="Whether any tool is required to process the user query or not")]
+#     selected_tools: Annotated[Optional[Dict[str, str]], Field(description="Dict of selected tool Id as keys and one line reason of why it is required as values")] = None
 
 class PlanEvaluationState(BaseModel):
     """Represents the state of Plan evaluation done by Evaluator over Orchestrator's plan"""
@@ -113,10 +113,15 @@ class OrchestrationState(BaseModel):
     - Message retrieval state
     - Tool selection state
     """
-    user_knowledge_retrieval_state: Optional[UserKnowledgeRetrievalState] = None
-    message_retrieval_state: Optional[MessageRetrievalState] = None
-    tool_selection_state: Optional[ToolSelectionState] = None
-    feedback_by_evaluator: Optional[PlanEvaluationState] = None
+    # user_knowledge_retrieval_state: Optional[UserKnowledgeRetrievalState] = None
+    # message_retrieval_state: Optional[MessageRetrievalState] = None
+    # tool_selection_state: Optional[ToolSelectionState] = None
+    # feedback_by_evaluator: Optional[PlanEvaluationState] = None
+    user_knowledge_retrieval_keywords: Annotated[str, Field(description="String of keywords relevant enough to retrieve user knowledge base for the current query")] = ""
+    is_message_referred: Annotated[bool, Field(description="Whether the user query is referring to any past message in the conversation or not")]
+    referred_message_keywords: Annotated[Optional[str], Field(description="Keywords from the referred message")] = None
+    is_tool_required: Annotated[bool, Field(description="Whether any tool is required to process the user query or not")]
+    selected_tools: Annotated[Optional[Dict[str, str]], Field(description="Dict of selected tool Id as keys and one line reason of why it is required as values")] = None
     
 """
     Main Conversation State Model
@@ -138,4 +143,5 @@ class ConversationState(BaseModel):
     knowledge_base: Optional[list[UserKnowledge]] = None
     message_history: Optional[MessageStateList] = None
     orchestration_state: Optional[OrchestrationState] = None
+    plan_feedback: Optional[PlanEvaluationState] = None
     final_response: Optional[str] = None

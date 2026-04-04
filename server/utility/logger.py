@@ -27,6 +27,7 @@ class ColoredFormatter(logging.Formatter):
 def get_logger(name):
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
+    logger.propagate = False
     
     # Avoid adding multiple handlers if called twice
     if not logger.handlers:

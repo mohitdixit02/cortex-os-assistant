@@ -103,9 +103,9 @@ class MainClient:
             # Orchestrator code
             state = self.initialize_conversation_state(taskItem)
             res = main_workflow.invoke(state)
-            print("\n\n***** Orchestration Workflow Result *****\n\n")
-            pprint("Workflow Result: %s", res)
-            print("\n\n\n\n")
+            # print("\n\n***** Orchestration Workflow Result *****\n\n")
+            # pprint("Workflow Result: %s", res)
+            # print("\n\n\n\n")
             
             taskItem.result = {
                 "response_type": "text_stream",

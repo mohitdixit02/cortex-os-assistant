@@ -81,13 +81,13 @@ class CortexMainModel:
         chain = formatted_prompt | self.model | parser
         available_tools = "".join([f"{tool.tool_name}: {tool.tool_description}" for tool in AVAILABLE_TOOLS])
         
-        if state.orchestration_state and state.orchestration_state.feedback_by_evaluator and state.orchestration_state.feedback_by_evaluator.user_knowledge_retrieval_feedback:
-            user_knowledge_retrieval_feedback = "\n".join(state.orchestration_state.feedback_by_evaluator.user_knowledge_retrieval_feedback)
+        if state.plan_feedback and state.plan_feedback.user_knowledge_retrieval_feedback:
+            user_knowledge_retrieval_feedback = "\n".join(state.plan_feedback.user_knowledge_retrieval_feedback)
         else:
             user_knowledge_retrieval_feedback = ""
             
-        if state.orchestration_state and state.orchestration_state.feedback_by_evaluator and state.orchestration_state.feedback_by_evaluator.message_retrieval_feedback:
-            message_retrieval_feedback = "\n".join(state.orchestration_state.feedback_by_evaluator.message_retrieval_feedback)
+        if state.plan_feedback and state.plan_feedback.message_retrieval_feedback:
+            message_retrieval_feedback = "\n".join(state.plan_feedback.message_retrieval_feedback)
         else:
             message_retrieval_feedback = ""
 
@@ -102,7 +102,6 @@ class CortexMainModel:
             "user_knowledge_retrieval_feedback": user_knowledge_retrieval_feedback,
             "message_retrieval_feedback": message_retrieval_feedback,
         })
-        self.logger.info("Orchestration plan generated: %s", res)
         return res
     
     def evaluate_orchestration_plan(self, state: ConversationState):
@@ -120,8 +119,8 @@ class CortexMainModel:
         else:
             retrieved_messages = None
             
-        if state.orchestration_state and state.orchestration_state.feedback_by_evaluator:
-            feedback_by_evaluator = state.orchestration_state.feedback_by_evaluator.model_dump()
+        if state.plan_feedback:
+            feedback_by_evaluator = state.plan_feedback.model_dump()
         else:
             feedback_by_evaluator = None
 
@@ -134,5 +133,4 @@ class CortexMainModel:
             "user_mood": state.query_emotion,
             "user_emotional_profile": state.emotional_profile.model_dump_json() if state.emotional_profile else None,
         })
-        self.logger.info("Plan evaluation result: %s", res)
         return res

@@ -211,7 +211,7 @@ class MemoryClient:
             res = get_one(
                 session=session,
                 model=UserEmotionalProfile,
-                user_id=state.user_id,
+                user_id=user_id,
                 session_id=session_id,
                 mood_type=mood,
                 time_behavior=time_behavior
@@ -238,8 +238,8 @@ class MemoryClient:
         """
         user_id = state.user_id
         query_embedding = self.embd_model.generate_embeddings(state.query)
-        if state.orchestration_state and state.orchestration_state.user_knowledge_retrieval_state and state.orchestration_state.user_knowledge_retrieval_state.selected_categories:
-            categories = state.orchestration_state.user_knowledge_retrieval_state.selected_categories
+        if state.orchestration_state and state.orchestration_state.user_knowledge_retrieval_keywords:
+            categories = state.orchestration_state.user_knowledge_retrieval_keywords.split()
         else:
             categories = []
         
@@ -278,8 +278,8 @@ class MemoryClient:
         """
         user_id = state.user_id
         session_id = state.session_id
-        if state.orchestration_state and state.orchestration_state.message_retrieval_state and state.orchestration_state.message_retrieval_state.referred_message_keywords:
-            keywords = state.orchestration_state.message_retrieval_state.referred_message_keywords
+        if state.orchestration_state and state.orchestration_state.referred_message_keywords:
+            keywords = state.orchestration_state.referred_message_keywords.split()
         else:
             keywords = []
 
@@ -295,16 +295,6 @@ class MemoryClient:
                 user_id=user_id,
                 session_id=session_id
             )
-            
-        
-        # rows = session.exec(statement).all()
-        # return [(row[0], float(row[1])) for row in rows]
-                # res = [{
-                #         "role": item.role,
-                #         "content": item.content,
-                #         "timestamp": item.timestamp
-                #     } for item, score in res
-                # ] if res else None
             messages.extend(res)
 
         message_states = [

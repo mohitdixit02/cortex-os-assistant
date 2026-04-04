@@ -63,7 +63,7 @@ User Previous Emotional Profile: {user_emotional_profile}
 
 # Response
 Follow the below format strictly and only respond with the format mentioned without any additional text or explanation. \n
-1. For user_knowledge_retrieval_state, only provide the selected categories.
+1. For user_knowledge_retrieval_state, only provide the selected categories in the form of string separated by space, for example "LIKE DISLIKE FACT".
 2. For message_retrieval_state, If the user is referring to any past message, then respond with is_referred as true and provide the keywords for message retrieval. If not, then respond with is_referred as false and keep the keywords field empty or null. \n
 3. For tool_selection_state, If any tool is required, then respond with is_tool_required as true and provide the Dictinorat of selected tools. If not, then respond with is_tool_required as false and keep the selected_tools field empty or null. \n
 {format_instructions}

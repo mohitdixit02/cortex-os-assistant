@@ -45,7 +45,7 @@ main_graph.add_edge(START, "fetch_emotional_profile")
 main_graph.add_edge("fetch_stm", "plan_main_orchestration")
 main_graph.add_edge("fetch_emotional_profile", "plan_main_orchestration")
 main_graph.add_edge("plan_main_orchestration", "fetch_user_knowledge_base")
-main_graph.add_edge("plan_main_orchestration", "fetch_message_history")
+main_graph.add_conditional_edges("plan_main_orchestration", orchestrator.route_condition_fetch_messages)
 main_graph.add_edge("fetch_user_knowledge_base", "plan_evaluation")
 main_graph.add_edge("fetch_message_history", "plan_evaluation")
 main_graph.add_conditional_edges("plan_evaluation", orchestrator.route_condition_orchestration_evaluation)
@@ -69,8 +69,3 @@ __all__ = [
     "memory_client",
 ]
 
-main_graph.add_edge("build_memory_workflow", "build_stm")
-
-def node11(state):
-    pass
-main_graph.add_edge("plan_evaluation", "build_memory_workflow")
