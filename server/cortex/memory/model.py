@@ -2,7 +2,7 @@ from langchain_huggingface import HuggingFaceEndpointEmbeddings, ChatHuggingFace
 from cortex.memory.prompts import get_memory_client_prompts
 from utility.huggingface.config import models
 from utility.config import env
-from cortex.graph.state import ConversationState, EmotionalProfile, UserSTM, MemoryEmotionalProfile, UserKnowledge, MemoryUserKnowledgeList
+from cortex.graph.state import ConversationState, UserSTM, MemoryEmotionalProfile
 class MemoryModel:
     def __init__(self):
         model_config = models.get("main", {})
@@ -86,15 +86,7 @@ class MemoryModel:
             "user_time_of_day": time_of_day,
             "previous_emotional_profile": prev_emotional_profile.model_dump_json() if prev_emotional_profile else ""
         })
-        state.emotional_profile = EmotionalProfile(
-            mood_type=user_emotion,
-            time_behavior=time_of_day,
-            emotional_level=res.emotional_level,
-            logical_level=res.logical_level,
-            social_level=res.social_level,
-            context_summary=res.context_summary
-        )
-        return state.emotional_profile
+        return res
     
     def build_user_knowledge_base(self, state: ConversationState):
         """
@@ -114,11 +106,4 @@ class MemoryModel:
             "session_preferences": prev_stm.session_preferences if prev_stm else {},
             "user_emotion": user_emotion
         })
-        state.knowledge_base = [
-            UserKnowledge(
-                category=item.category,
-                strictness=item.strictness,
-                content=item.content,
-            ) for item in res.root
-        ] if res and res.root else None
-        return state.knowledge_base
+        return res

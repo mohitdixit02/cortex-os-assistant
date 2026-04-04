@@ -81,13 +81,14 @@ class CortexMainModel:
         chain = formatted_prompt | self.model | parser
         available_tools = "".join([f"{tool.tool_name}: {tool.tool_description}" for tool in AVAILABLE_TOOLS])
         
-        if state.plan_feedback and state.plan_feedback.user_knowledge_retrieval_feedback:
-            user_knowledge_retrieval_feedback = "\n".join(state.plan_feedback.user_knowledge_retrieval_feedback)
+        feedback = state.plan_feedback
+        if feedback and feedback.user_knowledge_retrieval_feedback:
+            user_knowledge_retrieval_feedback = "\n".join(feedback.user_knowledge_retrieval_feedback)
         else:
             user_knowledge_retrieval_feedback = ""
             
-        if state.plan_feedback and state.plan_feedback.message_retrieval_feedback:
-            message_retrieval_feedback = "\n".join(state.plan_feedback.message_retrieval_feedback)
+        if feedback and feedback.message_retrieval_feedback:
+            message_retrieval_feedback = "\n".join(feedback.message_retrieval_feedback)
         else:
             message_retrieval_feedback = ""
 
@@ -118,9 +119,10 @@ class CortexMainModel:
             retrieved_messages = [msg.model_dump() for msg in state.message_history.root]
         else:
             retrieved_messages = None
-            
-        if state.plan_feedback:
-            feedback_by_evaluator = state.plan_feedback.model_dump()
+        
+        feedback = state.plan_feedback
+        if feedback:
+            feedback_by_evaluator = feedback.model_dump()
         else:
             feedback_by_evaluator = None
 

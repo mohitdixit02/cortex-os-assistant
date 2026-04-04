@@ -52,9 +52,9 @@ You will be provided with following information:
 2. User's STM summary and session preferences - It will give you an idea about the user's current context, preferences, and emotional state. \n
 3. User current Mood (from the query) (can be happy, sad, angry, etc.) and Time of the day (Morning, Afternoon, Evening, etc.) - It will help you to understand the user's emotional state based on the time of day. \n
 4. User's previous emotional profile (if any else null) - For the above combination of mood and time of the day, it will give you an idea about:
-    a. Emotional Level (1-10) - Give you an idea about the intensity of their emotions at that point in time. \n
-    b. Logical Level (1-10) - Give you an idea about how logically the user is thinking and how much they are influenced by their emotions. \n
-    c. Social Level (1-10) - Give you an idea about how socially active the user is and how much they are influenced by their social interactions. \n
+    a. Emotional Level (1-10) - Intensity of user emotions at that point of time and how much they prefer emotional responses \n
+    b. Logical Level (1-10) - How logically the user thinks and prefers logical discussions. \n
+    c. Social Level (1-10) - How socially active the user is and how much they are influenced by their social interactions. Introvert, Ambivert or Extrovert\n
     d. Context Summary - The respective pattern, preferences and behavior summary of the user for that particular combination of mood and time of the day. \n
 
 # Task:

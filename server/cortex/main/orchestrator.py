@@ -71,11 +71,11 @@ class Orchestrator:
         **Returns**: \n
         - The next node or step in the workflow to route to based on the conditions evaluated from the orchestration state.
         """
-        if not state.orchestration_state or not state.plan_feedback:
+        feedback = state.plan_feedback
+        if not state.orchestration_state or not feedback:
             self.logger.info("No orchestration state or plan feedback found. Routing to default response generation.")
             return "build_memory_workflow"
 
-        feedback = state.plan_feedback
         if feedback.iteration_count >= 3:
             self.logger.info("Maximum iteration count reached for plan evaluation. Routing to default response generation.")
             return "build_memory_workflow"

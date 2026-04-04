@@ -17,7 +17,8 @@ from db.req import (
     get_one,
     get_similar,
     create_one,
-    create_many
+    create_many,
+    update_one
 )
 from db import (
     UserShortTermMemory,
@@ -28,6 +29,8 @@ from db import (
     RoleType,
     AIClientType
 )
+
+# /pending/ - Check Langsmith complete flow + res maker + alginer loop
 
 class MemoryClient:
     def __init__(self, engine: Engine):
@@ -79,8 +82,14 @@ class MemoryClient:
         Build the Emotional Profile based on the historical interactions and context. \n
         """
         state.query_time = self._get_time_behavior(state.query_timestamp)
-        emotional_profile = self.model.build_emotional_profile(
-            state=state
+        res = self.model.build_emotional_profile(state=state)
+        emotional_profile=EmotionalProfile(
+            mood_type=state.query_emotion,
+            time_behavior=state.query_time,
+            emotional_level=res.emotional_level,
+            logical_level=res.logical_level,
+            social_level=res.social_level,
+            context_summary=res.context_summary
         )
         self.logger.info(f"Built Emotional Profile: {emotional_profile}")
         return {
@@ -95,9 +104,14 @@ class MemoryClient:
         """
         Build the user's knowledge base based on the historical interactions and context. \n
         """
-        knowledge_base = self.model.build_user_knowledge_base(
-            state=state
-        )
+        res = self.model.build_user_knowledge_base(state=state)
+        knowledge_base = [
+            UserKnowledge(
+                category=item.category,
+                strictness=item.strictness,
+                content=item.content,
+            ) for item in res.root
+        ] if res and res.root else None
         self.logger.info(f"Built User Knowledge Base: {knowledge_base}")
         return {
             "knowledge_base": knowledge_base,
@@ -112,34 +126,77 @@ class MemoryClient:
         """
         with Session(self.engine) as session:
             if state.short_term_memory:
-                userSTM = UserShortTermMemory(
-                    user_id=state.user_id,
-                    session_id=state.session_id,
-                    stm_summary=state.short_term_memory.stm_summary,
-                    session_preferences=state.short_term_memory.session_preferences
-                )
-                create_one(
+                updated_user_stm = {}
+                if state.short_term_memory.session_preferences:
+                    updated_user_stm["session_preferences"] = state.short_term_memory.session_preferences
+                if state.short_term_memory.stm_summary:
+                    updated_user_stm["stm_summary"] = state.short_term_memory.stm_summary
+                db_obj = get_one(
                     session=session,
-                    obj_in=userSTM,
-                    commit=True
+                    model=UserShortTermMemory,
+                    user_id=state.user_id,
+                    session_id=state.session_id
                 )
+                if db_obj:
+                    update_one(
+                        session=session,
+                        db_obj=db_obj,
+                        obj_in=updated_user_stm,
+                        commit=True
+                    )
+                else:
+                    create_one(
+                        session=session,
+                        obj_in=UserShortTermMemory(
+                            user_id=state.user_id,
+                            session_id=state.session_id,
+                            stm_summary=state.short_term_memory.stm_summary or "",
+                            session_preferences=state.short_term_memory.session_preferences,
+                        ),
+                        commit=True,
+                    )
             if state.emotional_profile:
                 self.logger.info(f"Persisting Emotional Profile to DB: {state.emotional_profile}")
-                userEmotionalProfile = UserEmotionalProfile(
+                updated_emotional_profile = {}
+                if state.emotional_profile.context_summary:
+                    updated_emotional_profile["context_summary"] = state.emotional_profile.context_summary
+                if state.emotional_profile.emotional_level is not None:
+                    updated_emotional_profile["emotional_level"] = state.emotional_profile.emotional_level
+                if state.emotional_profile.logical_level is not None:
+                    updated_emotional_profile["logical_level"] = state.emotional_profile.logical_level
+                if state.emotional_profile.social_level is not None:
+                    updated_emotional_profile["social_level"] = state.emotional_profile.social_level
+
+                db_obj = get_one(
+                    session=session,
+                    model=UserEmotionalProfile,
                     user_id=state.user_id,
                     session_id=state.session_id,
                     mood_type=state.emotional_profile.mood_type,
-                    time_behavior=state.emotional_profile.time_behavior,
-                    emotional_level=state.emotional_profile.emotional_level,
-                    logical_level=state.emotional_profile.logical_level,
-                    social_level=state.emotional_profile.social_level,
-                    context_summary=state.emotional_profile.context_summary
+                    time_behavior=state.emotional_profile.time_behavior
                 )
-                create_one(
-                    session=session,
-                    obj_in=userEmotionalProfile,
-                    commit=True
-                )
+                if db_obj:
+                    update_one(
+                        session=session,
+                        db_obj=db_obj,
+                        obj_in=updated_emotional_profile,
+                        commit=True
+                    )
+                else:
+                    create_one(
+                        session=session,
+                        obj_in=UserEmotionalProfile(
+                            user_id=state.user_id,
+                            session_id=state.session_id,
+                            mood_type=state.emotional_profile.mood_type,
+                            time_behavior=state.emotional_profile.time_behavior,
+                            emotional_level=state.emotional_profile.emotional_level,
+                            logical_level=state.emotional_profile.logical_level,
+                            social_level=state.emotional_profile.social_level,
+                            context_summary=state.emotional_profile.context_summary,
+                        ),
+                        commit=True,
+                    )
             if state.knowledge_base:
                 user_knowledge_items = []
                 for item in state.knowledge_base:
@@ -282,6 +339,11 @@ class MemoryClient:
             keywords = state.orchestration_state.referred_message_keywords.split()
         else:
             keywords = []
+
+        if not keywords:
+            return {
+                "message_history": None,
+            }
 
         keyword_text = keywords if isinstance(keywords, str) else " ".join(keywords)
         keyword_embedding = self.embd_model.generate_embeddings(keyword_text)

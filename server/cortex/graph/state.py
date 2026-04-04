@@ -6,6 +6,10 @@ from datetime import datetime, timezone
 
 UTC_NOW = lambda: datetime.now(timezone.utc)
 
+def prefer_latest_non_none(current, incoming):
+    """Reducer for LangGraph concurrent updates: keep newest non-None value."""
+    return incoming if incoming is not None else current
+
 """
     Conversation State Models
 """                           
