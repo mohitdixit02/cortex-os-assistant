@@ -14,6 +14,8 @@ from utility.sensory.config import STT_CONFIG, TTS_CONFIG
 import re
 # keep listening and processing until the program is terminated
 
+# /pending/ - voice client not routing properly + fallback response starts at end + knowledge base saving fix
+
 class VoiceClient:
     """
         ### Cortex Voice Client \n
@@ -31,8 +33,8 @@ class VoiceClient:
     def __init__(self, audioBridge: AudioStreamBridge | None = None, streamEvent: StreamEvent | None = None):
         self.audioBridge = audioBridge
         self.streamEvent = streamEvent
-        # self.stt_client = STTClient()
-        # self.tts_client = TTSClient()
+        self.stt_client = STTClient()
+        self.tts_client = TTSClient()
         self.model = VoiceMainModel()
         self.emotion_model = EmotionDetectionModel()
         self._queue_cancel_event = asyncio.Event()
@@ -111,23 +113,34 @@ class VoiceClient:
         route_res = self.model.get_response_route(query)
         self.logger.info("Determined route type: %s", route_res.request_type)
         if route_res.request_type == "casual":
+            # immediate casual response is not saved in db yet - /pending/
             casual_response = self.model.stream_text_tokens(query)
             print("Is search query:", route_res.search_required)
             print("Casual response:", casual_response)
             tokens = re.split(r'(\s+)', casual_response)
         else:
             emotion = self.emotion_model.get_emotion(query)
-            task_item = await MainTaskQueue.add_task(
-                payload={"query": query},
-                task_name="audio_query",
-                metadata={
-                    "emotion": emotion,
-                    "user_id": "11111111-1111-1111-1111-111111111111",
-                    "session_id": "22222222-2222-2222-2222-222222222222",
-                }
-            )
-            await self._register_pending_task(task_item.task_id)
             fallback_response = self.model.stream_fallback_response(query)
+
+            async def _submit_main_task() -> None:
+                try:
+                    task_item = await MainTaskQueue.add_task(
+                        payload={
+                            "query": query,
+                            "emotion": emotion.get("label", "neutral")
+                        },
+                        task_name="audio_query",
+                        user_id="11111111-1111-1111-1111-111111111111",
+                        session_id="22222222-2222-2222-2222-222222222222",
+                        voice_client_response=fallback_response
+                    )
+                    await self._register_pending_task(task_item.task_id)
+                except Exception as task_exc:
+                    self.logger.exception("Failed to submit background main task: %s", task_exc)
+
+            if submit_task:
+                asyncio.create_task(_submit_main_task())
+
             print("Fallback response:", fallback_response)
             tokens = re.split(r'(\s+)', fallback_response)
 
@@ -173,11 +186,15 @@ class VoiceClient:
         self._queue_cancel_event = asyncio.Event()
                 
         cancel_event = self._queue_cancel_event
+        response_text = taskItem.result.get("response", "")
+        if not isinstance(response_text, str):
+            response_text = getattr(response_text, "response", str(response_text))
+        response_tokens = re.split(r'(\s+)', response_text)
 
         async def _generator():
             pending_text = ""
             async for token in iterate_tokens_async(
-                generator_callback=lambda: taskItem.result["response"],
+                generator_callback=lambda: response_tokens,
                 cancel_event=cancel_event,
             ):
                 if self.streamEvent and self.streamEvent.isUserSpeaking():

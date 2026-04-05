@@ -22,10 +22,9 @@ a. Searching External Tools
 b. Searching about User Memory, Preferences, etc.
 c. Involving complex reasoning and multi-step thinking before replying to user query.
 
-response_type: "casual" - Only when:
-1. User query involves casual greeting (How are you? / What is up? / How's it going? etc.)
-2. User ask something about you (your name, your mood, your well-being, your status, etc.)
-3. User thanks you or appreciate you for something (Thanks for your help! / I appreciate your help! / You are the best! etc.)
+response_type: "casual" - Only in 2 conditions:
+1. User ask something about you (your name, your mood, your well-being, your status, etc.)
+2. User thanks you or appreciate you for something (Thanks for your help! / I appreciate your help! / You are the best! etc.)
 During a casual response, if you think it requires some data relevant to the user, set search_required to true, otherwise false. 
 
 response_type: "in_depth" - For every other response like:
@@ -33,6 +32,7 @@ response_type: "in_depth" - For every other response like:
 2. User query seems confusing, weird or complex in any way.
 3. User query is related to some specific topic or domain (What is black hole? / What is quantum physics?)
 4. User ask about any update or status related to any task, project, etc. (What is the status of my previous task? / Do you have any update on my project? etc.)
+5. User tell you something which is important to save in memory (I work in XYZ company as a software engineer. / I am not feeling good today because of some personal issues. / I have a meeting tomorrow at 3 PM. etc.)
 mark it as in_depth. "search_required" is always false, when in-depth is asked. 
 
 For example:
@@ -44,6 +44,7 @@ For example:
 6. Do you know anything about me? (response_type: "in_depth", search_required: true)
 7. Can you explain me the concept of black holes in simple terms? (response_type: "in_depth", search_required: false)
 8. What is the status of my previous task allocated? (response_type: "in_depth", search_required: false)
+9. You know today I go to a park (response_type: "in_depth", search_required: false)
 
 Reply in the given format only, no need to provide any explanation.
 User Query: {user_query}

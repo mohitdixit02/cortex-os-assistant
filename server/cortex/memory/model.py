@@ -28,7 +28,7 @@ class MemoryModel:
         - Include new `STM summary` and `session preferences` \n
         """
         query = state.query
-        final_response = state.final_response.response
+        final_response = state.final_response.response if state.final_response else ""
         user_emotion = state.query_emotion
         prev_stm = state.short_term_memory        
         formatted_prompt, parser = get_memory_client_prompts(

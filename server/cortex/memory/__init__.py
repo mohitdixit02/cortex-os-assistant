@@ -52,6 +52,17 @@ class MemoryClient:
             return TimeOfDay.EVENING
         else:
             return TimeOfDay.NIGHT
+
+    def _extract_final_response_text(self, final_response) -> str:
+        """Normalize final response state/model/string into plain text."""
+        if final_response is None:
+            return ""
+        response_text = getattr(final_response, "response", None)
+        if isinstance(response_text, str):
+            return response_text
+        if isinstance(final_response, str):
+            return final_response
+        return str(final_response)
     
     # ******************** Build Memory State Functions ********************
     def build_stm(
@@ -61,7 +72,7 @@ class MemoryClient:
         """
         Build the Short Term Memory (STM) based on the recent interactions and context. \n
         """
-        if state.final_response is None or state.final_response.response is None:
+        if not self._extract_final_response_text(state.final_response):
             self.logger.error("Final response is None, STM will not be built without a valid final response.")
             raise ValueError("Final response is None, cannot build STM without a valid final response.")
         
@@ -215,11 +226,12 @@ class MemoryClient:
                     commit=True
                 )
             if state.final_response:
-                self.logger.info(f"Persisting Final Response to DB: {state.final_response}")
+                final_response_text = self._extract_final_response_text(state.final_response)
+                self.logger.info(f"Persisting Final Response to DB: {final_response_text}")
                 self.memory_saver.save_message(
                     session_id=state.session_id,
                     user_id=state.user_id,
-                    content=state.final_response,
+                    content=final_response_text,
                     role=RoleType.AI,
                     ai_client=AIClientType.CORTEX_MAIN_CLIENT
                 )

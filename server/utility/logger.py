@@ -8,8 +8,8 @@ class ColoredFormatter(logging.Formatter):
     COLORS = {
         "CORTEX_MAIN": Fore.CYAN,
         "CORTEX_VOICE": Fore.MAGENTA,
-        "SENSORY": Fore.GREEN,
-        "DB": Fore.YELLOW,
+        "SENSORY": Fore.YELLOW,
+        "DB": Fore.GREEN,
         "CORTEX_MEMORY": Fore.BLUE,
         "TASK_QUEUE": Fore.RED,
         "DEFAULT": Fore.WHITE,

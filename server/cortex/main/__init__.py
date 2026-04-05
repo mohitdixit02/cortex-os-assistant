@@ -19,6 +19,21 @@ class MainClient:
     
     def __init__(self):
         self.logger = get_logger("CORTEX_MAIN")
+
+    def _extract_final_response_text(self, final_response) -> str:
+        """Normalize final response state/model/string into plain text."""
+        if final_response is None:
+            return ""
+        if isinstance(final_response, dict):
+            response_text = final_response.get("response")
+            if isinstance(response_text, str):
+                return response_text
+        response_text = getattr(final_response, "response", None)
+        if isinstance(response_text, str):
+            return response_text
+        if isinstance(final_response, str):
+            return final_response
+        return str(final_response)
         
     def initialize_conversation_state(
         self,
@@ -103,16 +118,31 @@ class MainClient:
             # Orchestrator code
             state = self.initialize_conversation_state(taskItem)
             res = main_workflow.invoke(state)
-            # print("\n\n***** Orchestration Workflow Result *****\n\n")
-            # pprint("Workflow Result: %s", res)
-            # print("\n\n\n\n")
-            
-            taskItem.result = {
-                "response_type": "text_stream",
-                "response": "This is a dummy response for the query: {}".format(query)
-            }
-            taskItem.status = TaskStatus.COMPLETED
-            return taskItem
+
+            workflow_final_response = res.get("final_response") if isinstance(res, dict) else getattr(res, "final_response", None)
+            final_response_text = self._extract_final_response_text(workflow_final_response)
+
+            # Build memory as best-effort so response delivery is never blocked.
+            try:
+                build_memory_workflow.invoke(res)
+            except Exception as memory_exc:
+                self.logger.exception("Memory workflow failed after response generation: %s", memory_exc)
+
+            self.logger.info("Final response generated: %s", res)
+            self.logger.info("Response from main workflow >> %s", final_response_text if final_response_text else "No final response generated")
+            if final_response_text:
+                self.logger.info("Generated response: %s", final_response_text)
+                taskItem.result = {
+                    "response_type": "text_stream",
+                    "response": final_response_text,
+                }
+                taskItem.status = TaskStatus.COMPLETED
+                return taskItem
+            else:
+                self.logger.error("Failed to generate response for query: %s", query)
+                taskItem.status = TaskStatus.FAILED
+                taskItem.error = "Failed to generate response."
+                return taskItem
         except Exception as e:
             self.logger.exception("Error processing task: %s", e)
             taskItem.status = TaskStatus.FAILED
