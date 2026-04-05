@@ -3,6 +3,7 @@ from cortex.memory.prompts import get_memory_client_prompts
 from utility.huggingface.config import models
 from utility.config import env
 from cortex.graph.state import ConversationState, UserSTM, MemoryEmotionalProfile
+
 class MemoryModel:
     def __init__(self):
         model_config = models.get("main", {})
@@ -27,7 +28,7 @@ class MemoryModel:
         - Include new `STM summary` and `session preferences` \n
         """
         query = state.query
-        final_response = state.final_response
+        final_response = state.final_response.response
         user_emotion = state.query_emotion
         prev_stm = state.short_term_memory        
         formatted_prompt, parser = get_memory_client_prompts(

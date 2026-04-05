@@ -30,8 +30,6 @@ from db import (
     AIClientType
 )
 
-# /pending/ - Check Langsmith complete flow + res maker + alginer loop
-
 class MemoryClient:
     def __init__(self, engine: Engine):
         self.engine = engine
@@ -63,14 +61,15 @@ class MemoryClient:
         """
         Build the Short Term Memory (STM) based on the recent interactions and context. \n
         """
-        # query = "I like drinking Tea!"
-        state.final_response = "Oh, nice, I also enjoy a good cup of tea. Do you have a favorite type or flavor?"
+        if state.final_response is None or state.final_response.response is None:
+            self.logger.error("Final response is None, STM will not be built without a valid final response.")
+            raise ValueError("Final response is None, cannot build STM without a valid final response.")
+        
         short_term_memory = self.model.build_stm(
             state=state
         )
         self.logger.info(f"Built STM: {short_term_memory}")
         return {
-            "final_response": state.final_response,
             "short_term_memory": short_term_memory,
         }
     

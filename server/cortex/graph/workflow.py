@@ -34,11 +34,11 @@ main_graph = StateGraph(ConversationState)
 main_graph.add_node("fetch_stm", memory_client.fetch_relevant_stm)
 main_graph.add_node("fetch_emotional_profile", memory_client.fetch_emotional_profile)
 main_graph.add_node("plan_main_orchestration", orchestrator.build_main_orchestration_plan)
-main_graph.add_node("build_memory_workflow", build_memory_workflow)
 main_graph.add_node("fetch_user_knowledge_base", memory_client.fetch_relevant_knowledge_base)
 main_graph.add_node("fetch_message_history", memory_client.fetch_relevant_message_history)
 main_graph.add_node("plan_evaluation", orchestrator.evaluate_plan)
-# main_graph.add_node("pass_node", lambda state: state)
+main_graph.add_node("final_response_generation", orchestrator.generate_final_response)
+main_graph.add_node("final_response_alignment", orchestrator.align_final_response)
 
 main_graph.add_edge(START, "fetch_stm")
 main_graph.add_edge(START, "fetch_emotional_profile")
@@ -49,12 +49,15 @@ main_graph.add_edge("plan_main_orchestration", "fetch_message_history")
 main_graph.add_edge("fetch_user_knowledge_base", "plan_evaluation")
 main_graph.add_edge("fetch_message_history", "plan_evaluation")
 main_graph.add_conditional_edges("plan_evaluation", orchestrator.route_condition_orchestration_evaluation)
-
-# main_graph.add_edge(START, "fetch_user_knowledge_base")
-# main_graph.add_edge("fetch_stm", "pass_node")
-# main_graph.add_edge("fetch_emotional_profile", "pass_node")
-# main_graph.add_edge("fetch_user_knowledge_base", "pass_node")
-# main_graph.add_edge("pass_node", "build_memory_workflow")
+main_graph.add_edge("final_response_generation", "final_response_alignment")
+main_graph.add_conditional_edges(
+    "final_response_alignment",
+    orchestrator.route_condition_final_response_evaluation,
+    {
+        "final_response_generation": "final_response_generation",
+        "terminate": END,
+    },
+)
 
 main_workflow = main_graph.compile()
 

@@ -127,6 +127,16 @@ class OrchestrationState(BaseModel):
     is_tool_required: Annotated[bool, Field(description="Whether any tool is required to process the user query or not")]
     selected_tools: Annotated[Optional[Dict[str, str]], Field(description="Dict of selected tool Id as keys and one line reason of why it is required as values")] = None
     
+class FinalResponseGenerationState(BaseModel):
+    """Represents the state of final response generation done by Response Generator based on the orchestration plan and evaluation"""
+    response: Annotated[Optional[str], Field(description="The final response generated for the user query")] = None
+
+class FinalResponseFeedbackState(BaseModel):
+    """Represents the state of final response evaluation done by Evaluator based on user feedback"""
+    is_feedback_required: Annotated[bool, Field(description="Whether feedback is required for the current response or not")]
+    feedback: Annotated[Optional[list[str]], Field(description="Feedback for the response generator")] = None
+    iteration_count: Annotated[Optional[int], Field(description="Number of iterations or attempts made to generate the response")] = 0
+
 """
     Main Conversation State Model
 """
@@ -148,4 +158,5 @@ class ConversationState(BaseModel):
     message_history: Optional[MessageStateList] = None
     orchestration_state: Optional[OrchestrationState] = None
     plan_feedback: Optional[PlanEvaluationState] = None
-    final_response: Optional[str] = None
+    final_response: Optional[FinalResponseGenerationState] = None
+    final_response_feedback: Optional[FinalResponseFeedbackState] = None

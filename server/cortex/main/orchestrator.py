@@ -1,7 +1,6 @@
 from cortex.main.model import CortexMainModel
 from cortex.graph.state import ConversationState
 from utility.logger import get_logger
-from langgraph.graph import END
 from typing import Literal
 
 class Orchestrator:
@@ -63,7 +62,7 @@ class Orchestrator:
     def route_condition_orchestration_evaluation(
         self, 
         state: ConversationState
-        ) -> Literal["plan_main_orchestration", "build_memory_workflow"]:
+        ) -> Literal["plan_main_orchestration", "final_response_generation"]:
         """
         Route the orchestration flow based on the conditions defined in the orchestration state. \n
         **Input**: \n
@@ -74,18 +73,18 @@ class Orchestrator:
         feedback = state.plan_feedback
         if not state.orchestration_state or not feedback:
             self.logger.info("No orchestration state or plan feedback found. Routing to default response generation.")
-            return "build_memory_workflow"
+            return "final_response_generation"
 
         if feedback.iteration_count >= 3:
             self.logger.info("Maximum iteration count reached for plan evaluation. Routing to default response generation.")
-            return "build_memory_workflow"
+            return "final_response_generation"
         
         if feedback.is_feedback_required:
             self.logger.info("Feedback is required for the current plan. Routing to plan modification.")
             return "plan_main_orchestration"
         else:
             self.logger.info("No feedback required for the current plan. Routing to response generation.")
-            return "build_memory_workflow"
+            return "final_response_generation"
         
     def route_condition_fetch_messages(
         self,
@@ -104,3 +103,70 @@ class Orchestrator:
         else:
             self.logger.info("Message retrieval is not required for the current query. Routing to plan evaluation.")
             return "plan_evaluation"
+        
+    def generate_final_response(self, state: ConversationState):
+        """
+        Generate the final response for the user query based on the current conversation state and orchestration plan. \n
+        **Input**: \n
+        - `state`: The current conversation state containing all relevant information and the orchestration plan. \n
+        **Returns**: \n
+        - The final response generated for the user query that will be sent back to the user.
+        """
+        res = self.model.generate_final_response(state)
+        self.logger.info("Final response generated: %s", res)
+        state.final_response = res
+        return {
+            "final_response": state.final_response,
+        }
+        
+    def align_final_response(self, state: ConversationState):
+        """
+        Align the final response with the user's emotional profile and preferences. \n
+        **Input**: \n
+        - `state`: The current conversation state containing the generated final response and the user's emotional profile and preferences. \n
+        **Returns**: \n
+        - The aligned final response that takes into account the user's emotional state and preferences for a more personalized response.
+        """
+        res = self.model.evaluate_final_response(state)
+        self.logger.info("Final response aligned: %s", res)
+        
+        previous_feedback = state.final_response_feedback
+        previous_iteration = previous_feedback.iteration_count if previous_feedback else 0
+
+        merged_final_response_feedback = []
+        if previous_feedback and previous_feedback.feedback:
+            merged_final_response_feedback.extend(previous_feedback.feedback)
+        if res.feedback:
+            merged_final_response_feedback.extend(res.feedback)
+            
+        state.final_response_feedback = res.model_copy(update={
+            "feedback": merged_final_response_feedback or None, 
+            "iteration_count": previous_iteration + 1,
+        })
+        
+        return {
+            "final_response_feedback": state.final_response_feedback,
+        }
+    
+    def route_condition_final_response_evaluation(
+        self,
+        state: ConversationState
+    ) -> Literal["final_response_generation", "terminate"]:
+        """
+        Route the workflow based on whether final response evaluation is required or not. \n
+        **Input**: \n
+        - `state`: The current conversation state containing the final response feedback with evaluation condition. \n
+        **Returns**: \n
+        - The next node or step in the workflow to route to based on whether final response evaluation is required or not.
+        """
+        feedback = state.final_response_feedback
+        if feedback.iteration_count >= 3:
+            self.logger.info("Maximum iteration count reached for final response evaluation. Routing to workflow termination.")
+            return "terminate"
+        
+        if feedback and feedback.is_feedback_required:
+            self.logger.info("Response re-building is required. Routing to final_response_generation.")
+            return "final_response_generation"
+        else:
+            self.logger.info("Final response evaluation is not required. Routing to workflow termination.")
+            return "terminate"

@@ -136,3 +136,73 @@ class CortexMainModel:
             "user_emotional_profile": state.emotional_profile.model_dump_json() if state.emotional_profile else None,
         })
         return res
+    
+    def generate_final_response(self, state: ConversationState):
+        formatted_prompt, parser = get_main_client_prompts(
+            type="final_response_generation",
+        )
+        if state.knowledge_base:
+            retrieved_user_knowledge = [item.model_dump() for item in state.knowledge_base]
+        else:
+            retrieved_user_knowledge = None
+        
+        if state.message_history and state.message_history.root:
+            retrieved_messages = [msg.model_dump() for msg in state.message_history.root]
+        else:
+            retrieved_messages = None
+            
+        feedback = state.final_response_feedback
+        if feedback:
+            feedback_by_evaluator = feedback.model_dump()
+        else:
+            feedback_by_evaluator = None
+        
+        chain = formatted_prompt | self.model | parser
+        res = chain.invoke({
+            "user_query": state.query,
+            "stm_summary": state.short_term_memory.stm_summary if state.short_term_memory else "",
+            "stm_preferences": state.short_term_memory.session_preferences if state.short_term_memory else {},
+            "user_mood": state.query_emotion,
+            "user_time": state.query_time,
+            "user_emotional_profile": state.emotional_profile.model_dump_json() if state.emotional_profile else None,
+            "retrieved_user_knowledge": json.dumps(retrieved_user_knowledge) if retrieved_user_knowledge else None,
+            "retrieved_messages": json.dumps(retrieved_messages) if retrieved_messages else None,
+            "previous_feedback": json.dumps(feedback_by_evaluator) if feedback_by_evaluator else None,
+        })
+        return res
+    
+    def evaluate_final_response(self, state: ConversationState):
+        formatted_prompt, parser = get_main_client_prompts(
+            type="final_response_evaluation",
+        )
+        chain = formatted_prompt | self.model | parser
+        
+        if state.knowledge_base:
+            retrieved_user_knowledge = [item.model_dump() for item in state.knowledge_base]
+        else:
+            retrieved_user_knowledge = None
+        
+        if state.message_history and state.message_history.root:
+            retrieved_messages = [msg.model_dump() for msg in state.message_history.root]
+        else:
+            retrieved_messages = None
+            
+        feedback = state.final_response_feedback
+        if feedback:
+            feedback_by_evaluator = feedback.model_dump()
+        else:
+            feedback_by_evaluator = None
+        
+        res = chain.invoke({
+            "user_query": state.query,
+            "final_response": state.final_response.response if state.final_response else None,
+            "stm_summary": state.short_term_memory.stm_summary if state.short_term_memory else "",
+            "stm_preferences": state.short_term_memory.session_preferences if state.short_term_memory else {},
+            "user_mood": state.query_emotion,
+            "user_time": state.query_time,
+            "user_emotional_profile": state.emotional_profile.model_dump_json() if state.emotional_profile else None,
+            "retrieved_user_knowledge": json.dumps(retrieved_user_knowledge) if retrieved_user_knowledge else None,
+            "retrieved_messages": json.dumps(retrieved_messages) if retrieved_messages else None,
+            "previous_feedback": json.dumps(feedback_by_evaluator) if feedback_by_evaluator else None,
+        })
+        return res
