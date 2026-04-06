@@ -30,6 +30,9 @@ from db import (
     AIClientType
 )
 
+# remove the previous feedbacks and response to avoid noise
+# Recheck knowledge base retrival - update fetch effeciency and relevance imporvement
+
 class MemoryClient:
     def __init__(self, engine: Engine):
         self.engine = engine

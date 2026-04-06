@@ -49,7 +49,7 @@ You can only select from above categories and provide in the form of string sepa
 
 3. is_tool_required and selected_tools - \n
     a. You will be provided with a list of available tools and their functionalities, you have to decide whether any of these tools are required to process the user query or not.
-    b. If yes, then respond with is_tool_required as true and provide the Dictinorat of selected tools. \n
+    b. If yes, then respond with is_tool_required as true and provide the Dictionary of selected tools. \n
     c. If not, then respond with is_tool_required as false and keep the selected_tools field empty or null. \n
 
 # Available Tools: 

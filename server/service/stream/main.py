@@ -1,6 +1,7 @@
 import asyncio
 import io
 import wave
+import threading
 
 from fastapi import WebSocket
 from cortex.voice import VoiceClient
@@ -25,7 +26,29 @@ class StreamClient:
         - The corresponding `StreamEvent object` for handling streaming events.
     """
     
-    _main_listener_task: asyncio.Task | None = None
+    _main_listener_thread: threading.Thread | None = None
+    _main_client: MainClient | None = None
+
+    @classmethod
+    def _ensure_main_listener_thread(cls) -> None:
+        """Start the MainClient queue listener in an isolated daemon thread."""
+        if cls._main_listener_thread and cls._main_listener_thread.is_alive():
+            return
+
+        cls._main_client = MainClient()
+
+        def _runner() -> None:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(cls._main_client.listen_task_queue())
+
+        cls._main_listener_thread = threading.Thread(
+            target=_runner,
+            name="cortex-main-listener",
+            daemon=True,
+        )
+        cls._main_listener_thread.start()
+        cls._main_client.logger.info("Started Cortex MainClient listener thread")
 
     def __init__(self, websocket: WebSocket, streamEvent: StreamEvent):
         self.streamEvent = streamEvent
@@ -33,10 +56,8 @@ class StreamClient:
         self.voiceClient = VoiceClient(audioBridge=self.audioBridge, streamEvent=streamEvent)
         self._auto_stream_task = asyncio.create_task(self.voiceClient.run_auto_task_stream())
 
-        # Global producer worker should run only once for the process.
-        if StreamClient._main_listener_task is None or StreamClient._main_listener_task.done():
-            self._main_client = MainClient()
-            StreamClient._main_listener_task = asyncio.create_task(self._main_client.listen_task_queue())
+        # Global consumer worker should run only once for the process.
+        StreamClient._ensure_main_listener_thread()
         
     async def stream_response(self, audio_bytes: bytes):
         """

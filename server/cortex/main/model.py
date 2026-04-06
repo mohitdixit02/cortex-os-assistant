@@ -79,7 +79,7 @@ class CortexMainModel:
             type="main_orchestration",
         )
         chain = formatted_prompt | self.model | parser
-        available_tools = "".join([f"{tool.tool_name}: {tool.tool_description}" for tool in AVAILABLE_TOOLS])
+        available_tools = "\n".join([f"{tool.tool_name}: {tool.tool_description}" for tool in AVAILABLE_TOOLS])
         
         feedback = state.plan_feedback
         if feedback and feedback.user_knowledge_retrieval_feedback:

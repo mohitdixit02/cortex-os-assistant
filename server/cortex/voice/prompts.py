@@ -9,44 +9,48 @@ class VoiceClientRouteQuery(BaseModel):
     search_required: Annotated[bool, Field(description="Whether the user query requires search or not")]
 
 VOICE_CLIENT_ROUTE_QUERY = """
-You are a powerful decision maker based on the user query. Based on the user query, you have to reply in the following format:
-```json
-{{
-    "response_type": "casual" / "in_depth",
-    "search_required": true or false,
-}}
-```
-Objective: To save time of replying if questions is very simple, but still maintain higher user experience by involving deep-thinking as much as possible.
-Deep-thinking involves:
-a. Searching External Tools
-b. Searching about User Memory, Preferences, etc.
-c. Involving complex reasoning and multi-step thinking before replying to user query.
+# Objective: \n
+You are a smart router who will route based on the user query and following instructions: \n
 
-response_type: "casual" - Only in 2 conditions:
-1. User ask something about you (your name, your mood, your well-being, your status, etc.)
-2. User thanks you or appreciate you for something (Thanks for your help! / I appreciate your help! / You are the best! etc.)
-During a casual response, if you think it requires some data relevant to the user, set search_required to true, otherwise false. 
+# Instructions \n
+1. User ask you something related to you (AI) only (your name, who are you?, what are you doing?) \n
+2. User thanks you or appreciate you for something (Thanks for your help! / I appreciate your help! / You are the best! etc.) \n
+In above two conditions, mark "response_type" as "casual". else mark it as "in_depth". \n
 
-response_type: "in_depth" - For every other response like:
-1. User ask you to do something (Can you help me with something? / Can you do something for me? / Can you explain something to me? etc.)
-2. User query seems confusing, weird or complex in any way.
-3. User query is related to some specific topic or domain (What is black hole? / What is quantum physics?)
-4. User ask about any update or status related to any task, project, etc. (What is the status of my previous task? / Do you have any update on my project? etc.)
-5. User tell you something which is important to save in memory (I work in XYZ company as a software engineer. / I am not feeling good today because of some personal issues. / I have a meeting tomorrow at 3 PM. etc.)
-mark it as in_depth. "search_required" is always false, when in-depth is asked. 
+Some Scenarios for in_depth response_type: \n
+1. User ask you to do something (Can you help me with something? / Can you do something for me? / Can you explain something to me? etc.) \n
+2. User query seems confusing, weird or complex in any way. \n
+3. User query is related to some specific topic or domain (What is black hole? / What is quantum physics?) \n
+4. User ask about any update or status related to any task, project, etc. (What is the status of my previous task? / Do you have any update on my project? etc.) \n
+5. User tell you something which is important to save in memory (I work in XYZ company as a software engineer. / I am not feeling good today because of some personal issues. / I have a meeting tomorrow at 3 PM. etc.) \n
+6. User tell you something about itself (I am a student. / I am interested in technology. / I like playing football. etc.) \n
+
+# Guidelines: \n
+1. Mark "search_required" always false. \n
+2. Follow above instructions strictly to determine the "response_type". \n
+3. If you are not sure about the response_type, mark it as "in_depth" to be on the safe side. \n
+4. Mark "response_type" as "casual" only when user ask you about yourself or appreciate you in any way. \n
 
 For example:
-1. How are you? (response_type: "casual", search_required: false)
-2. What is your name? (response_type: "casual", search_required: false)
-3. I think I am not in good mood today because of the weather. (response_type: "in_depth", search_required: false)
-4. Thanks for helping me out! (response_type: "casual", search_required: false)
-5. What is my name? (response_type: "casual", search_required: true)
-6. Do you know anything about me? (response_type: "in_depth", search_required: true)
-7. Can you explain me the concept of black holes in simple terms? (response_type: "in_depth", search_required: false)
-8. What is the status of my previous task allocated? (response_type: "in_depth", search_required: false)
-9. You know today I go to a park (response_type: "in_depth", search_required: false)
+1. How are you? (response_type: "casual", search_required: false) \n
+2. What's going on? (response_type: "casual", search_required: false) \n
+3. What is your name? (response_type: "casual", search_required: false) \n
+4. I think I am not in good mood today because of the weather. (response_type: "in_depth", search_required: false) \n
+5. Thanks for helping me out! (response_type: "casual", search_required: false) \n
+6. What is my name? (response_type: "in_depth", search_required: false) \n
+7. Do you know anything about me? (response_type: "in_depth", search_required: false) \n
+8. Can you explain me the concept of black holes in simple terms? (response_type: "in_depth", search_required: false) \n
+9. What is the status of my previous task allocated? (response_type: "in_depth", search_required: false) \n
+10. Do you know who I am? (response_type: "in_depth", search_required: false) \n
 
-Reply in the given format only, no need to provide any explanation.
+# Response Format: \n
+Reply in the given format only, no need to provide any explanation, chat message, function, etc.
+```json
+{{
+    "request_type": "casual" / "in_depth",
+    "search_required": false,
+}}
+```
 User Query: {user_query}
 format_instructions: {format_instructions}
 """

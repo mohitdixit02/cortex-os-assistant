@@ -29,6 +29,7 @@ Based on the above information, create
     b. It should contain info relevant to user only "user_preferences". \n
     c. Some of the examples for session preferences are: "user_likes", "user_dislikes", "user_emotions", etc. \n
     d. It must not have info regarding AI behaviour. \n
+    e. It must not have user query or AI responses. \n
 
 # Important Notes:
 1. Your response will be used to overwrite the existing stm_memory and session_preferences for the user, so make sure to include all relevant information in your summary. \n
@@ -73,7 +74,7 @@ From the Above information, you have to analayze the user behaviour in various f
 4. Based on the above analysis, build the updated emotional profile for the user for that particular combination of mood and time of the day. \n
 
 # Notes regarding Context Summary
-1. Context Summary must tell user preferences, habits, or factual information based on a given mood and time of the day.
+1. Context Summary must include only user preferences, behaviour or habits related information based on a given mood and time of the day.
 2. Don't mention value of emotional level, logical level, or social level in the context summary. \n
 3. Don't mention the user query, emotion, or time of the day in the context summary. \n
 4. Content should be in a way that it can help in generating better response in future given mood and time of the day. \n
