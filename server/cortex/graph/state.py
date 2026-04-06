@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, RootModel
 from typing import Any, Dict, Optional, Annotated
 from enum import Enum
-from db.enums import TimeOfDay, TraitCategory, PreferenceLevel, RoleType, AIClientType
+from db.enums import TimeOfDay, PreferenceLevel, RoleType, AIClientType
 from datetime import datetime, timezone
 
 UTC_NOW = lambda: datetime.now(timezone.utc)
@@ -24,7 +24,6 @@ class EmotionalProfile(BaseModel):
 
 class UserKnowledge(BaseModel):
     """Represents a piece of knowledge about the user that can be used to personalize responses."""
-    category: TraitCategory
     strictness: PreferenceLevel
     content: str
     score: Optional[float] = None
@@ -67,7 +66,6 @@ class MemoryEmotionalProfile(BaseModel):
 
 class MemoryUserKnowledge(BaseModel):
     """Represents a piece of user knowledge stored in memory for long-term personalization."""
-    category: Annotated[TraitCategory, Field(description="Category of the user knowledge")]
     strictness: Annotated[PreferenceLevel, Field(description="Strictness level of the user knowledge")] = None
     content: Annotated[str, Field(description="Detailed information about the user preference, habit, or fact that can be useful for response generation. Be specific and concise in describing it. If it's a fact, provide clear and relevant information about the user.")]
 

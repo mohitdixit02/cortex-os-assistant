@@ -13,7 +13,6 @@ from db.enums import (
     RoleType,
     TaskStatus,
     TimeOfDay,
-    TraitCategory,
 )
 
 
@@ -155,7 +154,6 @@ class UserKnowledgeBase(SQLModel, table=True):
     user_id: UUID = Field(
         sa_column=Column(PGUUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True)
     )
-    category: TraitCategory = Field(sa_column=Column(SAEnum(TraitCategory, name="trait_category"), nullable=False, index=True))
     strictness: Optional[PreferenceLevel] = Field(
         default=None,
         sa_column=Column(SAEnum(PreferenceLevel, name="preference_level"), nullable=True, index=True),

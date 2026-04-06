@@ -28,12 +28,6 @@ EXCEPTION
 END $$;
 
 DO $$ BEGIN
-    CREATE TYPE trait_category AS ENUM ('LIKE', 'DISLIKE', 'HABIT', 'FACT', 'STRICT_PREFERENCE');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
-
-DO $$ BEGIN
     CREATE TYPE task_status AS ENUM ('INITIALIZED', 'QUEUED', 'PROCESSING', 'COMPLETED', 'FAILED');
 EXCEPTION
     WHEN duplicate_object THEN null;
@@ -101,7 +95,6 @@ CREATE TABLE IF NOT EXISTS user_emotional_profiles (
 CREATE TABLE IF NOT EXISTS user_knowledge_base (
     trait_id UUID PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    category trait_category NOT NULL,
     strictness preference_level,
     content TEXT NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -147,7 +140,6 @@ CREATE INDEX IF NOT EXISTS ix_user_short_term_memory_session_id ON user_short_te
 CREATE INDEX IF NOT EXISTS ix_user_emotional_profiles_user_id ON user_emotional_profiles(user_id);
 CREATE INDEX IF NOT EXISTS ix_user_emotional_profiles_session_id ON user_emotional_profiles(session_id);
 CREATE INDEX IF NOT EXISTS ix_user_knowledge_base_user_id ON user_knowledge_base(user_id);
-CREATE INDEX IF NOT EXISTS ix_user_knowledge_base_category ON user_knowledge_base(category);
 CREATE INDEX IF NOT EXISTS ix_user_knowledge_base_strictness ON user_knowledge_base(strictness);
 CREATE INDEX IF NOT EXISTS ix_user_knowledge_base_is_active ON user_knowledge_base(is_active);
 CREATE INDEX IF NOT EXISTS ix_tools_tool_name ON tools(tool_name);

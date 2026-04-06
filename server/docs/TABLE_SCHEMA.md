@@ -5,7 +5,6 @@ RoleType: USER, AI
 AIClientType: VOICE_CLIENT, CORE_MAIN_CLIENT
 PreferenceLevel: MUST, SHOULD, CAN, CANNOT
 TimeOfDay: MORNING, AFTERNOON, EVENING, NIGHT
-TraitCategory: LIKE, DISLIKE, HABIT, FACT, STRICT_PREFERENCE
 MoodTrend: STABLE, INCREASING, DECREASING
 
 ### Users Table (Google OAuth)
@@ -62,7 +61,6 @@ created_at: Timestamp
 ### UserKnowledgeBase (LTM: Preferences & Traits)
 trait_id: UUID (PK)
 user_id: UUID (FK -> Users.user_id)
-category: Enum(TraitCategory)
 strictness: Enum(PreferenceLevel) (Nullable)
 content: Text — e.g., "Does not like being interrupted during work"
 is_active: Boolean (Default: True)

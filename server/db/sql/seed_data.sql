@@ -87,12 +87,11 @@ INSERT INTO user_emotional_profiles (
 ON CONFLICT (profile_id) DO NOTHING;
 
 INSERT INTO user_knowledge_base (
-    trait_id, user_id, category, strictness, content, is_active, embedding, created_at, updated_at
+    trait_id, user_id, strictness, content, is_active, embedding, created_at, updated_at
 ) VALUES
 (
     '66666666-6666-6666-6666-666666666661',
     '11111111-1111-1111-1111-111111111111',
-    'LIKE',
     'SHOULD',
     'Prefers morning reminders and clear timeline summaries.',
     TRUE,

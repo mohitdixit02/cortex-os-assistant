@@ -7,7 +7,6 @@ from .enums import (
     RoleType,
     TaskStatus,
     TimeOfDay,
-    TraitCategory,
 )
 from .models import (
     ChatSession,
@@ -27,7 +26,6 @@ __all__ = [
     "AIClientType",
     "PreferenceLevel",
     "TimeOfDay",
-    "TraitCategory",
     "TaskStatus",
     "User",
     "ChatSession",

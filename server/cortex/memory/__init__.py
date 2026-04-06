@@ -120,7 +120,6 @@ class MemoryClient:
         res = self.model.build_user_knowledge_base(state=state)
         knowledge_base = [
             UserKnowledge(
-                category=item.category,
                 strictness=item.strictness,
                 content=item.content,
             ) for item in res.root
@@ -216,7 +215,6 @@ class MemoryClient:
                     user_knowledge_items.append(
                         UserKnowledgeBase(
                             user_id=state.user_id,
-                            category=item.category,
                             strictness=item.strictness,
                             content=item.content,
                             is_active=True,
@@ -315,26 +313,26 @@ class MemoryClient:
             categories = []
         
         knowledge_base = []
-        for category in categories:            
-            with Session(self.engine) as session:
-                res = get_similar(
-                    session=session,
-                    model=UserKnowledgeBase,
-                    query_embedding=query_embedding,
-                    top_k=5,
-                    user_id=user_id,
-                    category=category
-                )
-            knowledge_base.extend(res)
+        # for category in categories:            
+        #     with Session(self.engine) as session:
+        #         res = get_similar(
+        #             session=session,
+        #             model=UserKnowledgeBase,
+        #             query_embedding=query_embedding,
+        #             top_k=5,
+        #             user_id=user_id,
+        #             category=category
+        #         )
+        #     knowledge_base.extend(res)
         
-        knowledge_base = [
-            UserKnowledge(
-                category=item.category,
-                strictness=item.strictness,
-                content=item.content,
-                score=score
-            ) for item, score in knowledge_base
-        ] if knowledge_base else None
+        # knowledge_base = [
+        #     UserKnowledge(
+        #         category=item.category,
+        #         strictness=item.strictness,
+        #         content=item.content,
+        #         score=score
+        #     ) for item, score in knowledge_base
+        # ] if knowledge_base else None
 
         return {
             "knowledge_base": knowledge_base,

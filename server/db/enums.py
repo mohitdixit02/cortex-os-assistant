@@ -20,13 +20,6 @@ class TimeOfDay(str, Enum):
     EVENING = "EVENING"
     NIGHT = "NIGHT"
 
-class TraitCategory(str, Enum):
-    LIKE = "LIKE"
-    DISLIKE = "DISLIKE"
-    HABIT = "HABIT"
-    FACT = "FACT"
-    STRICT_PREFERENCE = "STRICT_PREFERENCE"
-
 class TaskStatus(str, Enum):
     INITIALIZED = "INITIALIZED"
     QUEUED = "QUEUED"
