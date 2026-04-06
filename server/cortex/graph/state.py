@@ -76,6 +76,19 @@ class MemoryUserKnowledgeList(RootModel[list[MemoryUserKnowledge]]):
     """Root model for a list of long-term memory knowledge items."""
     pass
 
+class MemoryState(BaseModel):
+    """Represents the overall memory state for a user, including emotional profile and knowledge items."""
+    user_id: str
+    session_id: str
+    query: str
+    ai_response: str
+    query_emotion: Optional[str] = None
+    query_time: Optional[TimeOfDay] = None
+    short_term_memory: Optional[UserSTM] = None
+    emotional_profile: Optional[MemoryEmotionalProfile] = None
+    knowledge_items: Optional[MemoryUserKnowledgeList] = None
+    older_knowledge_base: Optional[list[UserKnowledge]] = None
+    
 
 """
     Orchestration State Models

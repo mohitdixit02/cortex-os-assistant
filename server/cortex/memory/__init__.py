@@ -6,6 +6,7 @@ from cortex.graph.state import (
     MessageHistory,
     MessageState,
     MessageStateList,
+    MemoryState
 )
 from cortex.memory.model import MemoryModel
 from cortex.memory.embedding import EmbeddingModel
@@ -30,7 +31,6 @@ from db import (
     AIClientType
 )
 
-# remove the previous feedbacks and response to avoid noise
 # Recheck knowledge base retrival - update fetch effeciency and relevance imporvement
 
 class MemoryClient:
@@ -70,18 +70,12 @@ class MemoryClient:
     # ******************** Build Memory State Functions ********************
     def build_stm(
         self,
-        state: ConversationState
+        state: MemoryState
     ):
         """
         Build the Short Term Memory (STM) based on the recent interactions and context. \n
         """
-        if not self._extract_final_response_text(state.final_response):
-            self.logger.error("Final response is None, STM will not be built without a valid final response.")
-            raise ValueError("Final response is None, cannot build STM without a valid final response.")
-        
-        short_term_memory = self.model.build_stm(
-            state=state
-        )
+        short_term_memory = self.model.build_stm(state=state)
         self.logger.info(f"Built STM: {short_term_memory}")
         return {
             "short_term_memory": short_term_memory,
@@ -89,52 +83,33 @@ class MemoryClient:
     
     def build_emotional_profile(
         self,
-        state: ConversationState
+        state: MemoryState
     ):
         """
         Build the Emotional Profile based on the historical interactions and context. \n
         """
-        state.query_time = self._get_time_behavior(state.query_timestamp)
         res = self.model.build_emotional_profile(state=state)
-        emotional_profile=EmotionalProfile(
-            mood_type=state.query_emotion,
-            time_behavior=state.query_time,
-            emotional_level=res.emotional_level,
-            logical_level=res.logical_level,
-            social_level=res.social_level,
-            context_summary=res.context_summary
-        )
-        self.logger.info(f"Built Emotional Profile: {emotional_profile}")
+        self.logger.info(f"Built Emotional Profile: {res}")
         return {
-            "query_time": state.query_time,
-            "emotional_profile": emotional_profile,
+            "emotional_profile": res,
         }
     
     def build_user_knowledge_base(
         self,
-        state: ConversationState
+        state: MemoryState
     ):
         """
         Build the user's knowledge base based on the historical interactions and context. \n
         """
         res = self.model.build_user_knowledge_base(state=state)
-        # knowledge_base = [
-        #     UserKnowledge(
-        #         strictness=item.strictness,
-        #         content=item.content,
-        #     ) for item in res.root
-        # ] if res and res.root else None
-        # self.logger.info(f"Built User Knowledge Base: {knowledge_base}")
-        
         self.logger.info(f"Built User Knowledge Base: {res}")
-        knowledge_base = "knowledge_base"
         return {
-            "knowledge_base": knowledge_base,
+            "knowledge_items": res,
         }
         
     def persist_memory_state(
         self,
-        state: ConversationState
+        state: MemoryState
     ):
         """
         Persist the relevant memory states (STM, Emotional Profile, Knowledge Base) to the database for long-term storage and future retrieval. \n

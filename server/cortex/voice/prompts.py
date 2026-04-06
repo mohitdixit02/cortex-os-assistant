@@ -15,9 +15,9 @@ You are a smart router who will route based on the user query and following inst
 # Instructions \n
 1. User ask you something related to you (AI) only (your name, who are you?, what are you doing?) \n
 2. User thanks you or appreciate you for something (Thanks for your help! / I appreciate your help! / You are the best! etc.) \n
-In above two conditions, mark "response_type" as "casual". else mark it as "in_depth". \n
+In above two conditions, mark "request_type" as "casual". else mark it as "in_depth". \n
 
-Some Scenarios for in_depth response_type: \n
+Some Scenarios for in_depth request_type: \n
 1. User ask you to do something (Can you help me with something? / Can you do something for me? / Can you explain something to me? etc.) \n
 2. User query seems confusing, weird or complex in any way. \n
 3. User query is related to some specific topic or domain (What is black hole? / What is quantum physics?) \n
@@ -27,30 +27,24 @@ Some Scenarios for in_depth response_type: \n
 
 # Guidelines: \n
 1. Mark "search_required" always false. \n
-2. Follow above instructions strictly to determine the "response_type". \n
-3. If you are not sure about the response_type, mark it as "in_depth" to be on the safe side. \n
-4. Mark "response_type" as "casual" only when user ask you about yourself or appreciate you in any way. \n
+2. Follow above instructions strictly to determine the "request_type". \n
+3. If you are not sure about the request_type, mark it as "in_depth" to be on the safe side. \n
+4. Mark "request_type" as "casual" only when user ask you about yourself or appreciate you in any way. \n
 
 For example:
-1. How are you? (response_type: "casual", search_required: false) \n
-2. What's going on? (response_type: "casual", search_required: false) \n
-3. What is your name? (response_type: "casual", search_required: false) \n
-4. I think I am not in good mood today because of the weather. (response_type: "in_depth", search_required: false) \n
-5. Thanks for helping me out! (response_type: "casual", search_required: false) \n
-6. What is my name? (response_type: "in_depth", search_required: false) \n
-7. Do you know anything about me? (response_type: "in_depth", search_required: false) \n
-8. Can you explain me the concept of black holes in simple terms? (response_type: "in_depth", search_required: false) \n
-9. What is the status of my previous task allocated? (response_type: "in_depth", search_required: false) \n
-10. Do you know who I am? (response_type: "in_depth", search_required: false) \n
+1. How are you? (request_type: "casual", search_required: false) \n
+2. What's going on? (request_type: "casual", search_required: false) \n
+3. What is your name? (request_type: "casual", search_required: false) \n
+4. I think I am not in good mood today because of the weather. (request_type: "in_depth", search_required: false) \n
+5. Thanks for helping me out! (request_type: "casual", search_required: false) \n
+6. What is my name? (request_type: "in_depth", search_required: false) \n
+7. Do you know anything about me? (request_type: "in_depth", search_required: false) \n
+8. Can you explain me the concept of black holes in simple terms? (request_type: "in_depth", search_required: false) \n
+9. What is the status of my previous task allocated? (request_type: "in_depth", search_required: false) \n
+10. Do you know who I am? (request_type: "in_depth", search_required: false) \n
 
 # Response Format: \n
-Reply in the given format only, no need to provide any explanation, chat message, function, etc.
-```json
-{{
-    "request_type": "casual" / "in_depth",
-    "search_required": false,
-}}
-```
+Reply in the given format only, no need to provide any explanation, chat message, function, etc. \n
 User Query: {user_query}
 format_instructions: {format_instructions}
 """

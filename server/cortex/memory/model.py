@@ -2,7 +2,7 @@ from langchain_huggingface import HuggingFaceEndpointEmbeddings, ChatHuggingFace
 from cortex.memory.prompts import get_memory_client_prompts
 from utility.huggingface.config import models
 from utility.config import env
-from cortex.graph.state import ConversationState, UserSTM, MemoryEmotionalProfile
+from cortex.graph.state import ConversationState, UserSTM, MemoryEmotionalProfile, MemoryState
 
 class MemoryModel:
     def __init__(self):
@@ -14,13 +14,13 @@ class MemoryModel:
             temperature=model_config.get("temperature", 0.2)
         ))
     
-    def build_stm(self, state: ConversationState):
+    def build_stm(self, state: MemoryState):
         """
         ### Build Short Term Memory (STM) based on the provided conversation state \n
-        **Input:** `ConversationState` object \n
+        **Input:** `MemoryState` object \n
         Must include:
         - query
-        - final_response
+        - ai_response
         - query_emotion
         - previous STM memory (if available) \n
         **Output:** \n
@@ -28,7 +28,7 @@ class MemoryModel:
         - Include new `STM summary` and `session preferences` \n
         """
         query = state.query
-        final_response = state.final_response.response if state.final_response else ""
+        final_response = state.ai_response
         user_emotion = state.query_emotion
         prev_stm = state.short_term_memory        
         formatted_prompt, parser = get_memory_client_prompts(
@@ -48,7 +48,7 @@ class MemoryModel:
         )
         return state.short_term_memory
 
-    def build_emotional_profile(self, state: ConversationState):
+    def build_emotional_profile(self, state: MemoryState):
         """
         ### Build Emotional Profile based on the provided conversation state \n
         **Input:** `ConversationState` object \n
@@ -64,16 +64,6 @@ class MemoryModel:
         user_emotion = state.query_emotion
         prev_stm = state.short_term_memory
         time_of_day = state.query_time
-        
-        if state.emotional_profile:
-            prev_emotional_profile = MemoryEmotionalProfile(
-                emotional_level=state.emotional_profile.emotional_level,
-                logical_level=state.emotional_profile.logical_level,
-                social_level=state.emotional_profile.social_level,
-                context_summary=state.emotional_profile.context_summary
-            )
-        else:
-            prev_emotional_profile = None
 
         formatted_prompt, parser = get_memory_client_prompts(
             type="build_emotional_profile",
@@ -85,11 +75,11 @@ class MemoryModel:
             "stm_summary": prev_stm.stm_summary if prev_stm else "",
             "session_preferences": prev_stm.session_preferences if prev_stm else {},
             "user_time_of_day": time_of_day,
-            "previous_emotional_profile": prev_emotional_profile.model_dump_json() if prev_emotional_profile else ""
+            "previous_emotional_profile": state.emotional_profile.model_dump_json() if state.emotional_profile else ""
         })
         return res
     
-    def build_user_knowledge_base(self, state: ConversationState):
+    def build_user_knowledge_base(self, state: MemoryState):
         """
         Build the user's knowledge base based on the historical interactions and context. \n
         """
@@ -106,6 +96,6 @@ class MemoryModel:
             "stm_summary": prev_stm.stm_summary if prev_stm else "",
             "session_preferences": prev_stm.session_preferences if prev_stm else {},
             "user_emotion": user_emotion,
-            "previous_user_knowledge": state.knowledge_base if state.knowledge_base else "",
+            "previous_user_knowledge": state.older_knowledge_base if state.older_knowledge_base else "",
         })
         return res

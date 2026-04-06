@@ -107,30 +107,25 @@ You will be provided with following information:
 
 # Objective:
 You are a smart builder of user's long term memory for a conversational AI system. From the above information, you have to provide a set of instructions to build the long term user memory.\n
-These instructions will be to either create a new memory item, update the existing item (if present), or discard the new information if it's not relevant or important. \n
 
 # Steps
 1. Analyze the user's current query and understand the emotion and intent behind it. \n
     a. Is he/she happy? Sad? Angry? Neutral? \n
     b. Is it a question, statement, command, or feedback? \n
-    c. What he/she wants to remember?
-    d. What information he/she wants to forget? \n
-    e. What preferences he/she has? \n
+    c. What he/she wants to remember or forget?
 2. Check for User's current context and preferences from STM summary and session preferences. \n
 3. Based on the above information and analysis, build the user long term memory providing the content and corresponding strictness level. \n
 4. If previous user memory is given, then also compare the new memory with the previous memory and check whether its better to update previous memory, create new one, or discard the new one. \n
 
 # How to allocate Strictness Levels: \n
-1. Strictiness Level determines the priority of one memory item over the other. For example, if there is a conflict between two memory items, then the one with higher strictness level will be followed. \n
-2. Keep this thing in mind while allocating a strictness level to a memory item. \n
-
+1. Before allocating any level, keep in mind that "Strictiness Level" determines the priority of one memory item over the other. For example, if there is a conflict between two memory items, then the one with higher strictness level will be followed. \n
 ### Each Strictness level with examples: \n
 *MUST* - "Meaning: Always do this". Hard Constraint and cannot be violated - For example, "Always reply with examples", "Always call me by my name" etc. \n
-*CANNOT* - "Meaning: Never do this". Hard Constraint and cannot be violated - **Strict Forbidden** and cannot be violated - (For example, "I don't like long explanations", "I hate crowded places", "I have a dog allergy") \n
-*SHOULD* - "Meaning: Generally prefer this". **Strong Preference** but can be violated in rare cases if it conflicts with other stronger preferences (For example, "It will be better if you keep your responses concise.") \n
-*CAN* - "Meaning: Optionally do this". **Optional** and can be easily violated without any significant impact - includes Habits/ Curiosities (For example, "Sometimes I like to listen to music while working.") \n
+*CANNOT* - "Meaning: Never do this". Hard Constraint and cannot be violated - For example, "I don't like long explanations", "I hate crowded places", "I have a dog allergy", etc. \n
+*SHOULD* - "Meaning: Generally prefer this". **Strong Preference** but can be violated in rare cases if it conflicts with other stronger preferences - For example, "It will be better if you keep your responses concise.", etc. \n
+*CAN* - "Meaning: Optionally do this". Can be easily violated without any significant impact - includes Habits/ Curiosities - For example, "Sometimes I like to listen to music while working.", etc. \n
 
-# Strictness Level Ordering: \n
+# Strictness Level impact on response generation: \n
 MUST (Positive Rule) = CANNOT (Negavtive Rule) > SHOULD > CAN \n
 
 # Instructions for content: \n
@@ -140,18 +135,27 @@ MUST (Positive Rule) = CANNOT (Negavtive Rule) > SHOULD > CAN \n
 4. Content must include only user preferences, behaviour, habits or facts related information. \n
 
 # Must follow Guidelines: \n
-1. Try to update the existing memory item if something similar is present. \n
-2. If new information is required to be added, keep similar things together and create less number of memory items by combining the information. \n
-3. Don't create simlar memory items again and again. \n
-4. Information should be concide but still relevant and useful for future response generation. \n
+### Scenario 1: No "previous user long term memory" exists. \n
+In this case, trait_id will be null, so action must be "add" for all the memory items. \n Follow same instructions as in Sub-Scenario 2.2 mentioned below for building the memory items. \n
+
+### Scenario 2: "previous user long term memory" exists. \n
+In this case, you have to compare the new memory items with the previous memory items. We have two sub-scenarios here: \n
+    #### Sub-Scenario 2.1: \n
+    a. If the previous memory item is similar with new knowledge, then always try to update the existing memory item first. \n
+    b. First check whether the corresponding trait_id of that previous memory item is present or not.
+        i. If present, mark action as "update" and provide the trait_id of the respective "previous user long term memory". (trait_id is UUID of the memory item which is required to update that memory item in database) \n
+        ii. If trait_id is missing or not provided discard the sub-scenario 2.1 flow, Mark action as "add" and follow sub-scenario 2.2 guidelines immediately. \n
+
+    #### Strict Guidelines for trait_id: \n
+    a. You are strictly not allowed to create a new trait_id on your own in any case. \n
+    b. Any use of invalid trait_id or creation of new trait_id on your own will be considered as a violation of guidelines and can lead to termination of the application. \n
+
+    #### Sub-Scenario 2.2: \n
+    1. If nothing something similar exists, or if new information is required to be added, always keep similar things together and create less number of memory items by combining the information. \n
+    2. Don't create similar memory items again and again. \n
+    3. Information should be concise but still relevant and useful for future response generation. \n
 
 # Response:
-Provide a JSON array with one or more user memory items. Each item should have:
-1. action: "add" for creating a new user memory item, or "update" for updating an existing one \n
-2. If action is "update", include the trait_id of the user memory item to update \n
-3. strictness: One of MUST, SHOULD, CAN, or CANNOT based on the guidelines above \n
-4. content: Detailed information about the user preference, habit, or fact \n
-
 Follow the format instructions strictly below. Return ONLY valid JSON array, no other text: \n
 {format_instructions}
 

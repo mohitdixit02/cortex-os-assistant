@@ -1,10 +1,15 @@
-from cortex.graph.state import ConversationState
+from cortex.graph.state import ConversationState, MemoryState, MemoryEmotionalProfile, EmotionalProfile, FinalResponseGenerationState
 from utility.main import iterate_tokens_async
 from nltk.tokenize import sent_tokenize
 from typing import AsyncGenerator
-from cortex.graph.workflow import build_memory_workflow, main_workflow, test_workflow
+from cortex.graph.workflow import (
+    main_workflow, 
+    build_memory_workflow,
+    # test_workflow
+)
 from cortex.task import MainTaskQueue, TaskStatus, TaskItem
 from utility.logger import get_logger
+from db import TimeOfDay
 # keep listening and processing until the program is terminated
 
 class MainClient:
@@ -70,6 +75,54 @@ class MainClient:
             query_emotion=emotion
         )
         return state
+    
+    def initialize_memory_state(self, convState: ConversationState) -> MemoryState:
+        """
+        Initialize the memory state for a new conversation session. \n
+        **Input**: \n
+        - `convState`: The conversation state object containing the initial query and metadata for the conversation. \n
+        **Returns**: \n
+        - `MemoryState`: The initialized memory state object with default or extracted values from the conversation state.
+        """
+        if isinstance(convState, dict):
+            convState = ConversationState.model_validate(convState)
+        
+        self.logger.info("enter initialize_memory_state with conversation state: %s", convState)
+        if convState is None:
+            self.logger.error("Conversation state is None. Cannot initialize memory state.")
+            raise ValueError("Conversation state is None. Cannot initialize memory state.")
+        
+        if convState.final_response is None:
+            self.logger.error("Final response in conversation state is None. Can't initialize memory state without AI response.")
+            raise ValueError("Final response in conversation state is None. Can't initialize memory state without AI response.")
+        
+        ai_response = self._extract_final_response_text(convState.final_response)
+        
+        if convState.emotional_profile is None:
+            self.logger.error("Emotional profile in conversation state is None. Can't initialize memory state without emotional profile.")
+            raise ValueError("Emotional profile in conversation state is None. Can't initialize memory state without emotional profile.")
+        
+        emotional_profile = MemoryEmotionalProfile(
+            emotional_level=convState.emotional_profile.emotional_level,
+            logical_level=convState.emotional_profile.logical_level,
+            social_level=convState.emotional_profile.social_level,
+            context_summary=convState.emotional_profile.context_summary
+        )
+        
+        memory_state = MemoryState(
+            user_id=convState.user_id,
+            session_id=convState.session_id,
+            query=convState.query,
+            ai_response=ai_response,
+            query_emotion=convState.query_emotion,
+            query_time=convState.query_time,
+            short_term_memory=convState.short_term_memory,
+            emotional_profile=emotional_profile,
+            older_knowledge_base=convState.knowledge_base
+        )
+        
+        self.logger.info("Initialized memory state: %s", memory_state)
+        return memory_state
         
     async def listen_task_queue(self):
         """
@@ -117,22 +170,35 @@ class MainClient:
             # Orchestrator code
             state = self.initialize_conversation_state(taskItem)
             
-            # test workflow for memory building
-            res = test_workflow.invoke(state)
-            self.logger.info("Test workflow result: %s", res)
+            # state.final_response = FinalResponseGenerationState(
+            #     response="Yes, I know that you like tea and are in a good mood."
+            # )
+            # state.emotional_profile = EmotionalProfile(
+            #     time_behavior=TimeOfDay.AFTERNOON,
+            #     mood_type=state.query_emotion,
+            #     emotional_level=5,
+            #     logical_level=7,
+            #     social_level=6,
+            #     context_summary="User seems to be in a good mood and is talking about tea."
+            # )
+            # # test workflow for memory building
+            # res = test_workflow.invoke(memory_state)
+            # self.logger.info("Test workflow result: %s", res)
             
-            final_response_text = "Dummy response for query: " + query
+            # final_response_text = "Dummy response for query: " + query
             
-            # res = main_workflow.invoke(state)
+            res = main_workflow.invoke(state)
 
-            # workflow_final_response = res.get("final_response") if isinstance(res, dict) else getattr(res, "final_response", None)
-            # final_response_text = self._extract_final_response_text(workflow_final_response)
-
+            workflow_final_response = res.get("final_response") if isinstance(res, dict) else getattr(res, "final_response", None)
+            final_response_text = self._extract_final_response_text(workflow_final_response)
+            
+            memory_state = self.initialize_memory_state(res)
+            
             # Build memory
-            # try:
-            #     build_memory_workflow.invoke(res)
-            # except Exception as memory_exc:
-            #     self.logger.exception("Memory workflow failed after response generation: %s", memory_exc)
+            try:
+                build_memory_workflow.invoke(memory_state)
+            except Exception as memory_exc:
+                self.logger.exception("Memory workflow failed after response generation: %s", memory_exc)
 
             self.logger.info("Final response generated: %s", res)
             self.logger.info("Response from main workflow >> %s", final_response_text if final_response_text else "No final response generated")
