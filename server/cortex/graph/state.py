@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, RootModel
-from typing import Any, Dict, Optional, Annotated
+from typing import Any, Dict, Literal, Optional, Annotated
 from enum import Enum
 from db.enums import TimeOfDay, PreferenceLevel, RoleType, AIClientType
 from datetime import datetime, timezone
@@ -66,6 +66,8 @@ class MemoryEmotionalProfile(BaseModel):
 
 class MemoryUserKnowledge(BaseModel):
     """Represents a piece of user knowledge stored in memory for long-term personalization."""
+    action: Annotated[Literal["add", "update"], Field(description="Action to be taken for this knowledge item based on its relevance and importance")]
+    trait_id: Optional[str] = Field(default=None, description="Trait id of the user knowledge, required if action is update")
     strictness: Annotated[PreferenceLevel, Field(description="Strictness level of the user knowledge")] = None
     content: Annotated[str, Field(description="Detailed information about the user preference, habit, or fact that can be useful for response generation. Be specific and concise in describing it. If it's a fact, provide clear and relevant information about the user.")]
 
@@ -103,8 +105,8 @@ class CortexTool(BaseModel):
 class PlanEvaluationState(BaseModel):
     """Represents the state of Plan evaluation done by Evaluator over Orchestrator's plan"""
     is_feedback_required: Annotated[bool, Field(description="Whether user feedback is required for the current response or plan or not")]
-    user_knowledge_retrieval_feedback: Annotated[Optional[list[str]], Field(description="List of Feedbacks on user knowledge retrieval part of the plan")] = None
-    message_retrieval_feedback: Annotated[Optional[list[str]], Field(description="List of Feedbacks on message retrieval part of the plan")] = None
+    user_knowledge_retrieval_feedback: Annotated[Optional[str], Field(description="Feedback on the user knowledge retrieval part of the plan")] = None
+    message_retrieval_feedback: Annotated[Optional[str], Field(description="Feedback on the message retrieval part of the plan")] = None
     iteration_count: Annotated[Optional[int], Field(description="Number of iterations or attempts made to generate the response")] = 0
 
 class OrchestrationState(BaseModel):
@@ -119,7 +121,7 @@ class OrchestrationState(BaseModel):
     # message_retrieval_state: Optional[MessageRetrievalState] = None
     # tool_selection_state: Optional[ToolSelectionState] = None
     # feedback_by_evaluator: Optional[PlanEvaluationState] = None
-    user_knowledge_retrieval_keywords: Annotated[str, Field(description="String of keywords relevant enough to retrieve user knowledge base for the current query")] = ""
+    user_knowledge_retrieval_keywords: Annotated[list[str], Field(description="List of keywords relevant enough to retrieve user knowledge base for the current query")] = []
     is_message_referred: Annotated[bool, Field(description="Whether the user query is referring to any past message in the conversation or not")]
     referred_message_keywords: Annotated[Optional[str], Field(description="Keywords from the referred message")] = None
     is_tool_required: Annotated[bool, Field(description="Whether any tool is required to process the user query or not")]

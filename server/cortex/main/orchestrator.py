@@ -34,24 +34,11 @@ class Orchestrator:
         res = self.model.evaluate_orchestration_plan(state)
         self.logger.info("Plan evaluation result: %s", res)
 
+        # Iteration count update
         previous_feedback = state.plan_feedback
         previous_iteration = previous_feedback.iteration_count if previous_feedback else 0
 
-        merged_user_knowledge_feedback = []
-        if previous_feedback and previous_feedback.user_knowledge_retrieval_feedback:
-            merged_user_knowledge_feedback.extend(previous_feedback.user_knowledge_retrieval_feedback)
-        if res.user_knowledge_retrieval_feedback:
-            merged_user_knowledge_feedback.extend(res.user_knowledge_retrieval_feedback)
-
-        merged_message_feedback = []
-        if previous_feedback and previous_feedback.message_retrieval_feedback:
-            merged_message_feedback.extend(previous_feedback.message_retrieval_feedback)
-        if res.message_retrieval_feedback:
-            merged_message_feedback.extend(res.message_retrieval_feedback)
-
         state.plan_feedback = res.model_copy(update={
-            "user_knowledge_retrieval_feedback": merged_user_knowledge_feedback or None,
-            "message_retrieval_feedback": merged_message_feedback or None,
             "iteration_count": previous_iteration + 1,
         })
 
@@ -160,6 +147,10 @@ class Orchestrator:
         - The next node or step in the workflow to route to based on whether final response evaluation is required or not.
         """
         feedback = state.final_response_feedback
+        if not feedback:
+            self.logger.info("No final response feedback found. Routing to workflow termination.")
+            return "terminate"
+
         if feedback.iteration_count >= 3:
             self.logger.info("Maximum iteration count reached for final response evaluation. Routing to workflow termination.")
             return "terminate"

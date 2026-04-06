@@ -105,6 +105,7 @@ class MemoryModel:
             "user_query": query,
             "stm_summary": prev_stm.stm_summary if prev_stm else "",
             "session_preferences": prev_stm.session_preferences if prev_stm else {},
-            "user_emotion": user_emotion
+            "user_emotion": user_emotion,
+            "previous_user_knowledge": state.knowledge_base if state.knowledge_base else "",
         })
         return res

@@ -118,13 +118,16 @@ class MemoryClient:
         Build the user's knowledge base based on the historical interactions and context. \n
         """
         res = self.model.build_user_knowledge_base(state=state)
-        knowledge_base = [
-            UserKnowledge(
-                strictness=item.strictness,
-                content=item.content,
-            ) for item in res.root
-        ] if res and res.root else None
-        self.logger.info(f"Built User Knowledge Base: {knowledge_base}")
+        # knowledge_base = [
+        #     UserKnowledge(
+        #         strictness=item.strictness,
+        #         content=item.content,
+        #     ) for item in res.root
+        # ] if res and res.root else None
+        # self.logger.info(f"Built User Knowledge Base: {knowledge_base}")
+        
+        self.logger.info(f"Built User Knowledge Base: {res}")
+        knowledge_base = "knowledge_base"
         return {
             "knowledge_base": knowledge_base,
         }
@@ -210,22 +213,23 @@ class MemoryClient:
                         commit=True,
                     )
             if state.knowledge_base:
-                user_knowledge_items = []
-                for item in state.knowledge_base:
-                    user_knowledge_items.append(
-                        UserKnowledgeBase(
-                            user_id=state.user_id,
-                            strictness=item.strictness,
-                            content=item.content,
-                            is_active=True,
-                            embedding=self.embd_model.generate_embeddings(item.content)
-                        )
-                    )
-                create_many(
-                    session=session,
-                    objects=user_knowledge_items,
-                    commit=True
-                )
+                # user_knowledge_items = []
+                # for item in state.knowledge_base:
+                #     user_knowledge_items.append(
+                #         UserKnowledgeBase(
+                #             user_id=state.user_id,
+                #             strictness=item.strictness,
+                #             content=item.content,
+                #             is_active=True,
+                #             embedding=self.embd_model.generate_embeddings(item.content)
+                #         )
+                #     )
+                # create_many(
+                #     session=session,
+                #     objects=user_knowledge_items,
+                #     commit=True
+                # )
+                self.logger.info(f"Persisting User Knowledge Base to DB: {state.knowledge_base}")
             if state.final_response:
                 final_response_text = self._extract_final_response_text(state.final_response)
                 self.logger.info(f"Persisting Final Response to DB: {final_response_text}")
@@ -307,32 +311,41 @@ class MemoryClient:
         """
         user_id = state.user_id
         query_embedding = self.embd_model.generate_embeddings(state.query)
+        relevant_keywords_embedding = []
         if state.orchestration_state and state.orchestration_state.user_knowledge_retrieval_keywords:
-            categories = state.orchestration_state.user_knowledge_retrieval_keywords.split()
-        else:
-            categories = []
+            for keywords in state.orchestration_state.user_knowledge_retrieval_keywords:
+                relevant_keywords_embedding.append(self.embd_model.generate_embeddings(keywords))
         
         knowledge_base = []
-        # for category in categories:            
-        #     with Session(self.engine) as session:
-        #         res = get_similar(
-        #             session=session,
-        #             model=UserKnowledgeBase,
-        #             query_embedding=query_embedding,
-        #             top_k=5,
-        #             user_id=user_id,
-        #             category=category
-        #         )
-        #     knowledge_base.extend(res)
+        if relevant_keywords_embedding:
+            for rke in relevant_keywords_embedding:            
+                with Session(self.engine) as session:
+                    res = get_similar(
+                        session=session,
+                        model=UserKnowledgeBase,
+                        query_embedding=rke,
+                        top_k=2,
+                        user_id=user_id,
+                    )
+                knowledge_base.extend(res)
+        else:
+            with Session(self.engine) as session:
+                res = get_similar(
+                    session=session,
+                    model=UserKnowledgeBase,
+                    query_embedding=query_embedding,
+                    top_k=5,
+                    user_id=user_id,
+                )
+            knowledge_base.extend(res)
         
-        # knowledge_base = [
-        #     UserKnowledge(
-        #         category=item.category,
-        #         strictness=item.strictness,
-        #         content=item.content,
-        #         score=score
-        #     ) for item, score in knowledge_base
-        # ] if knowledge_base else None
+        knowledge_base = [
+            UserKnowledge(
+                strictness=item.strictness,
+                content=item.content,
+                score=score
+            ) for item, score in knowledge_base
+        ] if knowledge_base else None
 
         return {
             "knowledge_base": knowledge_base,

@@ -94,7 +94,7 @@ Format response as JSON with the following structure:
 """
 
 MEMORY_CLIENT_BUILD_USER_KNOWLEDGE = """
-You are a smart builder of user knowledge for a conversational AI system.
+# Context \n
 You will be provided with following information:
 1. User's current query. It can be any of the one thing- \n
     a. Question (Can you tell me about my friend?)
@@ -103,39 +103,56 @@ You will be provided with following information:
     d. Feedback (Your last response was not relevant to my query) \n
 2. User's STM summary and session preferences - It will give you an idea about the user's current context, preferences, and emotional state. \n
 3. User current Mood (from the query) (can be happy, sad, angry, etc.). It will help you to understand the user's emotional state. \n
+4. Previous user long term memory (if any) \n
 
-# Task:
-From the Above information, you have to build the user knowledge. \n
+# Objective:
+You are a smart builder of user's long term memory for a conversational AI system. From the above information, you have to provide a set of instructions to build the long term user memory.\n
+These instructions will be to either create a new memory item, update the existing item (if present), or discard the new information if it's not relevant or important. \n
 
 # Steps
 1. Analyze the user's current query and understand the emotion and intent behind it. \n
     a. Is he/she happy? Sad? Angry? Neutral? \n
     b. Is it a question, statement, command, or feedback? \n
-    c. What he wants to remember?
-    d. What information he wants to forget? \n
-    e. What preferences he has? \n
+    c. What he/she wants to remember?
+    d. What information he/she wants to forget? \n
+    e. What preferences he/she has? \n
 2. Check for User's current context and preferences from STM summary and session preferences. \n
-3. Based on the above information and analysis, build the user knowledge providing the category, strictness level, and content. \n
+3. Based on the above information and analysis, build the user long term memory providing the content and corresponding strictness level. \n
+4. If previous user memory is given, then also compare the new memory with the previous memory and check whether its better to update previous memory, create new one, or discard the new one. \n
 
-# Usage of Categories: \n
-LIKE - Things that user likes or prefers \n
-DISLIKE - Things that user dislikes or does not prefer \n
-HABIT - Things that user does regularly or has a habit of doing \n
-FACT - Factual information about the user that can be useful for response generation (e.g. User has a friend named John who loves hiking) \n
-STRICT_PREFERENCE - Strong preferences of the user that should be strictly followed while generating responses (e.g. User does not like ice cream) \n
+# How to allocate Strictness Levels: \n
+1. Strictiness Level determines the priority of one memory item over the other. For example, if there is a conflict between two memory items, then the one with higher strictness level will be followed. \n
+2. Keep this thing in mind while allocating a strictness level to a memory item. \n
 
-# Usage of Strictness Levels: \n
-MUST - Information that must be followed at highest priority. **Hard Constraint** and cannot be violated - (Example, "User MUST have responses under 50 words.") \n
-SHOULD - Information that should be followed while generating responses, **Strong Preference** but can be violated in rare cases if it conflicts with other stronger preferences or important information (For example, User prefers to have a morning workout routine) \n
-CAN - Information that user can follow (be a habit, like or dislike), **Optional** and can be easily violated without any significant impact on the user or response quality (e.g. User can eat ice cream, but prefers not to) \n
-CANNOT - Similar to Must, but in negative way. Include Information, which User does not want and should be strictly avoided while generating responses. **Strict Forbidden** and cannot be violated - (For example, User CANNOT be asked about their personal information) \n
+### Each Strictness level with examples: \n
+*MUST* - "Meaning: Always do this". Hard Constraint and cannot be violated - For example, "Always reply with examples", "Always call me by my name" etc. \n
+*CANNOT* - "Meaning: Never do this". Hard Constraint and cannot be violated - **Strict Forbidden** and cannot be violated - (For example, "I don't like long explanations", "I hate crowded places", "I have a dog allergy") \n
+*SHOULD* - "Meaning: Generally prefer this". **Strong Preference** but can be violated in rare cases if it conflicts with other stronger preferences (For example, "It will be better if you keep your responses concise.") \n
+*CAN* - "Meaning: Optionally do this". **Optional** and can be easily violated without any significant impact - includes Habits/ Curiosities (For example, "Sometimes I like to listen to music while working.") \n
 
-# NOTE:
-1. Always use MUST or CANNOT if category is STRICT_PREFERENCE. \n
-2. For other categories, you can use any of the strictness levels based on the importance and relevance of that information. \n
+# Strictness Level Ordering: \n
+MUST (Positive Rule) = CANNOT (Negavtive Rule) > SHOULD > CAN \n
+
+# Instructions for content: \n
+1. Content must not include user query or AI responses. \n
+2. Content must not include any information about AI behaviour. \n
+3. Content must include things like "user ask this, user ask that". \n
+4. Content must include only user preferences, behaviour, habits or facts related information. \n
+
+# Must follow Guidelines: \n
+1. Try to update the existing memory item if something similar is present. \n
+2. If new information is required to be added, keep similar things together and create less number of memory items by combining the information. \n
+3. Don't create simlar memory items again and again. \n
+4. Information should be concide but still relevant and useful for future response generation. \n
 
 # Response:
-Format response in the following format:
+Provide a JSON array with one or more user memory items. Each item should have:
+1. action: "add" for creating a new user memory item, or "update" for updating an existing one \n
+2. If action is "update", include the trait_id of the user memory item to update \n
+3. strictness: One of MUST, SHOULD, CAN, or CANNOT based on the guidelines above \n
+4. content: Detailed information about the user preference, habit, or fact \n
+
+Follow the format instructions strictly below. Return ONLY valid JSON array, no other text: \n
 {format_instructions}
 
 # Input
@@ -143,6 +160,7 @@ Format response in the following format:
 2. User's STM summary {stm_summary} \n
 3. User's Session preferences {session_preferences} \n
 4. User's current Mood {user_emotion} \n
+5. Previous user long term memory {previous_user_knowledge} \n
 """
 
 def get_memory_client_prompts(
@@ -186,6 +204,7 @@ def get_memory_client_prompts(
                 "stm_summary",
                 "session_preferences",
                 "user_emotion",
+                "previous_user_knowledge",
                 "format_instructions"
             ],
         )

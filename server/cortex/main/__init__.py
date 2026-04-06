@@ -2,10 +2,9 @@ from cortex.graph.state import ConversationState
 from utility.main import iterate_tokens_async
 from nltk.tokenize import sent_tokenize
 from typing import AsyncGenerator
-from cortex.graph.workflow import build_memory_workflow, main_workflow
+from cortex.graph.workflow import build_memory_workflow, main_workflow, test_workflow
 from cortex.task import MainTaskQueue, TaskStatus, TaskItem
 from utility.logger import get_logger
-from pprint import pprint
 # keep listening and processing until the program is terminated
 
 class MainClient:
@@ -117,16 +116,23 @@ class MainClient:
             
             # Orchestrator code
             state = self.initialize_conversation_state(taskItem)
-            res = main_workflow.invoke(state)
+            
+            # test workflow for memory building
+            res = test_workflow.invoke(state)
+            self.logger.info("Test workflow result: %s", res)
+            
+            final_response_text = "Dummy response for query: " + query
+            
+            # res = main_workflow.invoke(state)
 
-            workflow_final_response = res.get("final_response") if isinstance(res, dict) else getattr(res, "final_response", None)
-            final_response_text = self._extract_final_response_text(workflow_final_response)
+            # workflow_final_response = res.get("final_response") if isinstance(res, dict) else getattr(res, "final_response", None)
+            # final_response_text = self._extract_final_response_text(workflow_final_response)
 
-            # Build memory as best-effort so response delivery is never blocked.
-            try:
-                build_memory_workflow.invoke(res)
-            except Exception as memory_exc:
-                self.logger.exception("Memory workflow failed after response generation: %s", memory_exc)
+            # Build memory
+            # try:
+            #     build_memory_workflow.invoke(res)
+            # except Exception as memory_exc:
+            #     self.logger.exception("Memory workflow failed after response generation: %s", memory_exc)
 
             self.logger.info("Final response generated: %s", res)
             self.logger.info("Response from main workflow >> %s", final_response_text if final_response_text else "No final response generated")

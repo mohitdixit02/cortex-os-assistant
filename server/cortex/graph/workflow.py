@@ -66,9 +66,16 @@ image_data = main_workflow.get_graph(xray=True).draw_mermaid_png()
 img = Image.open(io.BytesIO(image_data))
 img.show()
 
+# test workflow
+test_graph = StateGraph(ConversationState)
+test_graph.add_node("build_user_knowledge_base", memory_client.build_user_knowledge_base)
+test_graph.add_edge(START, "build_user_knowledge_base")
+test_graph.add_edge("build_user_knowledge_base", END)
+test_workflow = test_graph.compile()
+
 __all__ = [
     "main_workflow",
     "build_memory_workflow",
-    "memory_client",
+    "test_workflow",
 ]
 

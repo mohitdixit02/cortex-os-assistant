@@ -83,12 +83,12 @@ class CortexMainModel:
         
         feedback = state.plan_feedback
         if feedback and feedback.user_knowledge_retrieval_feedback:
-            user_knowledge_retrieval_feedback = "\n".join(feedback.user_knowledge_retrieval_feedback)
+            user_knowledge_retrieval_feedback = feedback.user_knowledge_retrieval_feedback
         else:
             user_knowledge_retrieval_feedback = ""
             
         if feedback and feedback.message_retrieval_feedback:
-            message_retrieval_feedback = "\n".join(feedback.message_retrieval_feedback)
+            message_retrieval_feedback = feedback.message_retrieval_feedback
         else:
             message_retrieval_feedback = ""
 

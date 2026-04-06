@@ -12,6 +12,7 @@ from fastapi import WebSocket
 from service.stream.event import StreamEvent
 from utility.sensory.config import STT_CONFIG, TTS_CONFIG
 import re
+from langsmith import traceable
 # keep listening and processing until the program is terminated
 
 # /pending/ - voice client not routing properly + fallback response starts at end + knowledge base saving fix
@@ -82,7 +83,7 @@ class VoiceClient:
             yield audio_chunk
             
     # async def _stream_tokens_as
-
+    @traceable(enabled=False)
     async def listen_and_respond(
         self, 
         audio_bytes: bytes,
