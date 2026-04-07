@@ -27,12 +27,18 @@ models = {
         "name":"meta-llama/Llama-3.1-8B-Instruct",
         "task":"conversational",
         "max_new_tokens":500,
-        "temperature":0.2,
+        "temperature":0.4,
     },
     "voice_emotion":{
         "name":"boltuix/bert-emotion",
         "task":"text-classification",
         "max_new_tokens":50,
+        "temperature":0.5,
+    },
+    "planner":{
+        "name":"Qwen/Qwen2.5-7B-Instruct",
+        "task":"conversational",
+        "max_new_tokens":500,
         "temperature":0.2,
     }
 }

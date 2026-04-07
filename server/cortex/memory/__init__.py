@@ -32,6 +32,8 @@ from db import (
 )
 
 # Recheck knowledge base retrival - update fetch effeciency and relevance imporvement
+# External Tools Integration
+# Qwen Model Intergration for Routing
 
 class MemoryClient:
     def __init__(self, engine: Engine):
@@ -46,7 +48,14 @@ class MemoryClient:
         Helper function to determine the time behavior (e.g., morning, afternoon, evening) based on the timestamp. \n
         Can be used for tuning the response generation to be more contextually relevant based on the time of day. \n
         """
-        hour = timestamp.hour
+        
+        # converting timestamp to local time if it's in UTC
+        if timestamp.tzinfo is not None and timestamp.tzinfo.utcoffset(timestamp) is not None:
+            local_timestamp = timestamp.astimezone()
+        else:
+            local_timestamp = timestamp
+        
+        hour = local_timestamp.hour
         if 5 <= hour < 12:
             return TimeOfDay.MORNING
         elif 12 <= hour < 17:
@@ -162,8 +171,8 @@ class MemoryClient:
                     model=UserEmotionalProfile,
                     user_id=state.user_id,
                     session_id=state.session_id,
-                    mood_type=state.emotional_profile.mood_type,
-                    time_behavior=state.emotional_profile.time_behavior
+                    mood_type=state.query_emotion,
+                    time_behavior=state.query_time
                 )
                 if db_obj:
                     update_one(
@@ -178,8 +187,8 @@ class MemoryClient:
                         obj_in=UserEmotionalProfile(
                             user_id=state.user_id,
                             session_id=state.session_id,
-                            mood_type=state.emotional_profile.mood_type,
-                            time_behavior=state.emotional_profile.time_behavior,
+                            mood_type=state.query_emotion,
+                            time_behavior=state.query_time,
                             emotional_level=state.emotional_profile.emotional_level,
                             logical_level=state.emotional_profile.logical_level,
                             social_level=state.emotional_profile.social_level,
@@ -187,26 +196,47 @@ class MemoryClient:
                         ),
                         commit=True,
                     )
-            if state.knowledge_base:
-                # user_knowledge_items = []
-                # for item in state.knowledge_base:
-                #     user_knowledge_items.append(
-                #         UserKnowledgeBase(
-                #             user_id=state.user_id,
-                #             strictness=item.strictness,
-                #             content=item.content,
-                #             is_active=True,
-                #             embedding=self.embd_model.generate_embeddings(item.content)
-                #         )
-                #     )
-                # create_many(
-                #     session=session,
-                #     objects=user_knowledge_items,
-                #     commit=True
-                # )
+                    
+            if state.knowledge_items:
+                user_knowledge_items = state.knowledge_items
+                for item in user_knowledge_items.root:
+                    if item.action == "update" and item.trait_id:
+                        self.logger.info(f"Updating existing memory item with trait_id {item.trait_id} for user knowledge base: {item}")
+                        db_obj = get_one(
+                            session=session,
+                            model=UserKnowledgeBase,
+                            trait_id=item.trait_id
+                        )
+                        if db_obj:
+                            update_one(
+                                session=session,
+                                db_obj=db_obj,
+                                obj_in={
+                                    "strictness": item.strictness,
+                                    "content": item.content,
+                                    "embedding": self.embd_model.generate_embeddings(item.content)
+                                },
+                                commit=True
+                            )
+                        else:
+                            self.logger.warning(f"No existing memory item found with trait_id {item.trait_id} for update. Skipping update for this item.")
+                    elif item.action == "add":
+                        create_one(
+                            session=session,
+                            obj_in=UserKnowledgeBase(
+                                user_id=state.user_id,
+                                strictness=item.strictness,
+                                content=item.content,
+                                is_active=True,
+                                embedding=self.embd_model.generate_embeddings(item.content)
+                            ),
+                            commit=True
+                        )
+                    else:
+                        self.logger.warning(f"Invalid action '{item.action}' for knowledge item. Skipping this item.")
                 self.logger.info(f"Persisting User Knowledge Base to DB: {state.knowledge_base}")
-            if state.final_response:
-                final_response_text = self._extract_final_response_text(state.final_response)
+            if state.ai_response:
+                final_response_text = self._extract_final_response_text(state.ai_response)
                 self.logger.info(f"Persisting Final Response to DB: {final_response_text}")
                 self.memory_saver.save_message(
                     session_id=state.session_id,
@@ -215,7 +245,6 @@ class MemoryClient:
                     role=RoleType.AI,
                     ai_client=AIClientType.CORTEX_MAIN_CLIENT
                 )
-
 
     # ******************** Fetch Memory State Functions ********************
     def fetch_relevant_stm(
@@ -316,6 +345,7 @@ class MemoryClient:
         
         knowledge_base = [
             UserKnowledge(
+                trait_id=str(item.trait_id),
                 strictness=item.strictness,
                 content=item.content,
                 score=score

@@ -24,6 +24,7 @@ class EmotionalProfile(BaseModel):
 
 class UserKnowledge(BaseModel):
     """Represents a piece of knowledge about the user that can be used to personalize responses."""
+    trait_id: str
     strictness: PreferenceLevel
     content: str
     score: Optional[float] = None

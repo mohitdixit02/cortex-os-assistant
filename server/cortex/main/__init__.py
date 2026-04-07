@@ -98,16 +98,12 @@ class MainClient:
         
         ai_response = self._extract_final_response_text(convState.final_response)
         
-        if convState.emotional_profile is None:
-            self.logger.error("Emotional profile in conversation state is None. Can't initialize memory state without emotional profile.")
-            raise ValueError("Emotional profile in conversation state is None. Can't initialize memory state without emotional profile.")
-        
         emotional_profile = MemoryEmotionalProfile(
             emotional_level=convState.emotional_profile.emotional_level,
             logical_level=convState.emotional_profile.logical_level,
             social_level=convState.emotional_profile.social_level,
             context_summary=convState.emotional_profile.context_summary
-        )
+        ) if convState.emotional_profile else None
         
         memory_state = MemoryState(
             user_id=convState.user_id,

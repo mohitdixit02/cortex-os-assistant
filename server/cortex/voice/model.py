@@ -44,6 +44,13 @@ class VoiceMainModel:
             max_new_tokens=model_config.get("max_new_tokens", 200),
             temperature=model_config.get("temperature", 0.2)
         ))
+        planner_model_config = models.get("planner", {})
+        self.plan_model = ChatHuggingFace(llm=HuggingFaceEndpoint(
+            repo_id=planner_model_config.get("name"),
+            task=planner_model_config.get("task", "conversational"),
+            max_new_tokens=planner_model_config.get("max_new_tokens", 200),
+            temperature=planner_model_config.get("temperature", 0.2)
+        ))
         
     def get_model(self):
         return self.model
@@ -75,7 +82,7 @@ class VoiceMainModel:
             type="route_query",
             query=query
         )
-        chain = formatted_prompt | self.model | parser
+        chain = formatted_prompt | self.plan_model | parser
         res = chain.invoke({"user_query": query})
         return res
 

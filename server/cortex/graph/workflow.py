@@ -17,16 +17,14 @@ memory_graph = StateGraph(MemoryState)
 memory_graph.add_node("build_stm", memory_client.build_stm)
 memory_graph.add_node("build_emotional_profile", memory_client.build_emotional_profile)
 memory_graph.add_node("build_user_knowledge_base", memory_client.build_user_knowledge_base)
-# memory_graph.add_node("persist_memory_state", memory_client.persist_memory_state)
+memory_graph.add_node("persist_memory_state", memory_client.persist_memory_state)
 
 memory_graph.add_edge(START, "build_stm")
 memory_graph.add_edge("build_stm", "build_emotional_profile")
 memory_graph.add_edge("build_stm", "build_user_knowledge_base")
-# memory_graph.add_edge("build_emotional_profile", "persist_memory_state")
-# memory_graph.add_edge("build_user_knowledge_base", "persist_memory_state")
-# memory_graph.add_edge("persist_memory_state", END)
-memory_graph.add_edge("build_emotional_profile", END)
-memory_graph.add_edge("build_user_knowledge_base", END)
+memory_graph.add_edge("build_emotional_profile", "persist_memory_state")
+memory_graph.add_edge("build_user_knowledge_base", "persist_memory_state")
+memory_graph.add_edge("persist_memory_state", END)
 
 build_memory_workflow = memory_graph.compile()
 
@@ -64,9 +62,9 @@ main_graph.add_conditional_edges(
 main_workflow = main_graph.compile()
 
 # print(main_workflow.get_graph(xray=True).draw_ascii())
-# image_data = main_workflow.get_graph(xray=True).draw_mermaid_png()
-# img = Image.open(io.BytesIO(image_data))
-# img.show()
+image_data = main_workflow.get_graph(xray=True).draw_mermaid_png()
+img = Image.open(io.BytesIO(image_data))
+img.show()
 
 # test workflow
 # test_graph = StateGraph(MemoryState)

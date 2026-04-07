@@ -21,25 +21,36 @@ Previous Session Preferences: {previous_session_preferences} \n
 
 # Your task:
 Based on the above information, create 
-1. stm_memory: 
+1. stm_memory:
     a. A concise summary of the recent interactions and context of the user. \n
     b. It contains summary of both human and AI responses, user emotions, and any relevant information that can help in understanding conversation context. \n
-2. session_preferences: \n
-    a. A summary of the user's preferences and behavior during the current session. \n
-    b. It should contain info relevant to user only "user_preferences". \n
+2. session_preferences (can be null if nothing new or important to save): \n
+    a. User guidelines, recommendatios, or instructions that he/she ask to follow for the current session. \n
+    b. Any specific preferences or behavior of the user that can help in generating better responses during the current session. \n
     c. Some of the examples for session preferences are: "user_likes", "user_dislikes", "user_emotions", etc. \n
-    d. It must not have info regarding AI behaviour. \n
-    e. It must not have user query or AI responses. \n
 
-# Important Notes:
-1. Your response will be used to overwrite the existing stm_memory and session_preferences for the user, so make sure to include all relevant information in your summary. \n
+# Important Instructions - stm memory:
+1. Your response will be used to overwrite the existing stm_memory (if exists) for the user, so make sure to include all relevant information in your summary. \n
 2. You have to decide which piece of information is repeated, which is no longer required, which is more important, and accordingly build the summary. \n
-3. If you think that everything in previous stm_memory or session_preferences is still relevant and important, you can choose to keep it as it is in the new summary, and append your new information to it. \n
+3. If you think that everything in previous stm_memory is still relevant and important, you can choose to keep it as it is in the new summary, and append your new information to it. \n
 4. Remember that quality of summary and information is more important than quantity, even if summary is becoming long \n
 
+# Important Instructions - session_preferences:
+1. If you think no new session preference is required to be added, you can keep session_preferences as null. \n
+2. If you think of some new session preference to be added, you have to: \n
+    a. Pick the existing session preferences (if exists) and re-build the session preferences with the updated information. \n
+    b. You can modify the existing session preference if you think some information is repeated or no-longer required. \n
+3. If you give non-null session preferences, then it will overwrite the existing session preferences (if exists), so make sure to include all relevant information in your new session preferences. \n
+
+# Strict Guidelines - session_preferences:
+    a. It must not have any information related to AI \n
+    b. It must not have "user_query", "user_response", "messages", etc.\n
+    c. Session preference is only for session specific user instructions, and not to store history.
+
 # Response: \n
-Format response as JSON with the following structure:
+Format response as JSON strictly following the structure below:
 {format_instructions}
+No other text, function call, chat message, etc. \n
 """
 
 MEMORY_CLIENT_BUILD_EMOTIONAL_PROFILE = """
@@ -81,8 +92,9 @@ From the Above information, you have to analayze the user behaviour in various f
 5. If user wants to remember something for a particular time, then content should include that information also. \n
 
 # Response: \n
-Format response as JSON with the following structure:
+Format response as JSON strictly following the structure below:
 {format_instructions}
+No other text, function call, chat message, etc. \n
 
 # Input
 1. User's current query {user_query} \n
@@ -135,10 +147,12 @@ MUST (Positive Rule) = CANNOT (Negavtive Rule) > SHOULD > CAN \n
 4. Content must include only user preferences, behaviour, habits or facts related information. \n
 
 # Must follow Guidelines: \n
-### Scenario 1: No "previous user long term memory" exists. \n
+### Scenario 1: If nothing is relevant enough to be added or updated in long term memory, then simply respond with an empty list. \n
+
+### Scenario 2: Relevant info is available to add and no "previous user long term memory" exists. \n
 In this case, trait_id will be null, so action must be "add" for all the memory items. \n Follow same instructions as in Sub-Scenario 2.2 mentioned below for building the memory items. \n
 
-### Scenario 2: "previous user long term memory" exists. \n
+### Scenario 3: Relevant info is available to add and "previous user long term memory" exists. \n
 In this case, you have to compare the new memory items with the previous memory items. We have two sub-scenarios here: \n
     #### Sub-Scenario 2.1: \n
     a. If the previous memory item is similar with new knowledge, then always try to update the existing memory item first. \n
@@ -156,7 +170,7 @@ In this case, you have to compare the new memory items with the previous memory 
     3. Information should be concise but still relevant and useful for future response generation. \n
 
 # Response:
-Follow the format instructions strictly below. Return ONLY valid JSON array, no other text: \n
+Follow the format instructions strictly below. Return ONLY valid JSON array, no other text, function call, chat message \n
 {format_instructions}
 
 # Input

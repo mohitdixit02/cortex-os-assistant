@@ -7,12 +7,20 @@ from cortex.graph.state import ConversationState, UserSTM, MemoryEmotionalProfil
 class MemoryModel:
     def __init__(self):
         model_config = models.get("main", {})
+        planner_model_config = models.get("planner", {})
         self.model = ChatHuggingFace(llm=HuggingFaceEndpoint(
             repo_id=model_config.get("name"),
             task=model_config.get("task", "conversational"),
             max_new_tokens=model_config.get("max_new_tokens", 200),
             temperature=model_config.get("temperature", 0.2)
         ))
+        self.plan_model = ChatHuggingFace(llm=HuggingFaceEndpoint(
+            repo_id=planner_model_config.get("name"),
+            task=planner_model_config.get("task", "conversational"),
+            max_new_tokens=planner_model_config.get("max_new_tokens", 200),
+            temperature=planner_model_config.get("temperature", 0.2)
+        ))
+            
     
     def build_stm(self, state: MemoryState):
         """
@@ -90,7 +98,7 @@ class MemoryModel:
         formatted_prompt, parser = get_memory_client_prompts(
             type="build_user_knowledge"
         )
-        chain = formatted_prompt | self.model | parser
+        chain = formatted_prompt | self.plan_model | parser
         res = chain.invoke({
             "user_query": query,
             "stm_summary": prev_stm.stm_summary if prev_stm else "",
