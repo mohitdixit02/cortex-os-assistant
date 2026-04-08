@@ -24,7 +24,7 @@ class ManagerClient():
         if not res or not res.query:
             self.logger.warning("No keywords generated for web search tool")
             return ""
-            
+
         web_search_tool = WebSearchTool()
         self.logger.info(f"Executing web search tool with query: {res.query}")
         result = web_search_tool.search(input=res)
@@ -39,8 +39,9 @@ class ManagerClient():
             )
             docs.append(doc_obj)
 
+        target_query = " ".join(res.query) if isinstance(res.query, list) else res.query
         relevant_docs = retrieve_relevant_docs_utility(
-            target_query=query,
+            target_query=target_query,
             relevant_docs=docs,
             model=self.embd_model,
         )

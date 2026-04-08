@@ -1,6 +1,7 @@
 import asyncio
 from typing import Type
 from enum import Enum
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pydantic import BaseModel, Field
 import json
 
@@ -58,7 +59,10 @@ class WebSearchTool(BaseTool):
         "Input must be a list of search queries."
     )
     args_schema: Type[BaseModel] = WebSearchInput
-    max_results: int = 5
+    max_results: int = 2
+    max_query_workers: int = 6
+    max_url_workers: int = 8
+    max_urls_per_query: int = 4
 
     def _run(
         self,
@@ -77,25 +81,48 @@ class WebSearchTool(BaseTool):
     ) -> str:
         """Execute an asynchronous web search."""
         return await asyncio.to_thread(self._run, query)
+
+    def _search_single_query(self, query: str) -> list[dict]:
+        """Search one query and scrape a small bounded set of result URLs."""
+        res = self._run(query)
+        parsed = json.loads(res)
+        urls = [
+            item.get("link")
+            for item in parsed
+            if item.get("link") and "youtube" not in item.get("link", "")
+        ]
+        urls = list(dict.fromkeys(urls))[: self.max_urls_per_query]
+        return self.web_scrap(urls)
+    
+    def _load_single_url(self, url: str) -> dict | None:
+        try:
+            loader = WebBaseLoader(url)
+            data = loader.load()
+            if not data:
+                return None
+            formatted_data = " ".join((data[0].page_content or "").split())
+            if not formatted_data:
+                return None
+            return {
+                "url": url,
+                "data": formatted_data,
+            }
+        except Exception:
+            return None
     
     def web_scrap(self, urls: list[str]) -> list[dict]:
         """Perform web search using the tool."""
-        res = []
-        for url in urls:
-            loader = WebBaseLoader(url)
-            data = loader.load()
-            formatted_data = " ".join(data[0].page_content.split())
-            res.append(
-                {
-                    "url": url,
-                    "data": formatted_data
-                }
-            )
-        return res
-    
-    def _clean_output(self, output: str) -> str:
-        """Clean the output from the web search."""
-        return output.strip()
+        if not urls:
+            return []
+
+        results: list[dict] = []
+        with ThreadPoolExecutor(max_workers=self.max_url_workers) as executor:
+            futures = [executor.submit(self._load_single_url, url) for url in urls]
+            for future in as_completed(futures):
+                item = future.result()
+                if item is not None:
+                    results.append(item)
+        return results
 
     def search(
         self,
@@ -105,21 +132,23 @@ class WebSearchTool(BaseTool):
         query_value = input.query
         queries = [query_value] if isinstance(query_value, str) else list(query_value)
 
-        results = []
-        for query in queries:
-            cleaned_query = str(query).strip()
-            if not cleaned_query:
-                continue
-            try:
-                res = self._run(cleaned_query)
-                res = json.loads(res)
-                urls = [item["link"] for item in res if not "youtube" in item.get("link")]
-                docs = self.web_scrap(urls)
-                results.extend(docs)
-                
-            except Exception:
-                # Keep partial success if one provider call fails.
-                continue
+        cleaned_queries = [str(query).strip() for query in queries if str(query).strip()]
+        if not cleaned_queries:
+            return []
+
+        results: list[dict] = []
+        with ThreadPoolExecutor(max_workers=self.max_query_workers) as executor:
+            future_to_query = {
+                executor.submit(self._search_single_query, query): query
+                for query in cleaned_queries
+            }
+            for future in as_completed(future_to_query):
+                try:
+                    docs = future.result()
+                    if docs:
+                        results.extend(docs)
+                except Exception:
+                    continue
 
         return results
     

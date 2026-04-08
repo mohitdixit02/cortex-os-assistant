@@ -9,7 +9,7 @@ ACCEPTABLE_RELEVANCE_SCORE = 0.6
 RELEVANCE_SCORE_THRESHOLD = 0.5
 
 # Chunking configuration for large documents
-CHUNK_SIZE = 500
+CHUNK_SIZE = 600
 CHUNK_OVERLAP = 100
 
 # Embedding throughput tuning
