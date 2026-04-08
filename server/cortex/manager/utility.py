@@ -8,6 +8,9 @@ ACCEPTABLE_RELEVANCE_SCORE = 0.6
 # Relevance of every doc with the most relevant doc
 RELEVANCE_SCORE_THRESHOLD = 0.5
 
+# Max word limit
+MAX_WORD_LIMIT = 1000
+
 # Chunking configuration for large documents
 CHUNK_SIZE = 600
 CHUNK_OVERLAP = 100
@@ -81,8 +84,15 @@ def retrieve_relevant_docs_utility(
             })
             
     final_relevant_docs = []
+    current_word_count = 0
     for item in relevance_score_filter_docs:
         if item["relevance_score"] >= top_relevance_score * RELEVANCE_SCORE_THRESHOLD:
             print(f"Doc '{item['doc'].metadata.get('source', '')}' is selected as relevant with relevance score {item['relevance_score']}.")
             final_relevant_docs.append(item["doc"])
+            current_word_count += len(item["doc"].page_content.split())
+        
+        if current_word_count >= MAX_WORD_LIMIT:
+            print(f"Reached max word limit of {MAX_WORD_LIMIT}. Stopping selection of relevant documents.")
+            break
+
     return final_relevant_docs
