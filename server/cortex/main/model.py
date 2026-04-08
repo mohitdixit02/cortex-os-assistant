@@ -10,7 +10,7 @@ from numpy.linalg import norm
 from utility.logger import get_logger
 from utility.huggingface.config import models
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
-from cortex.main.tools import AVAILABLE_TOOLS
+from cortex.manager.tools import AVAILABLE_TOOLS
 import json
 
 text = """
@@ -28,11 +28,18 @@ class CortexMainModel:
         self.logger = get_logger("CORTEX_MAIN")
         self.logger.info("Initializing generation model...")
         model_config = models.get("main", {})
+        planner_model_config = models.get("planner", {})
         self.model = ChatHuggingFace(llm=HuggingFaceEndpoint(
             repo_id=model_config.get("name"),
             task=model_config.get("task", "conversational"),
             max_new_tokens=model_config.get("max_new_tokens", 200),
             temperature=model_config.get("temperature", 0.2)
+        ))
+        self.plan_model = ChatHuggingFace(llm=HuggingFaceEndpoint(
+            repo_id=planner_model_config.get("name"),
+            task=planner_model_config.get("task", "conversational"),
+            max_new_tokens=planner_model_config.get("max_new_tokens", 200),
+            temperature=planner_model_config.get("temperature", 0.2)
         ))
         # self.template_provider = TemplateProvider()
         # self.str_parser = StrOutputParser()
@@ -78,8 +85,8 @@ class CortexMainModel:
         formatted_prompt, parser = get_main_client_prompts(
             type="main_orchestration",
         )
-        chain = formatted_prompt | self.model | parser
-        available_tools = "\n".join([f"{tool.tool_name}: {tool.tool_description}" for tool in AVAILABLE_TOOLS])
+        chain = formatted_prompt | self.plan_model | parser
+        available_tools = "\n".join([f"{tool.get('tool_name')}: {tool.get('tool_description')} - {tool.get('tool_id')}" for tool in AVAILABLE_TOOLS])
         
         feedback = state.plan_feedback
         if feedback and feedback.user_knowledge_retrieval_feedback:

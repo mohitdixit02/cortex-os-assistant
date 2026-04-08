@@ -48,8 +48,24 @@ user_knowledge_retrieval_keywords: ["travel preferences, travel history, travel 
 
 3. is_tool_required and selected_tools - \n
     a. You will be provided with a list of available tools and their functionalities, you have to decide whether any of these tools are required to process the user query or not.
-    b. If yes, then respond with is_tool_required as true and provide the Dictionary of selected tools. \n
+    b. If yes, then respond with is_tool_required as true and provide the list of selected tools. \n
     c. If not, then respond with is_tool_required as false and keep the selected_tools field empty or null. \n
+    d. Each selected tool in the list must be in following format:
+    ```json
+    {{
+        "tool_id": "the unique id of the tool. select it from the available tools list",
+        "instructions": "Specific instructions for the tool to follow (can be null)"
+    }}
+    ```
+    e. tool_id must exactly match one id from the available tools list. Do not invent tool ids, class names, aliases, or new tool names. \n
+    
+    ### Note for Tool Instructions:
+    1. Since you have better understanding of the user query, preferences, behaviour, emotional profile and the context, you can provide specific instructions to the tool to make it more effective and personalized. \n
+    2. While building the instruction, remember that manager has no access to user preferences. It only knows the user query and your instructions.
+    3. For example, for web search tool, one of the instruction (only a example) can be "Also search for sweet dishes as user is in sad mood, and prefers sweet dishes when he is sad".
+    4. Simialrly, you can have instruction of your choice for this as well as other tools.
+    5. Any examples in this prompt are illustrative only. Never copy example wording into your output. \n
+    6. Instructions can be null as well if you think no specific instructions are required for the tool. \n
 
 # Available Tools: 
 {available_tools}

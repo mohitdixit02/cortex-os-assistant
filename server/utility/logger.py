@@ -9,7 +9,7 @@ class ColoredFormatter(logging.Formatter):
         "CORTEX_MAIN": Fore.CYAN,
         "CORTEX_VOICE": Fore.MAGENTA,
         "SENSORY": Fore.YELLOW,
-        "DB": Fore.GREEN,
+        "CORTEX_MANAGER": Fore.GREEN,
         "CORTEX_MEMORY": Fore.BLUE,
         "TASK_QUEUE": Fore.RED,
         "DEFAULT": Fore.WHITE,

@@ -1,4 +1,5 @@
 from cortex.memory import MemoryClient
+from cortex.manager import ManagerClient
 from langgraph.graph import StateGraph, START, END
 from cortex.main.orchestrator import Orchestrator
 from cortex.graph.state import ConversationState, MemoryState
@@ -6,10 +7,9 @@ from db import engine
 from PIL import Image
 import io
 
-memory_client = MemoryClient(
-    engine=engine
-)
 orchestrator = Orchestrator()
+memory_client = MemoryClient(engine=engine)
+manager_client = ManagerClient()
 
 # Build Memory for the conversation
 memory_graph = StateGraph(MemoryState)
@@ -62,20 +62,36 @@ main_graph.add_conditional_edges(
 main_workflow = main_graph.compile()
 
 # print(main_workflow.get_graph(xray=True).draw_ascii())
-image_data = main_workflow.get_graph(xray=True).draw_mermaid_png()
-img = Image.open(io.BytesIO(image_data))
-img.show()
+def display_workflow_graph(worflow):
+    image_data = worflow.get_graph(xray=True).draw_mermaid_png()
+    img = Image.open(io.BytesIO(image_data))
+    img.show()
+
+# display_workflow_graph(main_workflow)
 
 # test workflow
-# test_graph = StateGraph(MemoryState)
-# test_graph.add_node("build_user_knowledge_base", memory_client.build_user_knowledge_base)
-# test_graph.add_edge(START, "build_user_knowledge_base")
-# test_graph.add_edge("build_user_knowledge_base", END)
-# test_workflow = test_graph.compile()
+test_graph = StateGraph(ConversationState)
+# test_graph.add_node("fetch_stm", memory_client.fetch_relevant_stm)
+# test_graph.add_node("fetch_emotional_profile", memory_client.fetch_emotional_profile)
+# test_graph.add_node("plan_main_orchestration", orchestrator.build_main_orchestration_plan)
+test_graph.add_node("execute_tools_manager", manager_client.execute_tools)
+
+test_graph.add_edge(START, "execute_tools_manager")
+test_graph.add_edge("execute_tools_manager", END)
+
+# test_graph.add_edge(START, "fetch_stm")
+# test_graph.add_edge(START, "fetch_emotional_profile")
+# test_graph.add_edge("fetch_stm", "plan_main_orchestration")
+# test_graph.add_edge("fetch_emotional_profile", "plan_main_orchestration")
+# test_graph.add_edge("plan_main_orchestration", "execute_tools_manager")
+# test_graph.add_edge("execute_tools_manager", END)
+test_workflow = test_graph.compile()
+
+display_workflow_graph(test_workflow)
 
 __all__ = [
     "main_workflow",
     "build_memory_workflow",
-    # "test_workflow",
+    "test_workflow",
 ]
 

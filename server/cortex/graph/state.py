@@ -106,10 +106,17 @@ class MemoryState(BaseModel):
 class CortexTool(BaseModel):
     """Represents a tool that can be used by the Cortex Main Client to process user queries and generate responses."""
     tool_id: str
-    tool_name: str
-    tool_description: str
-    tool_input_format: Optional[dict[str, Any]] = None
-    tool_output_format: Optional[dict[str, Any]] = None
+    # tool_name: str
+    # tool_description: str
+    # tool_input_format: Optional[dict[str, Any]] = None
+    # tool_output_format: Optional[dict[str, Any]] = None
+    instructions: Optional[str] = None
+    tool_result: Optional[Any] = None
+    tool_exec_status: Optional[str] = None
+
+class CortexToolList(RootModel[list[CortexTool]]):
+    """Root model for a list of Cortex tools."""
+    pass
 
 # class ToolSelectionState(BaseModel):
 #     """Represents the state of tool selection process decided by the Orchestartor based on the user query and context."""
@@ -139,8 +146,8 @@ class OrchestrationState(BaseModel):
     is_message_referred: Annotated[bool, Field(description="Whether the user query is referring to any past message in the conversation or not")]
     referred_message_keywords: Annotated[Optional[str], Field(description="Keywords from the referred message")] = None
     is_tool_required: Annotated[bool, Field(description="Whether any tool is required to process the user query or not")]
-    selected_tools: Annotated[Optional[Dict[str, str]], Field(description="Dict of selected tool Id as keys and one line reason of why it is required as values")] = None
-    
+    selected_tools: Annotated[Optional[CortexToolList], Field(description="List of selected tools")] = None
+
 class FinalResponseGenerationState(BaseModel):
     """Represents the state of final response generation done by Response Generator based on the orchestration plan and evaluation"""
     response: Annotated[Optional[str], Field(description="The final response generated for the user query")] = None
