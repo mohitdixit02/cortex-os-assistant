@@ -183,7 +183,7 @@ class MainClient:
             
             web_tool = CortexTool(
                 tool_id="web_search_01",
-                instructions="Search for popular pizza types, toppings, and recipes. Consider Mohit's neutral mood and casual tone preference."
+                instructions="Search for latest topics of Indian news specifically related to politics."
             )
             
             state.orchestration_state = OrchestrationState(

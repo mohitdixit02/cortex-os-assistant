@@ -82,10 +82,11 @@ def retrieve_relevant_docs_utility(
                 "doc": chunk_doc,
                 "relevance_score": relevance_score
             })
-            
+    
+    sorted_docs = sorted(relevance_score_filter_docs, key=lambda x: x["relevance_score"], reverse=True)
     final_relevant_docs = []
     current_word_count = 0
-    for item in relevance_score_filter_docs:
+    for item in sorted_docs:
         if item["relevance_score"] >= top_relevance_score * RELEVANCE_SCORE_THRESHOLD:
             print(f"Doc '{item['doc'].metadata.get('source', '')}' is selected as relevant with relevance score {item['relevance_score']}.")
             final_relevant_docs.append(item["doc"])

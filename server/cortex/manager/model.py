@@ -77,3 +77,31 @@ class ManagerModel:
             query=res.query
         )
         return web_input
+
+    def summarize_tool_result(
+        self,
+        tool_result: str,
+        query: str,
+        tool_type: str,
+    ) -> str:
+        """
+        Summarize the tool result based on the user query and tool type using the generation model. \n
+        - tool_result: The raw result obtained from executing the tool which may contain a large amount of information
+        - query: user query for which the tool was executed, to be used as context for summarization
+        - tool_type: type of the tool which may be used to condition the summarization (e.g. web search result may be summarized differently than a calculator result)
+        
+        Returns: A summarized version of the tool result which is concise and relevant to the user query
+        """
+        formatted_prompt, parser = get_manager_client_prompts(
+            type="tool_result_summarization",
+            tool_type=tool_type,
+        )
+        chain = formatted_prompt | self.model | parser
+        
+        res = chain.invoke({
+            "tool_result": tool_result,
+            "user_query": query,
+            "tool_type": tool_type,
+        })
+        summary = self._chunk_to_text(res)
+        return summary

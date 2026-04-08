@@ -91,3 +91,30 @@ class ManagerClient():
         return {
             "orchestration_state": state.orchestration_state,
         }
+
+    def summarize_tool_results(self, state: ConversationState) -> str:
+        orchestration_state = state.orchestration_state
+        if orchestration_state is None:
+            self.logger.warning("No orchestration state found in the conversation state. Cannot summarize tool results.")
+            return ""
+        
+        selected_tools = orchestration_state.selected_tools
+        selected_tools_list = selected_tools.root if hasattr(selected_tools, "root") else selected_tools
+        
+        summary = ""
+        for tool in selected_tools_list:
+            if isinstance(tool, CortexTool):
+                if tool.tool_id == AvailableToolsType.WEB_SEARCH_TOOL.value:
+                    summary = self.model.summarize_tool_result(
+                        tool_result = tool.tool_result,
+                        query = state.query,
+                        tool_type = AvailableToolsType.WEB_SEARCH_TOOL.value
+                    )
+                    tool.tool_result = summary
+            else:
+                self.logger.warning(f"Invalid tool format: {tool}. Skipping this tool in summary.")
+        
+        state.orchestration_state.selected_tools = selected_tools
+        return {
+            "orchestration_state": state.orchestration_state,
+        }

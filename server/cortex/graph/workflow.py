@@ -75,9 +75,11 @@ test_graph = StateGraph(ConversationState)
 # test_graph.add_node("fetch_emotional_profile", memory_client.fetch_emotional_profile)
 # test_graph.add_node("plan_main_orchestration", orchestrator.build_main_orchestration_plan)
 test_graph.add_node("execute_tools_manager", manager_client.execute_tools)
+test_graph.add_node("summarize_tool_result", manager_client.summarize_tool_results)
 
 test_graph.add_edge(START, "execute_tools_manager")
-test_graph.add_edge("execute_tools_manager", END)
+test_graph.add_edge("execute_tools_manager", "summarize_tool_result")
+test_graph.add_edge("summarize_tool_result", END)
 
 # test_graph.add_edge(START, "fetch_stm")
 # test_graph.add_edge(START, "fetch_emotional_profile")

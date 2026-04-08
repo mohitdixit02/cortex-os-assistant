@@ -1,9 +1,10 @@
 from cortex.manager.tools import WebSearchInput
 from langchain_core.prompts import PromptTemplate
 from pydantic import BaseModel, Field
-from typing import Annotated, Literal, Any, Dict
+from typing import Annotated, Literal, Any, Dict, Optional
 from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
 from cortex.graph.state import OrchestrationState, PlanEvaluationState, FinalResponseFeedbackState, FinalResponseGenerationState
+from cortex.manager.tools import AvailableToolsType
 
 MANAGER_WEB_QUERY_PROMPT = """
 # Context: \n
@@ -31,8 +32,39 @@ A list of relevant queries (strings) to be used for web search. Follow the below
 {format_instructions}
 """
 
+TOOL_RESULT_SUMMARIZATION_PROMPT = """
+# Input Format: \n
+You will be given: \n
+1. User Query: Question or information or suggestion from the user. \n
+2. Tool Result: To get relevant info, a respective tool is executed and its result is given as input to you. \n
+3. Tool Instructions: Additional Instructions specific to the tool.
+
+# Input: \n
+User Query: {user_query}
+Tool Result: {tool_result}
+
+# Tool Specific instructions: \n
+{tool_instructions}
+
+# Objective: \n
+1. Based on the user query, tool result and specifictool instructions, you have to extract only the core facts that answer the user's query.
+2. Rewrite them as concise, relevant sentences in around 100-120 words in total.
+2. Make sure no important information got missed from the tool result while re-organizing facts.
+3. Your response is later used by the response generator to generate the final response for the user query, so it should be relevant and useful.
+
+# Response Format: \n
+Concise summary in the form of string, with no extra explanation, text, formatting, python function, etc. Just the concise summary string.
+"""
+
+WEB_TOOL_SPECIFIC_INSTRUCTIONS = """
+The tool used is Web Search Tool. The tool result will contain concatenated content of multiple web documents. All the Web Documents are relevant.
+# Instructions:
+1. Some of the content might have repeative data, so make sure to not include repeative information.
+2. Make sure that user query is fully addressed in the summary and no relevant information is missed.
+"""
 def get_manager_client_prompts(
     type: str,
+    tool_type: Optional[str] = None,
 ):
     if type == "web_query_planning":
         parser = PydanticOutputParser(pydantic_object=WebSearchInput)
@@ -45,4 +77,20 @@ def get_manager_client_prompts(
             ],
         )
         return prompt.partial(format_instructions=parser.get_format_instructions()), parser
+    elif type == "tool_result_summarization":
+        parser = StrOutputParser()
+        prompt = PromptTemplate(
+            template=TOOL_RESULT_SUMMARIZATION_PROMPT,
+            input_variables=[
+                "user_query",
+                "tool_result",
+                "tool_instructions"
+            ],
+        )
+        if not tool_type:
+            return prompt.partial(tool_instructions=""), parser
+        
+        if tool_type == AvailableToolsType.WEB_SEARCH_TOOL.value:
+            return prompt.partial(tool_instructions=WEB_TOOL_SPECIFIC_INSTRUCTIONS), parser
+
 
