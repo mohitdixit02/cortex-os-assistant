@@ -166,7 +166,10 @@ In this case, you have to compare the new memory items with the previous memory 
     b. First check whether the corresponding trait_id of that previous memory item is present or not.
         i. If present, mark action as "update" and provide the trait_id of the respective "previous user long term memory". (trait_id is UUID of the memory item which is required to update that memory item in database) \n
         ii. If trait_id is missing or not provided discard the sub-scenario 2.1 flow, Mark action as "add" and follow sub-scenario 2.2 guidelines immediately. \n
-
+    c. Make sure that update action must not lead to loss of previous useful information. \n
+    d. You can combine previous and new information in case you are not sure about the importance of any piece of information. \n
+    e. Only discard previous information if you are sure that it is no longer relevant or useful. \n
+    
     #### Strict Guidelines for trait_id: \n
     a. You are strictly not allowed to create a new trait_id on your own in any case. \n
     b. Any use of invalid trait_id or creation of new trait_id on your own will be considered as a violation of guidelines and can lead to termination of the application. \n

@@ -26,7 +26,7 @@ models = {
     "main":{
         "name":"meta-llama/Llama-3.1-8B-Instruct",
         "task":"conversational",
-        "max_new_tokens":500,
+        "max_new_tokens":300,
         "temperature":0.4,
     },
     "voice_emotion":{
@@ -38,7 +38,7 @@ models = {
     "planner":{
         "name":"Qwen/Qwen2.5-7B-Instruct",
         "task":"conversational",
-        "max_new_tokens":500,
+        "max_new_tokens":300,
         "temperature":0.2,
     }
 }

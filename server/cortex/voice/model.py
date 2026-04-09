@@ -10,6 +10,7 @@ from utility.huggingface.config import models
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from utility.huggingface.request import HuggingFaceRequest
 from cortex.voice.prompts import VoiceClientRouteQuery, get_voice_client_prompts
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
 
 # class QueryTypeStructModel(BaseModel):
 #     type: Annotated[Literal["casual", "query"], Field(description="Type of the user query")]
@@ -118,7 +119,12 @@ class EmotionDetectionModel:
     def __init__(self):
         self.logger = get_logger("CORTEX_VOICE")
         self.logger.info("Initializing generation model...")
-        self.model_config = models.get("voice_emotion", {})
+        model_config = models.get("voice_emotion", {})
+        model_name = model_config.get("name")
+        model = AutoModelForSequenceClassification.from_pretrained(model_name)
+        task = model_config.get("task")
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model_pipeline = pipeline(task, model=model, tokenizer=tokenizer)
         
     def get_model(self):
         return self.model
@@ -133,10 +139,11 @@ class EmotionDetectionModel:
          For example: `{"label": "joy", "score": 0.95}`
         """
         self.logger.info("Detecting emotion for text: %s", text)
-        res = HuggingFaceRequest(
-            feature="voice_emotion",
-            data=text
-        )
+        # res = HuggingFaceRequest(
+        #     feature="voice_emotion",
+        #     data=text
+        # )
+        res = self.model_pipeline(text)
         self.logger.info("Emotion detection result: %s", res)
         output = sorted(res, key=lambda x: x["score"], reverse=True)
         if output:
