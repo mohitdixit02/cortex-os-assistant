@@ -205,7 +205,7 @@ class CortexMainModel:
         formatted_prompt, parser = get_main_client_prompts(
             type="final_response_evaluation",
         )
-        chain = formatted_prompt | self.model | parser
+        chain = formatted_prompt | self.plan_model | parser
         
         if state.knowledge_base:
             retrieved_user_knowledge = [item.model_dump() for item in state.knowledge_base]

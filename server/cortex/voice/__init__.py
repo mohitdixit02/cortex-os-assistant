@@ -34,8 +34,8 @@ class VoiceClient:
     def __init__(self, audioBridge: AudioStreamBridge | None = None, streamEvent: StreamEvent | None = None):
         self.audioBridge = audioBridge
         self.streamEvent = streamEvent
-        # self.stt_client = STTClient()
-        # self.tts_client = TTSClient()
+        self.stt_client = STTClient()
+        self.tts_client = TTSClient()
         self.model = VoiceMainModel()
         self.emotion_model = EmotionDetectionModel()
         self._queue_cancel_event = asyncio.Event()

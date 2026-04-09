@@ -1,4 +1,4 @@
-from langchain_huggingface import HuggingFaceEndpointEmbeddings, ChatHuggingFace, HuggingFaceEndpoint
+from langchain_huggingface import HuggingFaceEmbeddings, HuggingFaceEndpointEmbeddings, ChatHuggingFace, HuggingFaceEndpoint
 from typing import Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from utility.huggingface.config import models
@@ -9,10 +9,13 @@ from numpy.linalg import norm
 
 class EmbeddingModel:
     def __init__(self):
-        self.embd_model = HuggingFaceEndpointEmbeddings(
-            model="sentence-transformers/all-MiniLM-L6-v2",
-            task="feature-extraction",
-            huggingfacehub_api_token=env.HF_TOKEN
+        # self.embd_model = HuggingFaceEndpointEmbeddings(
+        #     model="sentence-transformers/all-MiniLM-L6-v2",
+        #     task="feature-extraction",
+        #     huggingfacehub_api_token=env.HF_TOKEN
+        # )
+        self.embd_model = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2"
         )
         
     def generate_embeddings(self, text: str) -> list[float]:

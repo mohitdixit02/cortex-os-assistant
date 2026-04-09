@@ -6,6 +6,10 @@ from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
 from cortex.graph.state import OrchestrationState, PlanEvaluationState, FinalResponseFeedbackState, FinalResponseGenerationState
 from cortex.manager.tools import AvailableToolsType
 
+class WebQueryPlanResult(BaseModel):
+    query: list[str] = Field(..., description="The list of strings where each string has relevant keywords to search for.")
+    context: str = Field(None, description="Direct answer to the user query")
+
 MANAGER_WEB_QUERY_PROMPT = """
 # Context: \n
 You are a smart query planner for the web search tool. 
@@ -15,20 +19,27 @@ You are a smart query planner for the web search tool.
 2. Instructions by Orchestrator: Additional instructions or constraints provided by the orchestrator to guide the query planning. (can be null) \n
 
 # Task: \n
-Based on the user query and the instructions by orchestrator, you have to give a list of relevant queries which can be used for web search.
+Based on the user query and the instructions by orchestrator, you have to give: \n
+1. A list of relevant queries which can be used for web search. \n
+2. A context string which is the direct answer to the user query based on your knowledge. \n
 
-# Instructions: \n
+# Instructions - Query: \n
 1. Each query should be relevant enough to search for.
 2. Strictly follow the orchestrator instructions if provided. If no instructions are provided, generate queries based on the user query alone.
 3. Similar Queries must be grouped together while each query in the list should be different from other queries to cover different aspects.
 4. Give atleast one query and at max five queries in the output list.
+
+# Instructions - Context: \n
+1. Based on the user query and orchestrartor instructions (if any), act as a expert of that field, and provide a paragraph of text that can answer to the user query directly. \n
+2. Use professional terminology and a factual tone.
+3. Do not use introductory phrases like 'Based on the query...' or 'Here is...'.
 
 # Input:
 User Query: {user_query}
 Instructions by Orchestrator: {orchestrator_instructions}
 
 # Output Format: \n
-A list of relevant queries (strings) to be used for web search. Follow the below format strictly. Never include any explanations, additional text, python functions, etc in the response. \n
+Follow the below format strictly. Never include any explanations, additional text, python functions, etc in the response. \n
 {format_instructions}
 """
 
@@ -68,7 +79,7 @@ def get_manager_client_prompts(
     tool_type: Optional[str] = None,
 ):
     if type == "web_query_planning":
-        parser = PydanticOutputParser(pydantic_object=WebSearchInput)
+        parser = PydanticOutputParser(pydantic_object=WebQueryPlanResult)
         prompt = PromptTemplate(
             template=MANAGER_WEB_QUERY_PROMPT,
             input_variables=[
@@ -93,5 +104,3 @@ def get_manager_client_prompts(
         
         if tool_type == AvailableToolsType.WEB_SEARCH_TOOL.value:
             return prompt.partial(tool_instructions=WEB_TOOL_SPECIFIC_INSTRUCTIONS), parser
-
-

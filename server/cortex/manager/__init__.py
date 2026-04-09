@@ -1,4 +1,4 @@
-from cortex.manager.tools import AvailableToolsType, WebSearchTool
+from cortex.manager.tools import AvailableToolsType, WebSearchTool, WebSearchInput
 from cortex.graph.state import ConversationState, CortexTool
 from cortex.manager.model import ManagerModel
 from utility.logger import get_logger
@@ -27,7 +27,8 @@ class ManagerClient():
 
         web_search_tool = WebSearchTool()
         self.logger.info(f"Executing web search tool with query: {res.query}")
-        result = web_search_tool.search(input=res)
+        search_input = WebSearchInput(query=res.query)
+        result = web_search_tool.search(input=search_input)
         docs = []
         for doc in result:
             data = doc.get("data", "")
@@ -41,7 +42,7 @@ class ManagerClient():
 
         target_query = " ".join(res.query) if isinstance(res.query, list) else res.query
         relevant_docs = retrieve_relevant_docs_utility(
-            target_query=target_query,
+            target_query=target_query + " " + res.context,
             relevant_docs=docs,
             model=self.embd_model,
         )

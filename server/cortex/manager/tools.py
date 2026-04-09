@@ -1,14 +1,13 @@
 import asyncio
 from typing import Type
 from enum import Enum
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeoutError
 from pydantic import BaseModel, Field
 import json
 from contextlib import nullcontext
 
 from cortex.graph.state import CortexTool
 from langchain_core.tools import BaseTool
-from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_community.document_loaders import WebBaseLoader
 from langsmith import traceable
 try:
@@ -57,7 +56,7 @@ class WebSearchInput(BaseModel):
     query: list[str] = Field(..., description="The list of strings where each string has relevant keywords to search for.")
 
 class WebSearchTool(BaseTool):
-    """LangChain BaseTool implementation backed by DuckDuckGoSearchResults."""
+    """LangChain BaseTool implementation backed by native DDGS search and WebBaseLoader scraping."""
 
     name: str = "web_search"
     description: str = (
@@ -69,6 +68,8 @@ class WebSearchTool(BaseTool):
     max_query_workers: int = 6
     max_url_workers: int = 8
     max_urls_per_query: int = 4
+    ddg_timeout_s: int = 8
+    scrape_timeout_s: float = 8.0
 
     def _no_trace_context(self):
         """Return a context manager that disables LangSmith tracing when available."""
@@ -83,11 +84,24 @@ class WebSearchTool(BaseTool):
     ) -> str:
         """Execute a synchronous web search."""
         with self._no_trace_context():
-            search_tool = DuckDuckGoSearchResults(
-                num_results=self.max_results,
-                output_format="json"
-            )
-            return search_tool.run(query)
+            from ddgs import DDGS
+
+            with DDGS(timeout=self.ddg_timeout_s) as ddgs:
+                raw_results = ddgs.text(
+                    query,
+                    max_results=self.max_results,
+                    backend="auto",
+                )
+
+            normalized_results = [
+                {
+                    "snippet": item.get("body", ""),
+                    "title": item.get("title", ""),
+                    "link": item.get("href", ""),
+                }
+                for item in raw_results or []
+            ]
+            return json.dumps(normalized_results)
 
     async def _arun(
         self,
@@ -111,7 +125,13 @@ class WebSearchTool(BaseTool):
     def _load_single_url(self, url: str) -> dict | None:
         try:
             with self._no_trace_context():
-                loader = WebBaseLoader(url)
+                loader = WebBaseLoader(
+                    url,
+                    requests_kwargs={"timeout": self.scrape_timeout_s},
+                    continue_on_failure=True,
+                    raise_for_status=False,
+                    show_progress=False,
+                )
                 data = loader.load()
             if not data:
                 return None
@@ -134,9 +154,14 @@ class WebSearchTool(BaseTool):
         with ThreadPoolExecutor(max_workers=self.max_url_workers) as executor:
             futures = [executor.submit(self._load_single_url, url) for url in urls]
             for future in as_completed(futures):
-                item = future.result()
-                if item is not None:
-                    results.append(item)
+                try:
+                    item = future.result(timeout=self.scrape_timeout_s + 2)
+                    if item is not None:
+                        results.append(item)
+                except FutureTimeoutError:
+                    continue
+                except Exception:
+                    continue
         return results
 
     def search(
@@ -159,9 +184,13 @@ class WebSearchTool(BaseTool):
             }
             for future in as_completed(future_to_query):
                 try:
-                    docs = future.result()
+                    docs = future.result(
+                        timeout=self.ddg_timeout_s + (self.scrape_timeout_s * self.max_urls_per_query) + 2
+                    )
                     if docs:
                         results.extend(docs)
+                except FutureTimeoutError:
+                    continue
                 except Exception:
                     continue
 

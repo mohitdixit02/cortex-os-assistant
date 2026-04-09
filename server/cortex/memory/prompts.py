@@ -12,15 +12,8 @@ You are a Short Term Memory (STM) builder for a conversational AI system. Your t
 3. Emootion of the user for the current query \n
 4. Previous stm_memory (if any else null) and session_preferences (if any else null) \n
 
-# Information to consider while building STM and session preferences:
-User Query: {user_query} \n
-AI Response: {ai_response} \n
-User Emotion: {user_emotion} \n
-Previous STM Memory: {previous_stm_memory} \n
-Previous Session Preferences: {previous_session_preferences} \n
-
 # Your task:
-Based on the above information, create 
+Based on the information provided, create 
 1. stm_memory:
     a. A concise summary of the recent interactions and context of the user. \n
     b. It contains summary of both human and AI responses, user emotions, and any relevant information that can help in understanding conversation context. \n
@@ -42,10 +35,17 @@ Based on the above information, create
     b. You can modify the existing session preference if you think some information is repeated or no-longer required. \n
 3. If you give non-null session preferences, then it will overwrite the existing session preferences (if exists), so make sure to include all relevant information in your new session preferences. \n
 
+# Information to consider while building STM and session preferences:
+User Query: {user_query} \n
+AI Response: {ai_response} \n
+User Emotion: {user_emotion} \n
+Previous STM Memory: {previous_stm_memory} \n
+Previous Session Preferences: {previous_session_preferences} \n
+
 # Strict Guidelines - session_preferences:
     a. It must not have any information related to AI \n
     b. It must not have "user_query", "user_response", "messages", etc.\n
-    c. Session preference is only for session specific user instructions, and not to store history.
+    c. Session preference is only for session specific user instructions, and not to store history. \n
 
 # Response: \n
 Format response as JSON strictly following the structure below:
@@ -91,11 +91,6 @@ From the Above information, you have to analayze the user behaviour in various f
 4. Content should be in a way that it can help in generating better response in future given mood and time of the day. \n
 5. If user wants to remember something for a particular time, then content should include that information also. \n
 
-# Response: \n
-Format response as JSON strictly following the structure below:
-{format_instructions}
-No other text, function call, chat message, etc. \n
-
 # Input
 1. User's current query {user_query} \n
 2. User's STM summary {stm_summary} \n
@@ -103,6 +98,11 @@ No other text, function call, chat message, etc. \n
 4. User's current Mood {user_emotion} \n
 5. User's current Time of the day {user_time_of_day} \n
 6. User's previous emotional profile {previous_emotional_profile} \n
+
+# Response: \n
+Format response as JSON strictly following the structure below:
+{format_instructions}
+No other text, function call, chat message, etc. \n
 """
 
 MEMORY_CLIENT_BUILD_USER_KNOWLEDGE = """
@@ -146,6 +146,13 @@ MUST (Positive Rule) = CANNOT (Negavtive Rule) > SHOULD > CAN \n
 3. Content must include things like "user ask this, user ask that". \n
 4. Content must include only user preferences, behaviour, habits or facts related information. \n
 
+# Input
+1. User's current query {user_query} \n
+2. User's STM summary {stm_summary} \n
+3. User's Session preferences {session_preferences} \n
+4. User's current Mood {user_emotion} \n
+5. Previous user long term memory {previous_user_knowledge} \n
+
 # Must follow Guidelines: \n
 ### Scenario 1: If nothing is relevant enough to be added or updated in long term memory, then simply respond with an empty list. \n
 
@@ -172,13 +179,6 @@ In this case, you have to compare the new memory items with the previous memory 
 # Response:
 Follow the format instructions strictly below. Return ONLY valid JSON array, no other text, function call, chat message \n
 {format_instructions}
-
-# Input
-1. User's current query {user_query} \n
-2. User's STM summary {stm_summary} \n
-3. User's Session preferences {session_preferences} \n
-4. User's current Mood {user_emotion} \n
-5. Previous user long term memory {previous_user_knowledge} \n
 """
 
 def get_memory_client_prompts(

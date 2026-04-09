@@ -2,7 +2,7 @@ from langchain_huggingface import HuggingFacePipeline, HuggingFaceEmbeddings, Hu
 from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
 from pydantic import BaseModel, Field
 from cortex.graph.state import ConversationState, CortexTool, OrchestrationState
-from cortex.manager.prompts import get_manager_client_prompts
+from cortex.manager.prompts import get_manager_client_prompts, WebQueryPlanResult
 from typing import TypedDict, Annotated, Literal, Optional, Dict, Any
 import numpy as np
 from numpy import dot
@@ -10,7 +10,6 @@ from numpy.linalg import norm
 from utility.logger import get_logger
 from utility.huggingface.config import models
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
-from cortex.manager.tools import AVAILABLE_TOOLS, WebSearchInput
 import json
 
 class ManagerModel:
@@ -54,13 +53,13 @@ class ManagerModel:
         self,
         query: str,
         tool: CortexTool,
-    ) -> WebSearchInput:
+    ) -> WebQueryPlanResult:
         """
         Build the input for web search tool based on the user query and orchestrator instructions using the generation model. \n
         - query: user query for which the web search input is to be generated
         - tool: CortexTool object which may contain instructions from the orchestrator for web search query planning
         
-        Returns: WebSearchInput object containing the generated keywords for web search
+        Returns: WebQueryPlanResult object containing the generated keywords for web search and context to be used for web search query planning.
         """
         formatted_prompt, parser = get_manager_client_prompts(
             type="web_query_planning",
@@ -73,8 +72,9 @@ class ManagerModel:
             "user_query": query,
             "orchestrator_instructions": instructions
         })
-        web_input = WebSearchInput(
-            query=res.query
+        web_input = WebQueryPlanResult(
+            query=res.query,
+            context=res.context
         )
         return web_input
 
