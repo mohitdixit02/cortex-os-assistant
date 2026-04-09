@@ -74,34 +74,49 @@ class ManagerClient():
         
         selected_tools = orchestrator_state.selected_tools
         selected_tools_list = selected_tools.root if hasattr(selected_tools, "root") else selected_tools
+        updated_tools = []
         for tool in selected_tools_list:
             if isinstance(tool, CortexTool):
                 try:
                     res = self._execute_tool(tool, query=state.query)
-                    tool.tool_result = res
-                    tool.tool_exec_status = "completed"
+                    updated_tools.append(
+                        tool.model_copy(update={
+                            "tool_result": res,
+                            "tool_exec_status": "completed",
+                        })
+                    )
                 except Exception as e:
                     self.logger.error(f"Error occurred while executing tool {tool}: {e}")
-                    tool.tool_exec_status = "failed"
-                    tool.tool_result = None
+                    updated_tools.append(
+                        tool.model_copy(update={
+                            "tool_result": None,
+                            "tool_exec_status": "failed",
+                        })
+                    )
             else:
                 self.logger.warning(f"Invalid tool format: {tool}. Skipping this tool.")
         
-        state.orchestration_state.selected_tools = selected_tools
+        state.orchestration_state.selected_tools = selected_tools.model_copy(update={
+            "root": updated_tools,
+        })
         return {
             "orchestration_state": state.orchestration_state,
         }
 
-    def summarize_tool_results(self, state: ConversationState) -> str:
+    def summarize_tool_results(self, state: ConversationState):
         orchestration_state = state.orchestration_state
         if orchestration_state is None:
             self.logger.warning("No orchestration state found in the conversation state. Cannot summarize tool results.")
-            return ""
+            return {"orchestration_state": None}
         
         selected_tools = orchestration_state.selected_tools
+        if selected_tools is None:
+            self.logger.warning("No selected tools found in the orchestration state. Nothing to summarize.")
+            return {"orchestration_state": orchestration_state}
+
         selected_tools_list = selected_tools.root if hasattr(selected_tools, "root") else selected_tools
         
-        summary = ""
+        updated_tools = []
         for tool in selected_tools_list:
             if isinstance(tool, CortexTool):
                 if tool.tool_id == AvailableToolsType.WEB_SEARCH_TOOL.value:
@@ -110,11 +125,20 @@ class ManagerClient():
                         query = state.query,
                         tool_type = AvailableToolsType.WEB_SEARCH_TOOL.value
                     )
-                    tool.tool_result = summary
+                    updated_tools.append(
+                        tool.model_copy(update={
+                            "tool_result": summary,
+                            "tool_exec_status": tool.tool_exec_status or "completed",
+                        })
+                    )
+                else:
+                    updated_tools.append(tool)
             else:
                 self.logger.warning(f"Invalid tool format: {tool}. Skipping this tool in summary.")
         
-        state.orchestration_state.selected_tools = selected_tools
+        state.orchestration_state.selected_tools = selected_tools.model_copy(update={
+            "root": updated_tools,
+        })
         return {
             "orchestration_state": state.orchestration_state,
         }

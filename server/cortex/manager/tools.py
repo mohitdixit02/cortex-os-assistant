@@ -4,11 +4,17 @@ from enum import Enum
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pydantic import BaseModel, Field
 import json
+from contextlib import nullcontext
 
 from cortex.graph.state import CortexTool
 from langchain_core.tools import BaseTool
 from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_community.document_loaders import WebBaseLoader
+from langsmith import traceable
+try:
+    from langsmith.run_helpers import tracing_context
+except Exception:  # pragma: no cover - fallback for environments without this helper
+    tracing_context = None
 
 web_search_tool = CortexTool(
     tool_id="web_search_01",
@@ -64,16 +70,24 @@ class WebSearchTool(BaseTool):
     max_url_workers: int = 8
     max_urls_per_query: int = 4
 
+    def _no_trace_context(self):
+        """Return a context manager that disables LangSmith tracing when available."""
+        if tracing_context is None:
+            return nullcontext()
+        return tracing_context(enabled=False)
+
+    @traceable(enabled=False)
     def _run(
         self,
         query: str,
     ) -> str:
         """Execute a synchronous web search."""
-        search_tool = DuckDuckGoSearchResults(
-            num_results=self.max_results,
-            output_format="json"
-        )
-        return search_tool.run(query)
+        with self._no_trace_context():
+            search_tool = DuckDuckGoSearchResults(
+                num_results=self.max_results,
+                output_format="json"
+            )
+            return search_tool.run(query)
 
     async def _arun(
         self,
@@ -96,8 +110,9 @@ class WebSearchTool(BaseTool):
     
     def _load_single_url(self, url: str) -> dict | None:
         try:
-            loader = WebBaseLoader(url)
-            data = loader.load()
+            with self._no_trace_context():
+                loader = WebBaseLoader(url)
+                data = loader.load()
             if not data:
                 return None
             formatted_data = " ".join((data[0].page_content or "").split())

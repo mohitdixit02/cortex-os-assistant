@@ -67,6 +67,26 @@ class CortexMainModel:
             return "".join(parts)
         return str(content) if content else ""
 
+    def _serialize_tool_results(self, state: ConversationState) -> Optional[str]:
+        """Serialize tool results into JSON payload for prompts."""
+        orchestration_plan = state.orchestration_state
+        if not orchestration_plan or not orchestration_plan.selected_tools:
+            return None
+
+        tools_result_list = (
+            orchestration_plan.selected_tools.root
+            if hasattr(orchestration_plan.selected_tools, "root")
+            else orchestration_plan.selected_tools
+        )
+        if not tools_result_list:
+            return None
+
+        serializable_tools = [
+            tool.model_dump() if hasattr(tool, "model_dump") else tool
+            for tool in tools_result_list
+        ]
+        return json.dumps(serializable_tools)
+
     def stream_text_tokens(self, query: str):
         """Cortex Model"""
         self.logger.info("Streaming response tokens for query: %s", query)
@@ -163,6 +183,8 @@ class CortexMainModel:
             feedback_by_evaluator = feedback.model_dump()
         else:
             feedback_by_evaluator = None
+            
+        tool_result_payload = self._serialize_tool_results(state)
         
         chain = formatted_prompt | self.model | parser
         res = chain.invoke({
@@ -175,6 +197,7 @@ class CortexMainModel:
             "retrieved_user_knowledge": json.dumps(retrieved_user_knowledge) if retrieved_user_knowledge else None,
             "retrieved_messages": json.dumps(retrieved_messages) if retrieved_messages else None,
             "previous_feedback": json.dumps(feedback_by_evaluator) if feedback_by_evaluator else None,
+            "tool_result": tool_result_payload,
         })
         return res
     
@@ -200,6 +223,8 @@ class CortexMainModel:
         else:
             feedback_by_evaluator = None
         
+        tool_result_payload = self._serialize_tool_results(state)
+        
         res = chain.invoke({
             "user_query": state.query,
             "final_response": state.final_response.response if state.final_response else None,
@@ -211,5 +236,6 @@ class CortexMainModel:
             "retrieved_user_knowledge": json.dumps(retrieved_user_knowledge) if retrieved_user_knowledge else None,
             "retrieved_messages": json.dumps(retrieved_messages) if retrieved_messages else None,
             "previous_feedback": json.dumps(feedback_by_evaluator) if feedback_by_evaluator else None,
+            "tool_result": tool_result_payload,
         })
         return res

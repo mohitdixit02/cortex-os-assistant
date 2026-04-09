@@ -234,7 +234,7 @@ class MemoryClient:
                         )
                     else:
                         self.logger.warning(f"Invalid action '{item.action}' for knowledge item. Skipping this item.")
-                self.logger.info(f"Persisting User Knowledge Base to DB: {state.knowledge_base}")
+                self.logger.info(f"Persisting User Knowledge Base to DB: {state.knowledge_items}")
             if state.ai_response:
                 final_response_text = self._extract_final_response_text(state.ai_response)
                 self.logger.info(f"Persisting Final Response to DB: {final_response_text}")

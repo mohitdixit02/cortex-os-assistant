@@ -37,7 +37,7 @@ TOOL_RESULT_SUMMARIZATION_PROMPT = """
 You will be given: \n
 1. User Query: Question or information or suggestion from the user. \n
 2. Tool Result: To get relevant info, a respective tool is executed and its result is given as input to you. \n
-3. Tool Instructions: Additional Instructions specific to the tool.
+3. Tool Instructions: Additional Instructions specific to the tool. \n
 
 # Input: \n
 User Query: {user_query}
@@ -47,20 +47,21 @@ Tool Result: {tool_result}
 {tool_instructions}
 
 # Objective: \n
-1. Based on the user query, tool result and specifictool instructions, you have to extract only the core facts that answer the user's query.
-2. Rewrite them as concise, relevant sentences in around 100-120 words in total.
-2. Make sure no important information got missed from the tool result while re-organizing facts.
-3. Your response is later used by the response generator to generate the final response for the user query, so it should be relevant and useful.
+1. Based on the user query, tool result and specifictool instructions, you have to extract the core facts that answer the user's query. \n
+2. Rewrite them as relevant sentences of 10-12 lines (no html tags, json, python functions, etc.). \n
+2. Make sure no important information got missed from the tool result while re-organizing facts. \n
+3. Your response is later used by the response generator to generate the final response for the user query, so it should be relevant and useful. \n
+4. If the tool result is empty, reply with an empty string. Never create any information on your own. \n
 
 # Response Format: \n
-Concise summary in the form of string, with no extra explanation, text, formatting, python function, etc. Just the concise summary string.
+String of Relevant sentences, with no extra explanation, text, formatting, python function, etc. Just the concise summary string.
 """
 
 WEB_TOOL_SPECIFIC_INSTRUCTIONS = """
-The tool used is Web Search Tool. The tool result will contain concatenated content of multiple web documents. All the Web Documents are relevant.
+The tool used is Web Search Tool. The tool result will contain concatenated content of multiple web documents. All the Web Documents are relevant. \n
 # Instructions:
-1. Some of the content might have repeative data, so make sure to not include repeative information.
-2. Make sure that user query is fully addressed in the summary and no relevant information is missed.
+1. Some of the content might have repeative data, so make sure to not include repeative information. \n
+2. Make sure that user query is fully addressed in the summary and no relevant information is missed. \n
 """
 def get_manager_client_prompts(
     type: str,
