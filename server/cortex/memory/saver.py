@@ -29,6 +29,7 @@ class MemorySaver:
         role: str,
         ai_client: Optional[str] = None,
         is_tool_used: Optional[bool] = False,
+        is_summarized: Optional[bool] = False,
         tool_id: Optional[str] = None,
     ) -> Message:
         """
@@ -40,6 +41,7 @@ class MemorySaver:
         - `role`: The role of the message sender (e.g., "user", "assistant"). \n
         - `ai_client`: (Optional) The AI client that generated the message, if applicable. \n
         - `is_tool_used`: (Optional) Whether a tool was used in generating the message. Default is False. \n
+        - `is_summarized`: (Optional) Whether this message has already been summarized. Default is False. \n
         - `tool_id`: (Optional) The ID of the tool used, if applicable. \n
         **Output**: The created message object
         """
@@ -59,6 +61,7 @@ class MemorySaver:
                         role=role,
                         ai_client=ai_client,
                         is_tool_used=is_tool_used,
+                        is_summarized=is_summarized,
                         tool_id=tool_id,
                         embedding=embedding
                     )

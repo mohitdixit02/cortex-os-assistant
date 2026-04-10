@@ -14,12 +14,22 @@ manager_client = ManagerClient()
 # Build Memory for the conversation
 memory_graph = StateGraph(MemoryState)
 
+memory_graph.add_node("persist_ai_response", memory_client.persist_ai_response)
+memory_graph.add_node("retrieve_unsummarized_messages", memory_client.retrieve_unsummarized_messages)
 memory_graph.add_node("build_stm", memory_client.build_stm)
 memory_graph.add_node("build_emotional_profile", memory_client.build_emotional_profile)
 memory_graph.add_node("build_user_knowledge_base", memory_client.build_user_knowledge_base)
 memory_graph.add_node("persist_memory_state", memory_client.persist_memory_state)
+memory_graph.add_node("parallel_dispatch", lambda state: state)
 
-memory_graph.add_edge(START, "build_stm")
+memory_graph.add_edge(START, "persist_ai_response")
+memory_graph.add_edge("persist_ai_response", "retrieve_unsummarized_messages")
+memory_graph.add_conditional_edges("retrieve_unsummarized_messages", memory_client.route_build_stm_required, {
+        True: "build_stm",
+        False: "parallel_dispatch",
+    })
+memory_graph.add_edge("parallel_dispatch", "build_emotional_profile")
+memory_graph.add_edge("parallel_dispatch", "build_user_knowledge_base")
 memory_graph.add_edge("build_stm", "build_emotional_profile")
 memory_graph.add_edge("build_stm", "build_user_knowledge_base")
 memory_graph.add_edge("build_emotional_profile", "persist_memory_state")
@@ -79,22 +89,29 @@ def display_workflow_graph(worflow):
     img = Image.open(io.BytesIO(image_data))
     img.show()
 
-# display_workflow_graph(main_workflow)
+display_workflow_graph(main_workflow)
+display_workflow_graph(build_memory_workflow)
 
 # test workflow
-test_graph = StateGraph(ConversationState)
-test_graph.add_node("execute_tools_manager", manager_client.execute_tools)
+# test_graph = StateGraph(ConversationState)
+# test_graph_2 = StateGraph(MemoryState)
+# test_graph.add_node("fetch_stm", memory_client.fetch_relevant_stm)
+# test_graph_2.add_node("build_stm", memory_client.build_stm)
+# test_graph.add_edge(START, "fetch_stm")
+# test_graph.add_edge("fetch_stm", END)
+# test_graph_2.add_edge(START, "build_stm")
+# test_graph_2.add_edge("build_stm", END)
 
-test_graph.add_edge(START, "execute_tools_manager")
-test_graph.add_edge("execute_tools_manager", END)
+# test_workflow = test_graph.compile()
+# test_workflow_2 = test_graph_2.compile()
 
-test_workflow = test_graph.compile()
-
-display_workflow_graph(test_workflow)
+# display_workflow_graph(test_workflow)
+# display_workflow_graph(test_workflow_2)
 
 __all__ = [
     "main_workflow",
     "build_memory_workflow",
-    "test_workflow",
+    # "test_workflow",
+    # "test_workflow_2",
 ]
 

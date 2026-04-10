@@ -33,6 +33,7 @@ class UserSTM(BaseModel):
     """Short Term Memory (STM) for the user based on the conversation context and recent interactions."""
     stm_summary: str
     session_preferences: Optional[dict[str, Any]] = None
+    recent_conversation: Optional[str] = None
 
 class MessageHistory(BaseModel):
     """Relevant Message History for the current conversation"""
@@ -47,6 +48,7 @@ class MessageState(BaseModel):
     role: RoleType
     ai_client: Optional[AIClientType] = None
     is_tool_used: Optional[bool] = None
+    is_summarized: Optional[bool] = None
     tool_id: Optional[str] = None
     embedding: Optional[list[float]] = None
 
@@ -89,6 +91,8 @@ class MemoryState(BaseModel):
     emotional_profile: Optional[MemoryEmotionalProfile] = None
     knowledge_items: Optional[MemoryUserKnowledgeList] = None
     older_knowledge_base: Optional[list[UserKnowledge]] = None
+    stm_start_update_timestamp: Optional[datetime] = None
+    stm_end_update_timestamp: Optional[datetime] = None
     
 
 """

@@ -12,14 +12,15 @@ from cortex.memory.model import MemoryModel
 from cortex.memory.embedding import EmbeddingModel
 from cortex.memory.saver import MemorySaver
 from sqlalchemy.engine import Engine
-from sqlmodel import Session
+from sqlmodel import Session, select
 from utility.logger import get_logger
 from db.req import (
     get_one,
     get_similar,
     create_one,
     create_many,
-    update_one
+    update_one,
+    get_many,
 )
 from db import (
     UserShortTermMemory,
@@ -30,10 +31,16 @@ from db import (
     RoleType,
     AIClientType
 )
+from datetime import datetime, timezone
+UTC_NOW = lambda: datetime.now(timezone.utc)
 
 # Recheck knowledge base retrival - update fetch effeciency and relevance imporvement
 # External Tools Integration
 # Qwen Model Intergration for Routing
+
+# Self reference: value x means x complete conversations (user query + ai response) in the message history
+MINIMUM_CONVERSATION_HISTORY_COUNT = 2 # Must be less than what is going to summarize
+CONVERSATION_HISTORY_SUMMARIZATION_THRESHOLD = 5 # Can't be zero as summarization is must (>= 1)
 
 class MemoryClient:
     def __init__(self, engine: Engine):
@@ -75,8 +82,95 @@ class MemoryClient:
         if isinstance(final_response, str):
             return final_response
         return str(final_response)
+
+    def _get_recent_conversation_stm(
+        self,
+        session: Session,
+        user_id: str,
+        session_id: str,
+    ) -> list[Message]:
+        """
+        Returns recent conversation messages for STM building. \n
+        """
+        recent_user_messages = list(session.exec(
+            select(Message.created_at)
+            .where(
+                Message.user_id == user_id,
+                Message.session_id == session_id,
+                Message.is_summarized == False,
+                Message.role == RoleType.USER,
+            )
+            .order_by(Message.created_at.asc())
+            .limit(1)
+        ).all())
+
+        if not recent_user_messages:
+            return ""
+                
+        recent_conversations = list(session.exec(
+            select(Message)
+            .where(
+                Message.user_id == user_id,
+                Message.session_id == session_id,
+                Message.is_summarized == False,
+                Message.created_at >= recent_user_messages[0]
+            )
+            .order_by(Message.created_at.asc())
+        ).all())
+        
+        res = ""
+        for msg in recent_conversations:
+            if msg.role == RoleType.USER:
+                res += f"USER: {msg.content}\n"
+            elif msg.role == RoleType.AI:   
+                res += f"AI: {msg.content}\n"
+        
+        return res.strip()
+    
+    def retrieve_unsummarized_messages(self, state: MemoryState) -> MemoryState:
+        if (CONVERSATION_HISTORY_SUMMARIZATION_THRESHOLD - MINIMUM_CONVERSATION_HISTORY_COUNT) <= 0:
+            self.logger.error("Invalid configuration: CONVERSATION_HISTORY_SUMMARIZATION_THRESHOLD must be strictly greater than MINIMUM_CONVERSATION_HISTORY_COUNT.")
+            raise ValueError("Invalid configuration: CONVERSATION_HISTORY_SUMMARIZATION_THRESHOLD must be strictly greater than MINIMUM_CONVERSATION_HISTORY_COUNT.")
+
+        with Session(self.engine) as session:
+            non_summarized_messages = list(session.exec(
+                select(Message.created_at)
+                .where(
+                    Message.user_id == state.user_id,
+                    Message.session_id == state.session_id,
+                    Message.is_summarized == False,
+                    Message.role == RoleType.USER,
+                )
+                .order_by(Message.created_at.asc())
+            ).all())
+            
+        if len(non_summarized_messages) >= CONVERSATION_HISTORY_SUMMARIZATION_THRESHOLD:
+            state.stm_start_update_timestamp = non_summarized_messages[0]
+            last_index = len(non_summarized_messages) - MINIMUM_CONVERSATION_HISTORY_COUNT
+            state.stm_end_update_timestamp = non_summarized_messages[last_index] if last_index >= 0 else UTC_NOW()
+            self.logger.info(f"Threshold exceeded for building STM: Found {len(non_summarized_messages)} non-summarized user messages")
+        else:
+            state.stm_start_update_timestamp = None
+            state.stm_end_update_timestamp = None
+            self.logger.info(f"No need to build STM: Found only {len(non_summarized_messages)} non-summarized user messages")
+        return {
+            "stm_start_update_timestamp": state.stm_start_update_timestamp,
+            "stm_end_update_timestamp": state.stm_end_update_timestamp
+        }
     
     # ******************** Build Memory State Functions ********************
+    def route_build_stm_required(self, state: MemoryState) -> bool:
+        """
+        Determine if building STM is required based on the current memory state. \n
+        **Input:** `MemoryState` object \n
+        **Output:** Boolean indicating whether to route to build STM or not \n
+        """
+        if state.stm_start_update_timestamp:
+            self.logger.info("Routing to build STM: STM update timestamp is set")
+            return True
+        self.logger.info("No need to route to build STM: No new non-summarized messages found.")
+        return False
+        
     def build_stm(
         self,
         state: MemoryState
@@ -84,6 +178,37 @@ class MemoryClient:
         """
         Build the Short Term Memory (STM) based on the recent interactions and context. \n
         """
+        
+        constrains = (
+            Message.user_id == state.user_id,
+            Message.session_id == state.session_id,
+            Message.is_summarized == False,
+        )
+        
+        if state.stm_start_update_timestamp:
+            constrains += (Message.created_at >= state.stm_start_update_timestamp,)
+        if state.stm_end_update_timestamp:
+            constrains += (Message.created_at < state.stm_end_update_timestamp,)
+        else:
+            constrains += (Message.created_at < UTC_NOW(),)
+        
+        with Session(self.engine) as session:
+            recent_conversations = list(session.exec(
+                select(Message)
+                .where(*constrains)
+                .order_by(Message.created_at.asc())
+            ).all())
+        
+        res = ""
+        for msg in recent_conversations:
+            if msg.role == RoleType.USER:
+                res += f"USER: {msg.content}\n"
+            elif msg.role == RoleType.AI:   
+                res += f"AI: {msg.content}\n"
+        
+        state.short_term_memory.recent_conversation = res.strip()
+        self.logger.info(f"Built recent conversation for STM: {state.short_term_memory.recent_conversation}")
+        
         short_term_memory = self.model.build_stm(state=state)
         self.logger.info(f"Built STM: {short_term_memory}")
         return {
@@ -235,16 +360,49 @@ class MemoryClient:
                     else:
                         self.logger.warning(f"Invalid action '{item.action}' for knowledge item. Skipping this item.")
                 self.logger.info(f"Persisting User Knowledge Base to DB: {state.knowledge_items}")
-            if state.ai_response:
-                final_response_text = self._extract_final_response_text(state.ai_response)
-                self.logger.info(f"Persisting Final Response to DB: {final_response_text}")
-                self.memory_saver.save_message(
-                    session_id=state.session_id,
-                    user_id=state.user_id,
-                    content=final_response_text,
-                    role=RoleType.AI,
-                    ai_client=AIClientType.CORTEX_MAIN_CLIENT
-                )
+            if state.stm_update_timestamp:
+                self.logger.info(f"Updating messages as summarized for session_id: {state.session_id}, user_id: {state.user_id} from {state.stm_start_update_timestamp} to {state.stm_end_update_timestamp}")
+                with Session(self.engine) as session:
+                    stmt = (
+                        select(Message)
+                        .where(
+                            Message.user_id == state.user_id,
+                            Message.session_id == state.session_id,
+                            Message.is_summarized == False,
+                            Message.created_at >= state.stm_start_update_timestamp,
+                            Message.created_at < state.stm_end_update_timestamp if state.stm_end_update_timestamp else True
+                        )
+                    )
+                    messages_to_update = session.exec(stmt).all()
+                    for msg in messages_to_update:
+                        update_one(
+                            session=session,
+                            db_obj=msg,
+                            obj_in={"is_summarized": True},
+                            commit=False
+                        )
+                    session.commit()
+                    
+    def persist_ai_response(
+        self,
+        state: MemoryState
+    ):
+        """
+        Save the AI response to the database. \n
+        """
+        if not state.ai_response:
+            self.logger.info("No AI response found in the memory state. Skipping saving AI response.")
+            return
+        
+        final_response_text = self._extract_final_response_text(state.ai_response)
+        self.logger.info(f"Saving AI response to DB: {final_response_text}")
+        self.memory_saver.save_message(
+            session_id=state.session_id,
+            user_id=state.user_id,
+            content=final_response_text,
+            role=RoleType.AI,
+            ai_client=AIClientType.CORTEX_MAIN_CLIENT
+        )
 
     # ******************** Fetch Memory State Functions ********************
     def fetch_relevant_stm(
@@ -263,10 +421,22 @@ class MemoryClient:
                 user_id=user_id,
                 session_id=session_id,
             )
-        self.logger.info(f"Fetched STM from DB: {res}")
+
+            recent_messages = self._get_recent_conversation_stm(
+                session=session,
+                user_id=user_id,
+                session_id=session_id,
+            )
+            
+        if recent_messages:
+            recent_conversation = "\nRecent Conversation:\n" + recent_messages
+        else:
+            recent_conversation = ""
+
         state.short_term_memory = UserSTM(
-            stm_summary=res.stm_summary,
-            session_preferences=res.session_preferences
+            stm_summary=res.stm_summary if res else None,
+            session_preferences=res.session_preferences if res else None,
+            recent_conversation=recent_conversation
         ) if res else None
         return {
             "short_term_memory": state.short_term_memory,
@@ -397,6 +567,7 @@ class MemoryClient:
                 content=item.content,
                 role=item.role,
                 ai_client=item.ai_client,
+                is_summarized=item.is_summarized,
             )
             for item, _score in messages
         ] if messages else None

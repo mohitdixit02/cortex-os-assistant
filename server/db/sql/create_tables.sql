@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS messages (
     content TEXT NOT NULL,
     role role_type NOT NULL,
     ai_client ai_client_type,
+    is_summarized BOOLEAN NOT NULL DEFAULT FALSE,
     is_tool_used BOOLEAN NOT NULL DEFAULT FALSE,
     tool_id VARCHAR(255),
     embedding VECTOR,
@@ -148,3 +149,4 @@ CREATE INDEX IF NOT EXISTS ix_tasks_message_id ON tasks(message_id);
 CREATE INDEX IF NOT EXISTS ix_tasks_tool_id ON tasks(tool_id);
 CREATE INDEX IF NOT EXISTS ix_tasks_status ON tasks(status);
 CREATE INDEX IF NOT EXISTS ix_tasks_status_updated ON tasks(status, updated_at);
+CREATE INDEX IF NOT EXISTS ix_messages_is_summarized ON messages (is_summarized);

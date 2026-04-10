@@ -8,15 +8,16 @@ MEMORY_CLIENT_BUILD_STM = """
 You are a Short Term Memory (STM) builder for a conversational AI system. Your task is to create a concise summary of the recent interactions and context of the user, which can be used by the AI system to generate more relevant and context-aware responses. \n
 # You will be given:
 1. User's current query \n
-2. AI response to the user's query \n
-3. Emootion of the user for the current query \n
-4. Previous stm_memory (if any else null) and session_preferences (if any else null) \n
+2. Emotion of the user for the current query \n
+3. Previous stm_memory (if any else null) and session_preferences (if any else null) \n
+4. Recent conversation history (if any else null) \n
 
 # Your task:
-Based on the information provided, create 
+Based on the information provided, create \n
 1. stm_memory:
     a. A concise summary of the recent interactions and context of the user. \n
     b. It contains summary of both human and AI responses, user emotions, and any relevant information that can help in understanding conversation context. \n
+    c. Extend the previous stm_memory with the recent conversation. \n
 2. session_preferences (can be null if nothing new or important to save): \n
     a. User guidelines, recommendatios, or instructions that he/she ask to follow for the current session. \n
     b. Any specific preferences or behavior of the user that can help in generating better responses during the current session. \n
@@ -37,10 +38,10 @@ Based on the information provided, create
 
 # Information to consider while building STM and session preferences:
 User Query: {user_query} \n
-AI Response: {ai_response} \n
 User Emotion: {user_emotion} \n
 Previous STM Memory: {previous_stm_memory} \n
 Previous Session Preferences: {previous_session_preferences} \n
+Recent Conversation: {recent_conversation} \n
 
 # Strict Guidelines - session_preferences:
     a. It must not have any information related to AI \n
@@ -57,7 +58,7 @@ MEMORY_CLIENT_BUILD_EMOTIONAL_PROFILE = """
 You are a Emotional Context Understander and Analyzer for a conversational AI system.
 You will be provided with following information:
 1. User's current query. It can be any of the one thing- \n
-    a. Question (Can you tell me about my friend?)
+    a. Question (Can you tell me about my friend?) \n
     b. Statement (I have a friend named John who loves hiking) \n
     c. Command (Remember that I don't like ice cream) \n
     d. Feedback (Your last response was not relevant to my query) \n
@@ -116,6 +117,7 @@ You will be provided with following information:
 2. User's STM summary and session preferences - It will give you an idea about the user's current context, preferences, and emotional state. \n
 3. User current Mood (from the query) (can be happy, sad, angry, etc.). It will help you to understand the user's emotional state. \n
 4. Previous user long term memory (if any) \n
+5. Recent conversation history (if any else null) \n
 
 # Objective:
 You are a smart builder of user's long term memory for a conversational AI system. From the above information, you have to provide a set of instructions to build the long term user memory.\n
@@ -125,7 +127,7 @@ You are a smart builder of user's long term memory for a conversational AI syste
     a. Is he/she happy? Sad? Angry? Neutral? \n
     b. Is it a question, statement, command, or feedback? \n
     c. What he/she wants to remember or forget?
-2. Check for User's current context and preferences from STM summary and session preferences. \n
+2. Check for User's current context and preferences from STM summary, session preferences, and recent conversation history. \n
 3. Based on the above information and analysis, build the user long term memory providing the content and corresponding strictness level. \n
 4. If previous user memory is given, then also compare the new memory with the previous memory and check whether its better to update previous memory, create new one, or discard the new one. \n
 
@@ -152,6 +154,7 @@ MUST (Positive Rule) = CANNOT (Negavtive Rule) > SHOULD > CAN \n
 3. User's Session preferences {session_preferences} \n
 4. User's current Mood {user_emotion} \n
 5. Previous user long term memory {previous_user_knowledge} \n
+6. Recent conversation history {recent_conversation} \n
 
 # Must follow Guidelines: \n
 ### Scenario 1: If nothing is relevant enough to be added or updated in long term memory, then simply respond with an empty list. \n
@@ -193,10 +196,10 @@ def get_memory_client_prompts(
             template=MEMORY_CLIENT_BUILD_STM,
             input_variables=[
                 "user_query",
-                "ai_response",
                 "user_emotion",
                 "previous_stm_memory",
                 "previous_session_preferences",
+                "recent_conversation",
                 "format_instructions"
             ],
         )

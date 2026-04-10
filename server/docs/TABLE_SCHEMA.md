@@ -32,6 +32,7 @@ user_id: UUID (FK -> Users.user_id)
 content: Text
 role: Enum(RoleType)
 ai_client: Enum(AIClientType) (Nullable)
+is_summarized: Boolean (Default: False)
 is_tool_used: Boolean (Default: False)
 tool_id: String (Nullable)
 embedding: Vector — For pgvector search (variable dimensions)

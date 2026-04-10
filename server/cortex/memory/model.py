@@ -28,7 +28,6 @@ class MemoryModel:
         **Input:** `MemoryState` object \n
         Must include:
         - query
-        - ai_response
         - query_emotion
         - previous STM memory (if available) \n
         **Output:** \n
@@ -36,7 +35,6 @@ class MemoryModel:
         - Include new `STM summary` and `session preferences` \n
         """
         query = state.query
-        final_response = state.ai_response
         user_emotion = state.query_emotion
         prev_stm = state.short_term_memory        
         formatted_prompt, parser = get_memory_client_prompts(
@@ -45,14 +43,15 @@ class MemoryModel:
         chain = formatted_prompt | self.model | parser
         res = chain.invoke({
             "user_query": query,
-            "ai_response": final_response,
             "user_emotion": user_emotion,
             "previous_stm_memory": prev_stm.stm_summary if prev_stm else "",
-            "previous_session_preferences": prev_stm.session_preferences if prev_stm else {}
+            "previous_session_preferences": prev_stm.session_preferences if prev_stm else {},
+            "recent_conversation": prev_stm.recent_conversation if prev_stm else "",
         })
         state.short_term_memory = UserSTM(
             stm_summary=res.stm_summary,
-            session_preferences=res.session_preferences
+            session_preferences=res.session_preferences,
+            recent_conversation=None # reset recent conversation after summary build up
         )
         return state.short_term_memory
 

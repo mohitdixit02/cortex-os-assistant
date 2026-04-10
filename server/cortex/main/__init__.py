@@ -5,7 +5,8 @@ from typing import AsyncGenerator
 from cortex.graph.workflow import (
     main_workflow, 
     build_memory_workflow,
-    test_workflow
+    # test_workflow,
+    # test_workflow_2
 )
 from cortex.task import MainTaskQueue, TaskStatus, TaskItem
 from utility.logger import get_logger
@@ -179,41 +180,44 @@ class MainClient:
             # )
             # test workflow for memory building
             
-            selected_tools=CortexToolList(root=[CortexTool(tool_id='web_search_01', instructions="Search for popular pizza types, toppings, and recipes. Consider Mohit's neutral mood and casual tone preference.", tool_result=None, tool_exec_status='failed')])
+            # selected_tools=CortexToolList(root=[CortexTool(tool_id='web_search_01', instructions="Search for popular pizza types, toppings, and recipes. Consider Mohit's neutral mood and casual tone preference.", tool_result=None, tool_exec_status='failed')])
             
-            web_tool = CortexTool(
-                tool_id="web_search_01",
-                instructions=""
-            )
+            # web_tool = CortexTool(
+            #     tool_id="web_search_01",
+            #     instructions=""
+            # )
             
-            state.orchestration_state = OrchestrationState(
-                user_knowledge_retrieval_keywords=["tea", "good mood"],
-                is_message_referred=False,
-                is_tool_required=True,
-                selected_tools=CortexToolList(root=[web_tool])
-            )
+            # state.orchestration_state = OrchestrationState(
+            #     user_knowledge_retrieval_keywords=["tea", "good mood"],
+            #     is_message_referred=False,
+            #     is_tool_required=True,
+            #     selected_tools=CortexToolList(root=[web_tool])
+            # )
             
-            res = test_workflow.invoke(state)
-            self.logger.info("Test workflow result: %s", res)
+            # state1 = test_workflow.invoke(state)
+            # memory_state = self.initialize_memory_state(state1)
+            # res = test_workflow_2.invoke(memory_state)
+            # res = test_workflow.invoke(state)
+            # self.logger.info("Test workflow result: %s", res)
             
-            final_response_text = "Dummy response for query: " + query
+            # final_response_text = "Dummy response for query: " + query
             
             # ************** original flow *****************
-            # res = main_workflow.invoke(state)
+            res = main_workflow.invoke(state)
 
-            # workflow_final_response = res.get("final_response") if isinstance(res, dict) else getattr(res, "final_response", None)
-            # final_response_text = self._extract_final_response_text(workflow_final_response)
+            workflow_final_response = res.get("final_response") if isinstance(res, dict) else getattr(res, "final_response", None)
+            final_response_text = self._extract_final_response_text(workflow_final_response)
             
-            # memory_state = self.initialize_memory_state(res)
+            memory_state = self.initialize_memory_state(res)
             
-            # # Build memory
-            # try:
-            #     build_memory_workflow.invoke(memory_state)
-            # except Exception as memory_exc:
-            #     self.logger.exception("Memory workflow failed after response generation: %s", memory_exc)
+            # Build memory
+            try:
+                build_memory_workflow.invoke(memory_state)
+            except Exception as memory_exc:
+                self.logger.exception("Memory workflow failed after response generation: %s", memory_exc)
 
-            # self.logger.info("Final response generated: %s", res)
-            # self.logger.info("Response from main workflow >> %s", final_response_text if final_response_text else "No final response generated")
+            self.logger.info("Final response generated: %s", res)
+            self.logger.info("Response from main workflow >> %s", final_response_text if final_response_text else "No final response generated")
             if final_response_text:
                 self.logger.info("Generated response: %s", final_response_text)
                 taskItem.result = {

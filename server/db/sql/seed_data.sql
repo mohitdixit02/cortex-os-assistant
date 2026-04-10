@@ -38,6 +38,7 @@ INSERT INTO messages (
     'USER',
     NULL,
     FALSE,
+    FALSE,
     NULL,
     NULL,
     NOW()

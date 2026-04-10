@@ -82,6 +82,7 @@ class Message(SQLModel, table=True):
         sa_column=Column(SAEnum(AIClientType, name="ai_client_type"), nullable=True, index=True),
     )
     is_tool_used: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, default=False))
+    is_summarized: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, default=False, index=True))
     tool_id: Optional[str] = Field(default=None, sa_column=Column(String(255), nullable=True))
     embedding: Optional[list[float]] = Field(default=None, sa_column=Column(Vector(), nullable=True))
     created_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False, index=True))
