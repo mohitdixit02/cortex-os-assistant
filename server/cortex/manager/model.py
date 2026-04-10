@@ -16,7 +16,7 @@ class ManagerModel:
     def __init__(self):
         self.logger = get_logger("CORTEX_MANAGER")
         self.logger.info("Initializing generation model...")
-        model_config = models.get("main", {})
+        model_config = models.get("planner", {})
         self.model = ChatHuggingFace(llm=HuggingFaceEndpoint(
             repo_id=model_config.get("name"),
             task=model_config.get("task", "conversational"),
@@ -74,7 +74,8 @@ class ManagerModel:
         })
         web_input = WebQueryPlanResult(
             query=res.query,
-            context=res.context
+            context=res.context,
+            is_diversified=res.is_diversified
         )
         return web_input
 

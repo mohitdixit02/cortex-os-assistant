@@ -79,33 +79,22 @@ def display_workflow_graph(worflow):
     img = Image.open(io.BytesIO(image_data))
     img.show()
 
-display_workflow_graph(main_workflow)
+# display_workflow_graph(main_workflow)
 
 # test workflow
-# test_graph = StateGraph(ConversationState)
-# test_graph.add_node("fetch_stm", memory_client.fetch_relevant_stm)
-# test_graph.add_node("fetch_emotional_profile", memory_client.fetch_emotional_profile)
-# test_graph.add_node("plan_main_orchestration", orchestrator.build_main_orchestration_plan)
-# test_graph.add_node("execute_tools_manager", manager_client.execute_tools)
-# test_graph.add_node("summarize_tool_result", manager_client.summarize_tool_results)
+test_graph = StateGraph(ConversationState)
+test_graph.add_node("execute_tools_manager", manager_client.execute_tools)
 
-# test_graph.add_edge(START, "execute_tools_manager")
-# test_graph.add_edge("execute_tools_manager", "summarize_tool_result")
-# test_graph.add_edge("summarize_tool_result", END)
+test_graph.add_edge(START, "execute_tools_manager")
+test_graph.add_edge("execute_tools_manager", END)
 
-# test_graph.add_edge(START, "fetch_stm")
-# test_graph.add_edge(START, "fetch_emotional_profile")
-# test_graph.add_edge("fetch_stm", "plan_main_orchestration")
-# test_graph.add_edge("fetch_emotional_profile", "plan_main_orchestration")
-# test_graph.add_edge("plan_main_orchestration", "execute_tools_manager")
-# test_graph.add_edge("execute_tools_manager", END)
-# test_workflow = test_graph.compile()
+test_workflow = test_graph.compile()
 
-# display_workflow_graph(test_workflow)
+display_workflow_graph(test_workflow)
 
 __all__ = [
     "main_workflow",
     "build_memory_workflow",
-    # "test_workflow",
+    "test_workflow",
 ]
 

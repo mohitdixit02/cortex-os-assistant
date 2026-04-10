@@ -2,14 +2,8 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from cortex.memory.embedding import EmbeddingModel
 
-# Minimum relevance of a doc with the query
-ACCEPTABLE_RELEVANCE_SCORE = 0.6
-
-# Relevance of every doc with the most relevant doc
-RELEVANCE_SCORE_THRESHOLD = 0.5
-
 # Max word limit
-MAX_WORD_LIMIT = 1000
+MAX_WORD_LIMIT = 750
 
 # Chunking configuration for large documents
 CHUNK_SIZE = 600
@@ -23,6 +17,7 @@ def retrieve_relevant_docs_utility(
     target_query: str,
     relevant_docs: list[Document],
     model: EmbeddingModel,
+    is_diversified: bool = False
 ) -> list[Document]:
     """
     ### Utility function to retrieve relevant documents based on a target query. \n
@@ -31,6 +26,7 @@ def retrieve_relevant_docs_utility(
         target_query (str): The query for which relevant documents are to be retrieved.
         relevant_docs (list[Document]): A list of Document objects containing document information.
         model (any): The model to be used for generating embeddings and calculating relevance scores.
+        is_diversified (bool): A flag indicating whether the retrieved documents should be diversified.
 
     Returns:
         list[Document]: A list of Document objects containing the relevant documents.
@@ -43,6 +39,11 @@ def retrieve_relevant_docs_utility(
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
     )
+    
+    # Minimum relevance of a doc with the query
+    ACCEPTABLE_RELEVANCE_SCORE = 0.45 if is_diversified else 0.6
+    # Relevance of every doc with the most relevant doc
+    RELEVANCE_SCORE_THRESHOLD = 0.3 if is_diversified else 0.5
 
     query_embedding = model.generate_embeddings(target_query)
     

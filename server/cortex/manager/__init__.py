@@ -27,6 +27,8 @@ class ManagerClient():
 
         web_search_tool = WebSearchTool()
         self.logger.info(f"Executing web search tool with query: {res.query}")
+        self.logger.info(f"Web search tool context: {res.context}")
+        self.logger.info(f"Web search tool diversification flag: {res.is_diversified}")
         search_input = WebSearchInput(query=res.query)
         result = web_search_tool.search(input=search_input)
         docs = []
@@ -45,6 +47,7 @@ class ManagerClient():
             target_query=target_query + " " + res.context,
             relevant_docs=docs,
             model=self.embd_model,
+            is_diversified=res.is_diversified
         )
         self.logger.info(f"Retrieved {len(relevant_docs)} relevant documents for the query.")
         
