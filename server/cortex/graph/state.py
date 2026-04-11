@@ -174,6 +174,7 @@ class ConversationState(BaseModel):
     user_id: str
     session_id: str
     query: str
+    voice_client_response: Optional[str] = None
     query_emotion: Optional[str] = None
     query_timestamp: datetime = Field(default_factory=UTC_NOW)
     query_time: Optional[TimeOfDay] = None

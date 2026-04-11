@@ -56,6 +56,7 @@ class MainClient:
         self.logger.info("***** Task Metadata >> %s", taskItem.metadata)
         user_id = taskItem.metadata.get("user_id")
         session_id = taskItem.metadata.get("session_id")
+        voice_client_response = taskItem.metadata.get("voice_client_response")
         
         if not user_id or not session_id:
             self.logger.error("Missing user_id or session_id in task metadata. Cannot initialize conversation state.")
@@ -74,7 +75,8 @@ class MainClient:
             user_id=user_id,
             session_id=session_id,
             query=query,
-            query_emotion=emotion
+            query_emotion=emotion,
+            voice_client_response=voice_client_response
         )
         return state
     

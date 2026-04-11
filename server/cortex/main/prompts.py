@@ -141,13 +141,7 @@ User Mood: {user_mood}
 User Previous Emotional Profile: {user_emotional_profile}
 
 # Response:
-After evaluating the plan, you have to provide the feedback strictly in the below format without any additional text or explanation. \n
-Your output must only include the following fields in the JSON format: \n
-is_feedback_required - whether any feedback is given or not (True or False) \n
-user_knowledge_retrieval_feedback - User Knowledge Retrieval Feedback \n
-message_retrieval_feedback - Message Retrieval Feedback \n
-Don't print any function, or conversation, or extra message. Strictly respond with the JSON having above mentioned fields only. \n
-# Format Instructions:
+After evaluating the plan, you have to provide the feedback strictly in the below mentioned format. Strictly follow format and never print any function, code, explanation, text, etc.
 {format_instructions}
 """
 
@@ -181,15 +175,15 @@ You have to generate the final response for the user query based on the plan.
 6. If the feedback from the evaluator is provided, then take that into account while generating the response. \n
 
 # Important Note: \n
-1. Before your final response, a fallback response is already shared with the user, for better user experience. \n
-For example, fallback_response: "Ok sure let me check and get back to you on this." \n
-2. So your response must look like a natural follow up to the fallback response, and should not sound like a standalone response. \n
+1. You reply must look like a continuation of the provided fallback response, but aligned as per above instructions. \n
+2. Don't include fallback response in your final output, but use it as a reference to maintain the continuity and natural flow of the conversation. \n
 3. Strictly follow the feedback if provided by the evaluator. \n
 
 # Input: \n
 User Query: {user_query}
 STM Summary: {stm_summary}
 STM Preferences: {stm_preferences}
+fallback_response: {fallback_response}
 User Mood: {user_mood}
 Time of the day: {user_time}
 User Previous Emotional Profile: {user_emotional_profile}
@@ -232,16 +226,16 @@ Based on the user query, relevant context and information, a final response is g
 1. Understand the user query, stm summary, stm preferences, and the retrieved user knowledge, messages and tool results. \n
 2. Understand the user's emotional state and preferences using the stm preferences, user emotional profile, current mood and time. \n
 3. Based on the above understanding, evaluate the final response on the following parameters: \n
-    a. Relevance - How relevant the response is to the user query and the context. \n
-    b. Personalization - How well the response is personalized based on the user's preferences, traits and emotional state. \n
-    c. Naturalness - How natural and human-like the response is. \n
-    d. Alignment - how aligned the response is with the user's emotional state and current mood. \n
+    a. How relevant the response is to the user query and the context. \n
+    b. How relevant the response is based on user session preferences and stm summary (if present). \n
+    c. How well the response is aligned with the user's emotional state and respective preferences. \n
+    d. How well the response is aligned based on user's current mood and time of the day. \n
+    e. Is user response looks like a continuation to the fallback response or not, but fallback response should not be part of the final response. \n
 
 # Feedback Instructions:
 1. If response is good and aligned with user query, then mark is_feedback_required as False and keep the feedback field empty or null. \n
 2. If response is not good and not aligned with user query, then mark is_feedback_required as True and provide specific feedback on what is wrong with the response and how it can be improved. \n
-3. Your feedback must not lead to loss of information in further response generations. \n
-4. Don't repeat the same feedback again and again in the future evaluations. \n
+3. Don't repeat the same feedback again and again in the future evaluations. \n
 
 # Input: \n
 User Query: {user_query}
@@ -255,6 +249,7 @@ Retrieved User Knowledge: {retrieved_user_knowledge}
 Retrieved Messages: {retrieved_messages}
 Tool Result: {tool_result}
 Previous Feedbacks: {previous_feedback}
+Fallback Response: {fallback_response}
 
 # Response:
 Your response must strictly follow the below format without any additional text or explanation. \n
@@ -313,6 +308,7 @@ def get_main_client_prompts(
                 "retrieved_messages",
                 "previous_feedback",
                 "tool_result",
+                "fallback_response",
                 "format_instructions"
             ],
         )
@@ -333,6 +329,7 @@ def get_main_client_prompts(
                 "retrieved_messages",
                 "previous_feedback",
                 "tool_result",
+                "fallback_response",
                 "format_instructions"
             ],
         )

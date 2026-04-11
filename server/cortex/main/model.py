@@ -186,6 +186,7 @@ class CortexMainModel:
             "retrieved_messages": json.dumps(retrieved_messages) if retrieved_messages else None,
             "previous_feedback": json.dumps(feedback_by_evaluator) if feedback_by_evaluator else None,
             "tool_result": tool_result_payload,
+            "fallback_response": state.voice_client_response if state.voice_client_response else "",
         })
         return res
     
@@ -225,5 +226,6 @@ class CortexMainModel:
             "retrieved_messages": json.dumps(retrieved_messages) if retrieved_messages else None,
             "previous_feedback": json.dumps(feedback_by_evaluator) if feedback_by_evaluator else None,
             "tool_result": tool_result_payload,
+            "fallback_response": state.voice_client_response if state.voice_client_response else "",
         })
         return res

@@ -387,7 +387,8 @@ class MemoryClient:
                             session=session,
                             db_obj=msg,
                             obj_in={"is_summarized": True},
-                            commit=False
+                            commit=False,
+                            refresh=False,
                         )
                     session.commit()
                     
