@@ -94,6 +94,190 @@
   height: 1px;
 }
 
+.voicePanel {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  padding: 28px 24px 30px;
+  background:
+    radial-gradient(circle at top, rgba(255, 64, 196, 0.18), transparent 42%),
+    radial-gradient(circle at bottom, rgba(132, 61, 255, 0.16), transparent 40%),
+    linear-gradient(180deg, rgba(20, 12, 40, 0.96), rgba(13, 10, 26, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.34);
+}
+
+.orbStage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 240px;
+  height: 240px;
+}
+
+.orbShell {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.orbGlow {
+  position: absolute;
+  inset: -22px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 72, 200, 0.26), rgba(123, 0, 255, 0.08) 58%, transparent 72%);
+  filter: blur(8px);
+  opacity: 0.8;
+}
+
+.orbCore {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.06) 16%, transparent 18%),
+    radial-gradient(circle at 50% 45%, #ff59cf 0%, #d62eff 35%, #6a14ff 72%, #31005f 100%);
+  box-shadow:
+    0 0 18px rgba(255, 70, 200, 0.7),
+    0 0 42px rgba(123, 0, 255, 0.45),
+    inset 0 0 20px rgba(255, 255, 255, 0.08);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.rippleSet {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.ripple {
+  position: absolute;
+  inset: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 122, 220, 0.36);
+  box-shadow: 0 0 24px rgba(123, 0, 255, 0.1);
+  opacity: 0;
+  transform: scale(0.78);
+}
+
+.listening .ripple {
+  animation: rippleIn 2.1s ease-in-out infinite;
+}
+
+.listening .ripple:nth-child(2) {
+  animation-delay: 0.7s;
+}
+
+.listening .ripple:nth-child(3) {
+  animation-delay: 1.4s;
+}
+
+.speaking .orbCore {
+  animation: pulseOrb 0.95s ease-in-out infinite alternate;
+}
+
+.speaking .orbGlow {
+  animation: glowBreath 0.95s ease-in-out infinite alternate;
+}
+
+.voiceTextBlock {
+  display: grid;
+  gap: 6px;
+  text-align: center;
+}
+
+.voiceTitle {
+  font-size: 1.5rem;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+}
+
+.voiceSubtitle {
+  color: rgba(247, 215, 255, 0.8);
+  font-size: 0.95rem;
+}
+
+.voiceActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.primaryButton,
+.secondaryButton {
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, #ff58d4, #8f42ff);
+  color: white;
+  box-shadow: 0 10px 24px rgba(149, 57, 255, 0.28);
+}
+
+.secondaryButton {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 235, 252, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.primaryButton:hover,
+.secondaryButton:hover {
+  transform: translateY(-1px);
+}
+
+.primaryButton:active,
+.secondaryButton:active {
+  transform: translateY(0);
+}
+
+@keyframes pulseOrb {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.14);
+  }
+}
+
+@keyframes glowBreath {
+  from {
+    opacity: 0.72;
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(11px);
+  }
+}
+
+@keyframes rippleIn {
+  0% {
+    transform: scale(1.08);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.36;
+  }
+  100% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+}
+
 @media (max-width: 640px) {
   .page {
     padding: 16px 12px;
@@ -103,5 +287,20 @@
   .card {
     border-radius: 12px;
     padding: 16px;
+  }
+
+  .voicePanel {
+    padding: 20px 16px 22px;
+    border-radius: 18px;
+  }
+
+  .orbStage {
+    width: 200px;
+    height: 200px;
+  }
+
+  .orbShell {
+    width: 112px;
+    height: 112px;
   }
 }

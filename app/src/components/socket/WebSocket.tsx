@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAudioManager } from "../audio/AudioManager";
 import { MicStreamRes } from "../audio/AudioInterface";
 
@@ -66,6 +66,8 @@ export const useWebSocket = (
     }
     const socketRef = useRef<WebSocket | null>(initializeWebSocket(socketUrl, binaryType));
     const isStreamingRef = useRef(false);
+    const [isListening, setIsListening] = useState(false);
+    const [isSpeaking, setIsSpeaking] = useState(false);
     const playbackDrainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const streamPlaybackRef = useRef({
         streamId: null as number | null,
@@ -108,6 +110,8 @@ export const useWebSocket = (
                     format?: string;
                 };
                 if (data.type === metaDataKey) {
+                    setIsSpeaking(true);
+                    setIsListening(false);
                     const isInt16 = (data.format || "f32le").toLowerCase().includes("16");
                     configAudioSpec({
                         codec: isInt16
@@ -133,6 +137,8 @@ export const useWebSocket = (
                 }
                 if (data.type === audioEndKey) {
                     console.log("Received audio end signal from backend");
+                    setIsSpeaking(false);
+                    setIsListening(isStreamingRef.current);
                     const now = Date.now();
                     const playbackState = streamPlaybackRef.current;
                     const totalDurationMs = playbackState.sampleRate > 0
@@ -194,6 +200,8 @@ export const useWebSocket = (
             }
             closeAudioPlayer();
             isStreamingRef.current = false;
+            setIsListening(false);
+            setIsSpeaking(false);
             if (socketRef.current?.readyState === WebSocket.OPEN) {
                 socketRef.current.send(JSON.stringify({ type: socketEndResponse }));
             }
@@ -227,6 +235,8 @@ export const useWebSocket = (
             }
             ws.send(JSON.stringify({ type: "start_conversation", mime: "audio/wav" }));
             isStreamingRef.current = true;
+            setIsListening(true);
+            setIsSpeaking(false);
 
             // Audio manager will handle chunks as per handlers provided
             startRecording(
@@ -244,6 +254,8 @@ export const useWebSocket = (
         const ws = socketRef.current;
         await closeAudioPlayer();
         isStreamingRef.current = false;
+        setIsListening(false);
+        setIsSpeaking(false);
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: "end_conversation" }));
         }
@@ -253,6 +265,8 @@ export const useWebSocket = (
         startAudioStreaming,
         stopAudioStreaming,
         attachBackendListener,
-        closeSocket
+        closeSocket,
+        isListening,
+        isSpeaking
     }
 };
