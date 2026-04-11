@@ -11,18 +11,12 @@ from utility.logger import get_logger
 from utility.huggingface.config import models
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 import json
+from utility.models import PLANNER_MODEL
 
 class ManagerModel:
     def __init__(self):
         self.logger = get_logger("CORTEX_MANAGER")
-        self.logger.info("Initializing generation model...")
-        model_config = models.get("planner", {})
-        self.model = ChatHuggingFace(llm=HuggingFaceEndpoint(
-            repo_id=model_config.get("name"),
-            task=model_config.get("task", "conversational"),
-            max_new_tokens=model_config.get("max_new_tokens", 200),
-            temperature=model_config.get("temperature", 0.2)
-        ))
+        self.model = PLANNER_MODEL
         # self.template_provider = TemplateProvider()
         # self.str_parser = StrOutputParser()
         

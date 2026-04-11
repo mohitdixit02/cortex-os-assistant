@@ -2,24 +2,15 @@ from langchain_huggingface import HuggingFaceEndpointEmbeddings, ChatHuggingFace
 from cortex.memory.prompts import get_memory_client_prompts
 from utility.huggingface.config import models
 from utility.config import env
-from cortex.graph.state import ConversationState, UserSTM, MemoryEmotionalProfile, MemoryState
+from cortex.graph.state import ConversationState, UserSTM, MemoryEmotionalProfile, MemoryState, MemoryUserKnowledgeList
+import json
+import re
+from utility.models import MAIN_MODEL, PLANNER_MODEL
 
 class MemoryModel:
     def __init__(self):
-        model_config = models.get("main", {})
-        planner_model_config = models.get("planner", {})
-        self.model = ChatHuggingFace(llm=HuggingFaceEndpoint(
-            repo_id=model_config.get("name"),
-            task=model_config.get("task", "conversational"),
-            max_new_tokens=model_config.get("max_new_tokens", 200),
-            temperature=model_config.get("temperature", 0.2)
-        ))
-        self.plan_model = ChatHuggingFace(llm=HuggingFaceEndpoint(
-            repo_id=planner_model_config.get("name"),
-            task=planner_model_config.get("task", "conversational"),
-            max_new_tokens=planner_model_config.get("max_new_tokens", 200),
-            temperature=planner_model_config.get("temperature", 0.2)
-        ))
+        self.model = MAIN_MODEL
+        self.plan_model = PLANNER_MODEL
             
     
     def build_stm(self, state: MemoryState):
@@ -104,5 +95,6 @@ class MemoryModel:
             "session_preferences": prev_stm.session_preferences if prev_stm else {},
             "user_emotion": user_emotion,
             "previous_user_knowledge": state.older_knowledge_base if state.older_knowledge_base else "",
+            "recent_conversation": prev_stm.recent_conversation if prev_stm else "",
         })
         return res

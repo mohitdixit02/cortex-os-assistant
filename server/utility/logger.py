@@ -12,6 +12,7 @@ class ColoredFormatter(logging.Formatter):
         "CORTEX_MANAGER": Fore.GREEN,
         "CORTEX_MEMORY": Fore.BLUE,
         "TASK_QUEUE": Fore.RED,
+        "MODELS_LOADER": Fore.RED,
         "DEFAULT": Fore.WHITE,
     }
     

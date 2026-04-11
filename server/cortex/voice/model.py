@@ -11,6 +11,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, Syst
 from utility.huggingface.request import HuggingFaceRequest
 from cortex.voice.prompts import VoiceClientRouteQuery, get_voice_client_prompts
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
+from utility.models import MAIN_MODEL, PLANNER_MODEL, VOICE_EMOTION_PIPELINE
 
 # class QueryTypeStructModel(BaseModel):
 #     type: Annotated[Literal["casual", "query"], Field(description="Type of the user query")]
@@ -37,21 +38,8 @@ def demo_response(chunk_size: int = 24):
 class VoiceMainModel:
     def __init__(self):
         self.logger = get_logger("CORTEX_VOICE")
-        self.logger.info("Initializing generation model...")
-        model_config = models.get("main", {})
-        self.model = ChatHuggingFace(llm=HuggingFaceEndpoint(
-            repo_id=model_config.get("name"),
-            task=model_config.get("task", "conversational"),
-            max_new_tokens=model_config.get("max_new_tokens", 200),
-            temperature=model_config.get("temperature", 0.2)
-        ))
-        planner_model_config = models.get("planner", {})
-        self.plan_model = ChatHuggingFace(llm=HuggingFaceEndpoint(
-            repo_id=planner_model_config.get("name"),
-            task=planner_model_config.get("task", "conversational"),
-            max_new_tokens=planner_model_config.get("max_new_tokens", 200),
-            temperature=planner_model_config.get("temperature", 0.2)
-        ))
+        self.model = MAIN_MODEL
+        self.plan_model = PLANNER_MODEL
         
     def get_model(self):
         return self.model
@@ -118,13 +106,7 @@ class EmotionDetectionModel:
     """
     def __init__(self):
         self.logger = get_logger("CORTEX_VOICE")
-        self.logger.info("Initializing generation model...")
-        model_config = models.get("voice_emotion", {})
-        model_name = model_config.get("name")
-        model = AutoModelForSequenceClassification.from_pretrained(model_name)
-        task = model_config.get("task")
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model_pipeline = pipeline(task, model=model, tokenizer=tokenizer)
+        self.model_pipeline = VOICE_EMOTION_PIPELINE
         
     def get_model(self):
         return self.model

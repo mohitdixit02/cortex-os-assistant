@@ -12,6 +12,7 @@ from utility.huggingface.config import models
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from cortex.manager.tools import AVAILABLE_TOOLS
 import json
+from utility.models import MAIN_MODEL, PLANNER_MODEL
 
 text = """
     Hi, It is Cortex Main Model. I am main Orchestrator for handling user queries and generating responses. I can understand and respond to a wide range of queries, providing concise and accurate answers.
@@ -26,21 +27,8 @@ def demo_response(chunk_size: int = 24):
 class CortexMainModel:
     def __init__(self):
         self.logger = get_logger("CORTEX_MAIN")
-        self.logger.info("Initializing generation model...")
-        model_config = models.get("main", {})
-        planner_model_config = models.get("planner", {})
-        self.model = ChatHuggingFace(llm=HuggingFaceEndpoint(
-            repo_id=model_config.get("name"),
-            task=model_config.get("task", "conversational"),
-            max_new_tokens=model_config.get("max_new_tokens", 200),
-            temperature=model_config.get("temperature", 0.2)
-        ))
-        self.plan_model = ChatHuggingFace(llm=HuggingFaceEndpoint(
-            repo_id=planner_model_config.get("name"),
-            task=planner_model_config.get("task", "conversational"),
-            max_new_tokens=planner_model_config.get("max_new_tokens", 200),
-            temperature=planner_model_config.get("temperature", 0.2)
-        ))
+        self.model = MAIN_MODEL
+        self.plan_model = PLANNER_MODEL
         # self.template_provider = TemplateProvider()
         # self.str_parser = StrOutputParser()
         

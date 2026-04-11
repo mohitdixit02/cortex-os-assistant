@@ -6,6 +6,7 @@ from utility.config import env
 import numpy as np
 from numpy import dot
 from numpy.linalg import norm
+from utility.models import EMBEDDING_MODEL
 
 class EmbeddingModel:
     def __init__(self):
@@ -14,9 +15,7 @@ class EmbeddingModel:
         #     task="feature-extraction",
         #     huggingfacehub_api_token=env.HF_TOKEN
         # )
-        self.embd_model = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2"
-        )
+        self.embd_model = EMBEDDING_MODEL
         
     def generate_embeddings(self, text: str) -> list[float]:
         """

@@ -2,6 +2,7 @@ from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor
 from utility.logger import get_logger
 from utility.huggingface.config import models
 from utility.sensory.config import STT_CONFIG
+from utility.models import STT_MODEL, STT_PROCCESSOR
 import io
 import soundfile as sf
 import numpy as np
@@ -22,19 +23,12 @@ class STTModel:
     """
     def __init__(self):
         self.logger = get_logger("SENSORY")
-        self.logger.info("Initializing STTModel...")
         self.model_cfg = models.get("stt", {})
         self.np_dtype = np.dtype(self.model_cfg.get("model_np_dtype", "float32"))
-        self.processor = AutoProcessor.from_pretrained(self.model_cfg.get("name"))
+        self.processor = STT_PROCCESSOR
         self.sample_rate = STT_CONFIG.get("sample_rate")
-        self.model = AutoModelForSpeechSeq2Seq.from_pretrained(
-            self.model_cfg.get("name"),
-            torch_dtype=self.model_cfg.get("dtype"),
-            low_cpu_mem_usage=True,
-            use_safetensors=True,
-        ).to(self.model_cfg.get("device"))
+        self.model = STT_MODEL
         self.max_source_positions = int(self.model_cfg.get("max_source_positions"))
-        self.logger.info("STT model loaded..")
 
     def _normalize_input_features(self, input_features: torch.Tensor) -> torch.Tensor:
         """

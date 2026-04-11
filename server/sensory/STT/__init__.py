@@ -23,7 +23,6 @@ class STTClient:
         self.end_speech_silence_threshold = float(STT_CONFIG["end_speech_silence_threshold"])
         self.chunk_batch_size = int(STT_CONFIG.get("chunk_batch_size", 1))
         self.model = STTModel()
-        self.logger.info("STT model loaded locally...")
         
     def _batch_chunks(self, audio: np.ndarray) -> list:
         """

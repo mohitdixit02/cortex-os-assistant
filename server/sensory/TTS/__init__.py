@@ -3,7 +3,7 @@ from kokoro import KPipeline
 from utility.logger import get_logger
 from utility.sensory.config import TTS_CONFIG
 from utility.main import iterate_tokens_async
-
+from utility.models import TTS_PIPELINE
 
 class TTSClient:
     """
@@ -22,7 +22,7 @@ class TTSClient:
         self.sample_rate = TTS_CONFIG.get("sample_rate", 24000)
         self.channels = TTS_CONFIG.get("channels", 1)
         self.frame_samples = TTS_CONFIG.get("frame_samples")
-        self._pipeline = KPipeline(lang_code="a")
+        self._pipeline = TTS_PIPELINE
     
     # chunk duration (seconds) = frame_samples / sample_rate
     def _get_audio_stream_sync(self, text: str):
