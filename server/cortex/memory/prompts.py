@@ -183,7 +183,19 @@ In this case, you have to compare the new memory items with the previous memory 
     3. Information should be concise but still relevant and useful for future response generation. \n
 
 # Response:
-Follow the format instructions strictly below. Return ONLY valid JSON array, no other text, function call, chat message \n
+Return ONLY valid JSON array, no other text, function call, chat message \n
+Example of JSON array: \n
+```json
+[
+    {{
+        "action": "add",
+        "trait_id": null,
+        "strictness": "MUST",
+        "content": "your content here"
+    }}
+]
+```
+Follow the format instructions strictly below:
 {format_instructions}
 """
 
@@ -229,6 +241,7 @@ def get_memory_client_prompts(
                 "session_preferences",
                 "user_emotion",
                 "previous_user_knowledge",
+                "recent_conversation",
                 "format_instructions"
             ],
         )

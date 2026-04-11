@@ -11,6 +11,7 @@ from cortex.graph.workflow import (
 from cortex.task import MainTaskQueue, TaskStatus, TaskItem
 from utility.logger import get_logger
 from db import TimeOfDay
+import asyncio
 # keep listening and processing until the program is terminated
 
 class MainClient:
@@ -147,6 +148,17 @@ class MainClient:
             )
             self.logger.info("Completed Task with id: %s and name: %s", task.task_id, task.task_name)
             self.logger.info("Task Status: %s", updated_task.status)
+            
+    async def _build_memory_workflow(self, state: ConversationState):
+        """
+        ## Memory Workflow Builder \n
+        This function takes the current conversation state and builds the memory workflow for the conversation. \n
+        """
+        memory_state = self.initialize_memory_state(state)
+        try:
+            await build_memory_workflow.ainvoke(memory_state)
+        except Exception as memory_exc:
+            self.logger.exception("Memory workflow failed after response generation: %s", memory_exc)
                 
     async def _handle_task_queue(self, taskItem: TaskItem) -> TaskItem:
         """
@@ -208,13 +220,8 @@ class MainClient:
             workflow_final_response = res.get("final_response") if isinstance(res, dict) else getattr(res, "final_response", None)
             final_response_text = self._extract_final_response_text(workflow_final_response)
             
-            memory_state = self.initialize_memory_state(res)
-            
             # Build memory
-            try:
-                build_memory_workflow.invoke(memory_state)
-            except Exception as memory_exc:
-                self.logger.exception("Memory workflow failed after response generation: %s", memory_exc)
+            asyncio.create_task(self._build_memory_workflow(res))
 
             self.logger.info("Final response generated: %s", res)
             self.logger.info("Response from main workflow >> %s", final_response_text if final_response_text else "No final response generated")

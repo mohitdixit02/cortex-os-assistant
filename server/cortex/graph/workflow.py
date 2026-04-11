@@ -20,20 +20,13 @@ memory_graph.add_node("build_stm", memory_client.build_stm)
 memory_graph.add_node("build_emotional_profile", memory_client.build_emotional_profile)
 memory_graph.add_node("build_user_knowledge_base", memory_client.build_user_knowledge_base)
 memory_graph.add_node("persist_memory_state", memory_client.persist_memory_state)
-memory_graph.add_node("parallel_dispatch", lambda state: state)
 
 memory_graph.add_edge(START, "persist_ai_response")
 memory_graph.add_edge("persist_ai_response", "retrieve_unsummarized_messages")
-memory_graph.add_conditional_edges("retrieve_unsummarized_messages", memory_client.route_build_stm_required, {
-        True: "build_stm",
-        False: "parallel_dispatch",
-    })
-memory_graph.add_edge("parallel_dispatch", "build_emotional_profile")
-memory_graph.add_edge("parallel_dispatch", "build_user_knowledge_base")
+memory_graph.add_conditional_edges("retrieve_unsummarized_messages", memory_client.route_build_stm_required)
 memory_graph.add_edge("build_stm", "build_emotional_profile")
 memory_graph.add_edge("build_stm", "build_user_knowledge_base")
-memory_graph.add_edge("build_emotional_profile", "persist_memory_state")
-memory_graph.add_edge("build_user_knowledge_base", "persist_memory_state")
+memory_graph.add_edge(["build_emotional_profile", "build_user_knowledge_base"], "persist_memory_state")
 memory_graph.add_edge("persist_memory_state", END)
 
 build_memory_workflow = memory_graph.compile()
@@ -60,8 +53,7 @@ main_graph.add_edge("plan_main_orchestration", "fetch_user_knowledge_base")
 main_graph.add_edge("plan_main_orchestration", "fetch_message_history")
 main_graph.add_edge("plan_main_orchestration", "execute_tools_manager")
 main_graph.add_edge("execute_tools_manager", "summarize_tool_result")
-main_graph.add_edge("fetch_user_knowledge_base", "plan_evaluation")
-main_graph.add_edge("fetch_message_history", "plan_evaluation")
+main_graph.add_edge(["fetch_user_knowledge_base", "fetch_message_history", "summarize_tool_result"], "plan_evaluation")
 main_graph.add_conditional_edges(
     "plan_evaluation", 
     orchestrator.route_condition_orchestration_evaluation,
@@ -70,7 +62,6 @@ main_graph.add_conditional_edges(
         "final_response_generation": "final_response_generation",
     },
 )
-main_graph.add_edge("summarize_tool_result", "final_response_generation")
 main_graph.add_edge("final_response_generation", "final_response_alignment")
 main_graph.add_conditional_edges(
     "final_response_alignment",

@@ -40,7 +40,10 @@ You are a smart decision planner, given a user query, you have to understand the
 user_knowledge_retrieval_keywords: ["travel preferences, travel history, travel companions, travel habits", "goa plan, goa memories, goa experiences"] \n
 
 2. is_message_referred and referred_message_keywords - \n
-    a. From the user query, you have to understand whether the user is referring to any past message in the conversation or not.
+    a. From the user query, you have to understand whether the user query is related to past conversations or not. For example, \n
+        i. User ask about some past activity or interaction with you.
+        ii. User recall some information that you have shared in past.
+        iii. User ask you to continue, act or do something, which you are not sure of, then it is in previous conversation.
     b. If yes, then you have to mark is_message_referred as true and generate referred_message_keywords which is a string of relevant text / keywords having maximum semantic overlap with the referred message, which then is used to retrieved from the message history. \n
     c. If no, then respond with is_message_referred as false and keep the referred_message_keywords field empty or null. \n
     d. All Feedbacks by Evaluator: {message_retrieval_feedback}. If feedback is provided, then you have to take that into account while making the plan. \n

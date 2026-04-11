@@ -70,11 +70,11 @@ class ManagerClient():
         orchestrator_state = state.orchestration_state
         if orchestrator_state is None:
             self.logger.warning("No orchestration state found in the conversation state. Skipping tool execution.")
-            return state
+            return {}
     
         if orchestrator_state.is_tool_required is False:
             self.logger.info("No tool is required for the current query as per the orchestration state. Skipping tool execution.")
-            return state
+            return {}
         
         selected_tools = orchestrator_state.selected_tools
         selected_tools_list = selected_tools.root if hasattr(selected_tools, "root") else selected_tools
@@ -111,12 +111,12 @@ class ManagerClient():
         orchestration_state = state.orchestration_state
         if orchestration_state is None:
             self.logger.warning("No orchestration state found in the conversation state. Cannot summarize tool results.")
-            return {"orchestration_state": None}
+            return {}
         
         selected_tools = orchestration_state.selected_tools
         if selected_tools is None:
             self.logger.warning("No selected tools found in the orchestration state. Nothing to summarize.")
-            return {"orchestration_state": orchestration_state}
+            return {}
 
         selected_tools_list = selected_tools.root if hasattr(selected_tools, "root") else selected_tools
         

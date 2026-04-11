@@ -8,6 +8,7 @@ from cortex.graph.state import (
     MessageStateList,
     MemoryState
 )
+from typing import Literal, Optional
 from cortex.memory.model import MemoryModel
 from cortex.memory.embedding import EmbeddingModel
 from cortex.memory.saver import MemorySaver
@@ -88,9 +89,9 @@ class MemoryClient:
         session: Session,
         user_id: str,
         session_id: str,
-    ) -> list[Message]:
+    ) -> str:
         """
-        Returns recent conversation messages for STM building. \n
+        Returns recent conversation text for STM building. \n
         """
         recent_user_messages = list(session.exec(
             select(Message.created_at)
@@ -159,7 +160,7 @@ class MemoryClient:
         }
     
     # ******************** Build Memory State Functions ********************
-    def route_build_stm_required(self, state: MemoryState) -> bool:
+    def route_build_stm_required(self, state: MemoryState) -> Literal["build_stm", "build_emotional_profile", "build_user_knowledge_base"]:
         """
         Determine if building STM is required based on the current memory state. \n
         **Input:** `MemoryState` object \n
@@ -167,9 +168,9 @@ class MemoryClient:
         """
         if state.stm_start_update_timestamp:
             self.logger.info("Routing to build STM: STM update timestamp is set")
-            return True
+            return "build_stm"
         self.logger.info("No need to route to build STM: No new non-summarized messages found.")
-        return False
+        return ["build_emotional_profile", "build_user_knowledge_base"]
         
     def build_stm(
         self,
@@ -206,7 +207,14 @@ class MemoryClient:
             elif msg.role == RoleType.AI:   
                 res += f"AI: {msg.content}\n"
         
-        state.short_term_memory.recent_conversation = res.strip()
+        if state.short_term_memory:
+            state.short_term_memory.recent_conversation = res.strip()
+        else:
+            state.short_term_memory = UserSTM(
+                stm_summary=None,
+                session_preferences=None,
+                recent_conversation=res.strip()
+            )
         self.logger.info(f"Built recent conversation for STM: {state.short_term_memory.recent_conversation}")
         
         short_term_memory = self.model.build_stm(state=state)
@@ -360,7 +368,7 @@ class MemoryClient:
                     else:
                         self.logger.warning(f"Invalid action '{item.action}' for knowledge item. Skipping this item.")
                 self.logger.info(f"Persisting User Knowledge Base to DB: {state.knowledge_items}")
-            if state.stm_update_timestamp:
+            if state.stm_start_update_timestamp:
                 self.logger.info(f"Updating messages as summarized for session_id: {state.session_id}, user_id: {state.user_id} from {state.stm_start_update_timestamp} to {state.stm_end_update_timestamp}")
                 with Session(self.engine) as session:
                     stmt = (
@@ -433,11 +441,15 @@ class MemoryClient:
         else:
             recent_conversation = ""
 
-        state.short_term_memory = UserSTM(
-            stm_summary=res.stm_summary if res else None,
-            session_preferences=res.session_preferences if res else None,
-            recent_conversation=recent_conversation
-        ) if res else None
+        has_recent_context = bool(recent_conversation.strip())
+        if res or has_recent_context:
+            state.short_term_memory = UserSTM(
+                stm_summary=res.stm_summary if res and res.stm_summary else "",
+                session_preferences=res.session_preferences if res else None,
+                recent_conversation=recent_conversation if has_recent_context else None,
+            )
+        else:
+            state.short_term_memory = None
         return {
             "short_term_memory": state.short_term_memory,
         }
