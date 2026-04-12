@@ -132,6 +132,7 @@ class PlanEvaluationState(BaseModel):
     is_feedback_required: Annotated[bool, Field(description="Whether user feedback is required for the current response or plan or not")]
     user_knowledge_retrieval_feedback: Annotated[Optional[str], Field(description="Feedback on the user knowledge retrieval part of the plan")] = None
     message_retrieval_feedback: Annotated[Optional[str], Field(description="Feedback on the message retrieval part of the plan")] = None
+    tool_selection_feedback: Annotated[Optional[str], Field(description="Feedback on the tool selection part of the plan")] = None
     iteration_count: Annotated[Optional[int], Field(description="Number of iterations or attempts made to generate the response")] = 0
 
 class OrchestrationState(BaseModel):

@@ -106,6 +106,11 @@ class CortexMainModel:
             message_retrieval_feedback = feedback.message_retrieval_feedback
         else:
             message_retrieval_feedback = ""
+            
+        if feedback and feedback.tool_selection_feedback:
+            tool_selection_feedback = feedback.tool_selection_feedback
+        else:
+            tool_selection_feedback = ""
 
         res = chain.invoke({
             "available_tools": available_tools,
@@ -117,6 +122,7 @@ class CortexMainModel:
             "user_emotional_profile": state.emotional_profile.model_dump_json() if state.emotional_profile else None,
             "user_knowledge_retrieval_feedback": user_knowledge_retrieval_feedback,
             "message_retrieval_feedback": message_retrieval_feedback,
+            "tool_selection_feedback": tool_selection_feedback,
         })
         return res
     
@@ -131,7 +137,9 @@ class CortexMainModel:
             retrieved_user_knowledge = None
         
         if state.message_history and state.message_history.root:
-            retrieved_messages = [msg.model_dump() for msg in state.message_history.root]
+            retrieved_messages = ""
+            for msg in state.message_history.root:
+                retrieved_messages += f"{msg.role}: {msg.content}\n"
         else:
             retrieved_messages = None
         
@@ -141,14 +149,17 @@ class CortexMainModel:
         else:
             feedback_by_evaluator = None
 
+        available_tools = "\n".join([f"{tool.get('tool_name')}: {tool.get('tool_description')} - {tool.get('tool_id')}" for tool in AVAILABLE_TOOLS])
+        
         res = chain.invoke({
             "user_query": state.query,
             "orchestration_plan": state.orchestration_state.model_dump_json() if state.orchestration_state else None,
             "retrieved_user_knowledge": json.dumps(retrieved_user_knowledge) if retrieved_user_knowledge else None,
-            "retrieved_messages": json.dumps(retrieved_messages) if retrieved_messages else None,
+            "retrieved_messages": retrieved_messages,
             "previous_feedback": json.dumps(feedback_by_evaluator) if feedback_by_evaluator else None,
             "user_mood": state.query_emotion,
             "user_emotional_profile": state.emotional_profile.model_dump_json() if state.emotional_profile else None,
+            "available_tools": available_tools,
         })
         return res
     
@@ -162,7 +173,9 @@ class CortexMainModel:
             retrieved_user_knowledge = None
         
         if state.message_history and state.message_history.root:
-            retrieved_messages = [msg.model_dump() for msg in state.message_history.root]
+            retrieved_messages = ""
+            for msg in state.message_history.root:
+                retrieved_messages += f"{msg.role}: {msg.content}\n"
         else:
             retrieved_messages = None
             
@@ -183,7 +196,7 @@ class CortexMainModel:
             "user_time": state.query_time,
             "user_emotional_profile": state.emotional_profile.model_dump_json() if state.emotional_profile else None,
             "retrieved_user_knowledge": json.dumps(retrieved_user_knowledge) if retrieved_user_knowledge else None,
-            "retrieved_messages": json.dumps(retrieved_messages) if retrieved_messages else None,
+            "retrieved_messages": retrieved_messages,
             "previous_feedback": json.dumps(feedback_by_evaluator) if feedback_by_evaluator else None,
             "tool_result": tool_result_payload,
             "fallback_response": state.voice_client_response if state.voice_client_response else "",
@@ -202,7 +215,9 @@ class CortexMainModel:
             retrieved_user_knowledge = None
         
         if state.message_history and state.message_history.root:
-            retrieved_messages = [msg.model_dump() for msg in state.message_history.root]
+            retrieved_messages = ""
+            for msg in state.message_history.root:
+                retrieved_messages += f"{msg.role}: {msg.content}\n"
         else:
             retrieved_messages = None
             
@@ -223,7 +238,7 @@ class CortexMainModel:
             "user_time": state.query_time,
             "user_emotional_profile": state.emotional_profile.model_dump_json() if state.emotional_profile else None,
             "retrieved_user_knowledge": json.dumps(retrieved_user_knowledge) if retrieved_user_knowledge else None,
-            "retrieved_messages": json.dumps(retrieved_messages) if retrieved_messages else None,
+            "retrieved_messages": retrieved_messages,
             "previous_feedback": json.dumps(feedback_by_evaluator) if feedback_by_evaluator else None,
             "tool_result": tool_result_payload,
             "fallback_response": state.voice_client_response if state.voice_client_response else "",

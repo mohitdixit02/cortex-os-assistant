@@ -12,6 +12,7 @@ from typing import Literal, Optional
 from cortex.memory.model import MemoryModel
 from cortex.memory.embedding import EmbeddingModel
 from cortex.memory.saver import MemorySaver
+from sqlalchemy import func
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 from utility.logger import get_logger
@@ -42,6 +43,9 @@ UTC_NOW = lambda: datetime.now(timezone.utc)
 # Self reference: value x means x complete conversations (user query + ai response) in the message history
 MINIMUM_CONVERSATION_HISTORY_COUNT = 2 # Must be less than what is going to summarize
 CONVERSATION_HISTORY_SUMMARIZATION_THRESHOLD = 5 # Can't be zero as summarization is must (>= 1)
+
+MESSAGES_REJECTION_THRESHOLD = 0.1 # Messages only similar more than 10% will be kept.
+MESSAGES_MAX_LIMIT = 15 # Max messages to send to Cortex
 
 class MemoryClient:
     def __init__(self, engine: Engine):
@@ -570,27 +574,44 @@ class MemoryClient:
         user_id = state.user_id
         session_id = state.session_id
         if state.orchestration_state and state.orchestration_state.referred_message_keywords:
-            keywords = state.orchestration_state.referred_message_keywords.split()
+            keywords = state.orchestration_state.referred_message_keywords
         else:
-            keywords = []
+            keywords = ""
 
-        if not keywords:
+        if not keywords or keywords.strip() == "":
             return {
                 "message_history": None,
             }
 
-        keyword_text = keywords if isinstance(keywords, str) else " ".join(keywords)
-        keyword_embedding = self.embd_model.generate_embeddings(keyword_text)
+        keyword_embedding = self.embd_model.generate_embeddings(keywords)
         messages = []
         with Session(self.engine) as session:
-            res = get_similar(
-                session=session,
-                model=Message,
-                query_embedding=keyword_embedding,
-                top_k=5,
-                user_id=user_id,
-                session_id=session_id
+            similarity_expr = (1.0 - Message.embedding.cosine_distance(keyword_embedding)).label("similarity")
+
+            stmt = (
+                select(Message, similarity_expr)
+                .where(
+                    Message.user_id == user_id,
+                    Message.session_id == session_id,
+                    (
+                        (Message.role == RoleType.USER)
+                        | (
+                            (Message.role == RoleType.AI)
+                            & (
+                                Message.ai_client.is_(None)
+                                | (Message.ai_client != AIClientType.VOICE_CLIENT)
+                            )
+                        )
+                    ),
+                    Message.embedding.is_not(None),
+                    func.vector_dims(Message.embedding) == len(keyword_embedding),
+                    similarity_expr >= MESSAGES_REJECTION_THRESHOLD,
+                )
+                .order_by(similarity_expr.desc())
+                .limit(MESSAGES_MAX_LIMIT)
             )
+
+            res = session.exec(stmt).all()
             messages.extend(res)
 
         message_states = [

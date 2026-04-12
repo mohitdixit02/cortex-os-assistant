@@ -25,14 +25,21 @@ CORTEX_MAIN_ORCHESTRATOR_PROMPT = """
 # Objective:
 You are a smart decision planner, given a user query, you have to understand the user query, context provided based on all the input fields and instructions, plan out the blueprint and decide below things: \n
 
+# Input
+User Query: {user_query}
+STM Summary: {stm_summary}
+STM Preferences: {stm_preferences}
+User Mood: {user_mood}
+User Time of the day: {user_time}
+User Previous Emotional Profile: {user_emotional_profile}
+
 # Blueprint:
 ## user_knowledge_retrieval_keywords and user_knowledge_acceptance_threshold - \n
-a. Key facts, preferences, traits and behaviours for the user are captured in the database. \n
-b. You have to provide two things: \n
+a. Key facts, preferences, traits and behaviours for the user are captured in the database. You have to provide two things: \n
 i. Relevant keywords for retrieving the corresponding user knowledge from the database. \n
 ii. user_knowledge_acceptance_threshold, which is the similarity threshold for accepting the user knowledge items retrieved based on the keywords. It must be a float between 0.2 and 0.6. \n
-c. All Feedbacks by Evaluator: {user_knowledge_retrieval_feedback}. If feedback is provided, then you must have to take that into account while making the plan. \n
-d. Feedback may ask, 
+b. All Feedbacks by Evaluator: {user_knowledge_retrieval_feedback}. If feedback is provided, then you must have to take that into account while making the plan. \n
+c. Feedback may ask, 
 i. To add or remove some keywords to a string or group of strings. \n
 ii. To increase or decrease the user_knowledge_acceptance_threshold. \n
 
@@ -54,7 +61,10 @@ ii. user_knowledge_acceptance_threshold - a float between 0.2 and 0.6, represent
         i. User ask about some past activity or interaction with you.
         ii. User recall some information that you have shared in past.
         iii. User ask you to continue, act or do something, which you are not sure of, then it is in previous conversation.
-    b. If yes, then you have to mark is_message_referred as true and generate referred_message_keywords which is a string of relevant text / keywords having maximum semantic overlap with the referred message, which then is used to retrieved from the message history. \n
+    b. If yes, then you have to mark is_message_referred as true and generate referred_message_keywords. \n
+    i. referred_message_keywords should be a string of keywords having maximum semantic overlap with the referred message / user query. \n
+    ii. keywords should be relevant yet diversified enough to fetch the relevant messages from the past conversation. \n
+    iii. Keep minimum 3 and atmost 7 keywords in the referred_message_keywords string. \n
     c. If no, then respond with is_message_referred as false and keep the referred_message_keywords field empty or null. \n
     d. All Feedbacks by Evaluator: {message_retrieval_feedback}. If feedback is provided, then you must have to take that into account while making the plan. \n
     e. For example, if the feedback asks to add more keywords or references, then you have to modify the plan accordingly. \n
@@ -74,22 +84,18 @@ ii. user_knowledge_acceptance_threshold - a float between 0.2 and 0.6, represent
     
     ### Note for Tool Instructions:
     1. Since you have better understanding of the user query, preferences, behaviour, emotional profile and the context, you can provide specific instructions to the tool to make it more effective and personalized. \n
-    2. While building the instruction, remember that manager has no access to user preferences. It only knows the user query and your instructions.
-    3. For example, for web search tool, one of the instruction (only a example) can be "Also search for sweet dishes as user is in sad mood, and prefers sweet dishes when he is sad".
+    2. While building the instruction, remember that tool executor don't know user's preferences or what user like or dislike. It only knows your instructions. So your instructions must be specific.
+    3. For example, for web search tool, one of the instruction (only a example) can be "Also search for sweet dishes as user is in sad mood, and prefers sweet dishes when he is sad", and not "Search for user's favourite dishes, because he is sad" \n
     4. Simialrly, you can have instruction of your choice for this as well as other tools.
     5. Any examples in this prompt are illustrative only. Never copy example wording into your output. \n
     6. Instructions can be null as well if you think no specific instructions are required for the tool. \n
+    7. If any feedback from evaluator is providing regarding tool selection or tool instructions, then you must have to follow that feedback strictly while making the plan. \n
 
 # Available Tools: 
 {available_tools}
 
-# Input
-User Query: {user_query}
-STM Summary: {stm_summary}
-STM Preferences: {stm_preferences}
-User Mood: {user_mood}
-User Time of the day: {user_time}
-User Previous Emotional Profile: {user_emotional_profile}
+### Tool Specific Feedback:
+{tool_selection_feedback}
 
 # Response
 Follow the below format strictly and only respond with the format mentioned without any additional text or explanation. \n
@@ -125,8 +131,17 @@ You are a smart evaluator, whose job is to evaluate the plan generated by the Or
 2. Also take into account the previous feedbacks provided by you for the same query (if any provided) and the user's emotional state and preferences. \n
 3. Based on this, you have to evaluate and decide the feedback \n
 
+# Input: \n
+User Query: {user_query}
+Orchestration Plan: {orchestration_plan}
+Retrieved User Knowledge: {retrieved_user_knowledge}
+Retrieved Messages: {retrieved_messages}
+Previous Feedbacks: {previous_feedback}
+User Mood: {user_mood}
+User Previous Emotional Profile: {user_emotional_profile}
+
 # Feedback Instructions:
-### USER KNOWLEDGE BASE \n
+## USER KNOWLEDGE BASE \n
 a. Check whether the current retrieved User Knowledge is relevant and sufficient for generating the response. \n
 b. Give feedback in following cases: \n
 i. No information is retrieved. \n
@@ -136,9 +151,10 @@ iv. Retrieved information is relevant but there is some irrelevant information a
 c. You have to provide specific feedback on what kind of knowledge is missing or irrelevant. It should include:  \n
 i. Instructions to either add more specific keywords, remove previously selected keywords from user_knowledge_retrieval_keywords \n
 ii. Value of new user_knowledge_acceptance_threshold if you think more or less knowledge items should be retrieved based on the current retrieval and the user query. \n
+
 ### user_knowledge_acceptance_threshold guidance:
 - CORE RULE: Higher threshold means stricter filtering and fewer documents accepted. Lower threshold means broader filtering and more documents accepted. \n
-- If no user knowledge is retrieved, you MUST recommend lowering threshold (never increasing). \n
+- If no user knowledge is retrieved, you MUST recommend lowering threshold. \n
 - If retrieved knowledge is relevant but insufficient, recommend lowering threshold and/or broadening keywords. \n
 - Increase threshold ONLY when retrieval already returns sufficient information plus clearly irrelevant items, and stricter filtering is required. \n
 - If retrieval is empty and you suggest increasing threshold, that is logically invalid and must be avoided. \n
@@ -147,24 +163,31 @@ ii. Value of new user_knowledge_acceptance_threshold if you think more or less k
 - Do not suggest threshold above 0.55 unless the retrieved set is already large and noisy.
 d. If information retrieved is relevant and sufficient, then keep the feedback empty or null. \n
     
-### MESSAGE RETRIEVAL \n
+## MESSAGE RETRIEVAL \n
 a. Check whether the current retrieved messages are relevant and sufficient for generating the response. \n
 b. If not, then provide specific feedback on what kind of messages are missing or irrelevant. \n
-c. It should include instructions to either add the reference to the message, remove the reference to the message or modify the referred_message_keywords for message retrieval. \n
-d. If its relevant and sufficient, then keep it empty or null. \n
+c. It should include instructions to either add the reference, remove the reference or modify the referred_message_keywords for message retrieval. \n
+d. Also suggest relevant keywords or references to be added or removed from the referred_message_keywords for improving the message retrieval. \n
+e. Check whether number of keywords in referred_message_keywords are atleast 3, else suggest to increase it also.
+f. If its relevant and sufficient, then keep it empty or null. \n
+
+## Tool Selection \n
+Tool is selected by the orchestrator and executed by the tool manager. \n
+1. Check whether the selected tools are relevant and sufficient for processing the user query. \n
+2. Also check the respective tool instructions if any. \n
+3. Give feedback if: \n
+i. No tool is selected but you think some tool is required. \n
+ii. Some tool is selected but it is not relevant or necessary for the query. \n
+iii. The tool instructions provided are not sufficient or relevant to the user query and the context. \n
+4. Provide specific feedback on what tools should be selected or removed, and what instructions should be provided for the tools to make them more effective and personalized for the user query. \n
+5. Note that, tool executor has no information about user's preferences, likes or dislikes. So if Tool instructions include things like "User's preference or user's favourite X or Y", you have to ask planner to make it more specific. \n
+6. You will be given available tools list and their functionalities as well, so you can refer to that while giving feedback/. \n
+### Available Tools:
+{available_tools}
 
 # Strict Guidelines for Feedback:
 1. If you have added any feedback for either of the above two parts, then provide `is_feedback_required` as `True`, else `False`. \n
 2. Don't repeat the same feedback again and again in the future evaluations. \n
-
-# Input: \n
-User Query: {user_query}
-Orchestration Plan: {orchestration_plan}
-Retrieved User Knowledge: {retrieved_user_knowledge}
-Retrieved Messages: {retrieved_messages}
-Previous Feedbacks: {previous_feedback}
-User Mood: {user_mood}
-User Previous Emotional Profile: {user_emotional_profile}
 
 # Response:
 After evaluating the plan, you have to provide the feedback strictly in the below mentioned format. Strictly follow format and never print any function, code, explanation, text, etc.
@@ -299,6 +322,7 @@ def get_main_client_prompts(
                 "user_emotional_profile",
                 "user_knowledge_retrieval_feedback",
                 "message_retrieval_feedback",
+                "tool_selection_feedback",
                 "format_instructions"
             ],
         )
@@ -315,6 +339,7 @@ def get_main_client_prompts(
                 "previous_feedback",
                 "user_mood",
                 "user_emotional_profile",
+                "available_tools",
                 "format_instructions"
             ],
         )

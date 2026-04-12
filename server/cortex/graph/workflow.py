@@ -87,11 +87,14 @@ def display_workflow_graph(worflow):
 test_graph = StateGraph(ConversationState)
 # test_graph_2 = StateGraph(MemoryState)
 test_graph.add_node("orchestrator_plan", orchestrator.build_main_orchestration_plan)
+test_graph.add_node("messages", memory_client.fetch_relevant_message_history)
 test_graph.add_node("ukb", memory_client.fetch_relevant_knowledge_base)
 test_graph.add_node("evaluate_plan", orchestrator.evaluate_plan)
 test_graph.add_edge(START, "orchestrator_plan")
+test_graph.add_edge("orchestrator_plan", "messages")
 test_graph.add_edge("orchestrator_plan", "ukb")
 test_graph.add_edge("ukb", "evaluate_plan")
+test_graph.add_edge("messages", "evaluate_plan")
 test_graph.add_conditional_edges(
     "evaluate_plan", 
     orchestrator.route_condition_orchestration_evaluation,
@@ -100,8 +103,8 @@ test_graph.add_conditional_edges(
         "final_response_generation": END,
     },
 )
-# test_graph.add_edge(START, "ukb")
-# test_graph.add_edge("ukb", END)
+# test_graph.add_edge(START, "messages")
+# test_graph.add_edge("messages", END)
 
 # test_graph_2.add_node("build_stm", memory_client.build_stm)
 # test_graph_2.add_edge(START, "build_stm")

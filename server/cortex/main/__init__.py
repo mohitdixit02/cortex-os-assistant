@@ -201,13 +201,14 @@ class MainClient:
             #     instructions=""
             # )
             
-            state.orchestration_state = OrchestrationState(
-                user_knowledge_retrieval_keywords=['profession', 'job title', 'work'],
-                is_message_referred=False,
-                is_tool_required=False,
-                # selected_tools=CortexToolList(root=[web_tool]),
-                user_knowledge_acceptance_threshold=0.6
-            )
+            # state.orchestration_state = OrchestrationState(
+            #     user_knowledge_retrieval_keywords=['drinking preference', 'favorite beverages', 'likes and dislikes'],
+            #     is_message_referred=True,
+            #     referred_message_keywords="drinking preference, favorite beverages, likes and dislikes",
+            #     is_tool_required=False,
+            #     # selected_tools=CortexToolList(root=[web_tool]),
+            #     user_knowledge_acceptance_threshold=0.6
+            # )
             
             # state1 = test_workflow.invoke(state)
             # memory_state = self.initialize_memory_state(state1)
