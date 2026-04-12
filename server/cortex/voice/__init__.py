@@ -308,7 +308,8 @@ class VoiceClient:
         """
         self.logger.info("Starting Cortex Main Server for text response...")
         
-        emotion =self.emotion_model.get_emotion(query)
+        # emotion =self.emotion_model.get_emotion(query)
+        emotion = {"label": "neutral", "confidence": 0.99}
         
         # route_res = self.model.get_response_route(query)
         # logger.info("Determined route type: %s", route_res.request_type)

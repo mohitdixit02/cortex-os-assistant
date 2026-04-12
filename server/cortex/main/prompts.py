@@ -26,30 +26,40 @@ CORTEX_MAIN_ORCHESTRATOR_PROMPT = """
 You are a smart decision planner, given a user query, you have to understand the user query, context provided based on all the input fields and instructions, plan out the blueprint and decide below things: \n
 
 # Blueprint:
-1. user_knowledge_retrieval_keywords - \n
-    a. Key facts, preferences, traits and behaviours for the user are captured in the database. \n
-    b. You have to provide the relevant keywords for retrieving the corresponding user knowledge from the database. \n
-    c. All Feedbacks by Evaluator: {user_knowledge_retrieval_feedback}. If feedback is provided, then you have to take that into account while making the plan. \n
-    d. For example, if the feedback asks to add or remove keywords to a string or group of strings, then you have to modify the plan accordingly. \n
-    
+## user_knowledge_retrieval_keywords and user_knowledge_acceptance_threshold - \n
+a. Key facts, preferences, traits and behaviours for the user are captured in the database. \n
+b. You have to provide two things: \n
+i. Relevant keywords for retrieving the corresponding user knowledge from the database. \n
+ii. user_knowledge_acceptance_threshold, which is the similarity threshold for accepting the user knowledge items retrieved based on the keywords. It must be a float between 0.2 and 0.6. \n
+c. All Feedbacks by Evaluator: {user_knowledge_retrieval_feedback}. If feedback is provided, then you must have to take that into account while making the plan. \n
+d. Feedback may ask, 
+i. To add or remove some keywords to a string or group of strings. \n
+ii. To increase or decrease the user_knowledge_acceptance_threshold. \n
+
+### user_knowledge_acceptance_threshold guidance:
+- Higher threshold makes more documents rejected and result more strict.
+- For general knowledge retrieval: Use 0.25 to 0.45 (lower for broader matches)
+- For specific/strict knowledge: Use 0.45 to 0.6
+
 ### Response: 
-1. Provide a list of strings, where each string contains keywords for retrieving a specific piece of user knowledge. \n
+1. Provide: \n
+i. user_knowledge_retrieval_keywords - a list of strings, where each string contains keywords for retrieving a specific piece of user knowledge. \n
+ii. user_knowledge_acceptance_threshold - a float between 0.2 and 0.6, representing the similarity threshold for accepting user knowledge items. \n
 2. The keywords should be relevant enough to fetch the useful information from the user knowledge base for generating the response. \n
 3. Note that, each string of keywords will be used to retrieve a specific type of user knowledge, so keep similar keywords in one string and each string semantic meaning should be as different as possible, to cover different aspects of the user knowledge base. \n
-4. For example, user_query: "Remeber our goa trip?" \n
-user_knowledge_retrieval_keywords: ["travel preferences, travel history, travel companions, travel habits", "goa plan, goa memories, goa experiences"] \n
+4. Strictky follow the feedback if any. \n
 
-2. is_message_referred and referred_message_keywords - \n
+## is_message_referred and referred_message_keywords - \n
     a. From the user query, you have to understand whether the user query is related to past conversations or not. For example, \n
         i. User ask about some past activity or interaction with you.
         ii. User recall some information that you have shared in past.
         iii. User ask you to continue, act or do something, which you are not sure of, then it is in previous conversation.
     b. If yes, then you have to mark is_message_referred as true and generate referred_message_keywords which is a string of relevant text / keywords having maximum semantic overlap with the referred message, which then is used to retrieved from the message history. \n
     c. If no, then respond with is_message_referred as false and keep the referred_message_keywords field empty or null. \n
-    d. All Feedbacks by Evaluator: {message_retrieval_feedback}. If feedback is provided, then you have to take that into account while making the plan. \n
+    d. All Feedbacks by Evaluator: {message_retrieval_feedback}. If feedback is provided, then you must have to take that into account while making the plan. \n
     e. For example, if the feedback asks to add more keywords or references, then you have to modify the plan accordingly. \n
 
-3. is_tool_required and selected_tools - \n
+## is_tool_required and selected_tools - \n
     a. You will be provided with a list of available tools and their functionalities, you have to decide whether any of these tools are required to process the user query or not.
     b. If yes, then respond with is_tool_required as true and provide the list of selected tools. \n
     c. If not, then respond with is_tool_required as false and keep the selected_tools field empty or null. \n
@@ -90,16 +100,17 @@ CORTEX_MAIN_PLAN_EVALUATION_PROMPT = """
 # Context:
 For a given user query, the orchestrator has generated a plan. The plan includes the following: \n
 1. user_knowledge_retrieval_keywords - It contains a list of strings where each string is relevant enough to fetch a specific piece of user knowledge. Each string semantic meaning is different from the others. \n
-2. referred_message_keywords - The string of relevnat keywords generated based on current query that will be used to fetch the messages from the past conversation done \n
+2. referred_message_keywords - The string of relevant keywords generated based on current query that will be used to fetch the messages from the past conversation done \n
 3. is_message_referred - If true, referred_message_keywords are used to retrieve the relevant messages from the past conversation and are provided later. If false, then referred_message_keywords will be empty or null. \n
+4. user_knowledge_acceptance_threshold - A float between 0.2 and 0.6 representing the similarity threshold for accepting user knowledge items retrieved based on the keywords. \n
 
 # Objective:
 You are a smart evaluator, whose job is to evaluate the plan generated by the Orchestrator based on the user query and the context provided above, and provide the relevant feedback.\n
 
 # Input Format:
 1. User Query \n
-2. Orchestration Plan - Includes the user_knowledge_retrieval_keywords, referred_message_keywords and is_message_referred fields. \n
-3. Retrieved User Knowledge - The relevant user knowledge retrieved from the database based on the user_knowledge_retrieval_keywords provided by the Orchestrator. \n
+2. Orchestration Plan
+3. Retrieved User Knowledge - The relevant user knowledge retrieved from the database based on the user_knowledge_retrieval_keywords and respective user_knowledge_acceptance_threshold provided by the Orchestrator. \n
 4. Retrieved Messages - The relevant messages retrieved from the message history based on the message retrieval plan provided by the Orchestrator. (If is_message_referred is true else null) \n
 5. List of previous feedbacks provided by you for the same query (if any in past).
 6. User current Mood (from the query) (can be happy, sad, angry, etc.) \n
@@ -116,16 +127,31 @@ You are a smart evaluator, whose job is to evaluate the plan generated by the Or
 
 # Feedback Instructions:
 ### USER KNOWLEDGE BASE \n
-    a. Check whether the current retrieved User Knowledge is relevant and sufficient for generating the response. \n
-    b. If not, then provide specific feedback on what kind of knowledge is missing or irrelevant \n
-    c. It should include instructions to either add more specific keywords, remove previously selected keywords from user_knowledge_retrieval_keywords \n
-    d. If its relevant and sufficient, then keep it empty or null. \n
+a. Check whether the current retrieved User Knowledge is relevant and sufficient for generating the response. \n
+b. Give feedback in following cases: \n
+i. No information is retrieved. \n
+ii. Retrieved information is not relevant to the user query or the context. \n
+iii. Retrieved information is relevant but insufficient. \n
+iv. Retrieved information is relevant but there is some irrelevant information as well. \n
+c. You have to provide specific feedback on what kind of knowledge is missing or irrelevant. It should include:  \n
+i. Instructions to either add more specific keywords, remove previously selected keywords from user_knowledge_retrieval_keywords \n
+ii. Value of new user_knowledge_acceptance_threshold if you think more or less knowledge items should be retrieved based on the current retrieval and the user query. \n
+### user_knowledge_acceptance_threshold guidance:
+- CORE RULE: Higher threshold means stricter filtering and fewer documents accepted. Lower threshold means broader filtering and more documents accepted. \n
+- If no user knowledge is retrieved, you MUST recommend lowering threshold (never increasing). \n
+- If retrieved knowledge is relevant but insufficient, recommend lowering threshold and/or broadening keywords. \n
+- Increase threshold ONLY when retrieval already returns sufficient information plus clearly irrelevant items, and stricter filtering is required. \n
+- If retrieval is empty and you suggest increasing threshold, that is logically invalid and must be avoided. \n
+- For general knowledge retrieval: use 0.25 to 0.40.
+- For specific/strict knowledge: use 0.40 to 0.55.
+- Do not suggest threshold above 0.55 unless the retrieved set is already large and noisy.
+d. If information retrieved is relevant and sufficient, then keep the feedback empty or null. \n
     
 ### MESSAGE RETRIEVAL \n
-    a. Check whether the current retrieved messages are relevant and sufficient for generating the response. \n
-    b. If not, then provide specific feedback on what kind of messages are missing or irrelevant. \n
-    c. It should include instructions to either add the reference to the message, remove the reference to the message or modify the referred_message_keywords for message retrieval. \n
-    d. If its relevant and sufficient, then keep it empty or null. \n
+a. Check whether the current retrieved messages are relevant and sufficient for generating the response. \n
+b. If not, then provide specific feedback on what kind of messages are missing or irrelevant. \n
+c. It should include instructions to either add the reference to the message, remove the reference to the message or modify the referred_message_keywords for message retrieval. \n
+d. If its relevant and sufficient, then keep it empty or null. \n
 
 # Strict Guidelines for Feedback:
 1. If you have added any feedback for either of the above two parts, then provide `is_feedback_required` as `True`, else `False`. \n

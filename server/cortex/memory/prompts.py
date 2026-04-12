@@ -62,13 +62,13 @@ You will be provided with following information:
     b. Statement (I have a friend named John who loves hiking) \n
     c. Command (Remember that I don't like ice cream) \n
     d. Feedback (Your last response was not relevant to my query) \n
-2. User's STM summary and session preferences - It will give you an idea about the user's current context, preferences, and emotional state. \n
-3. User current Mood (from the query) (can be happy, sad, angry, etc.) and Time of the day (Morning, Afternoon, Evening, etc.) - It will help you to understand the user's emotional state based on the time of day. \n
-4. User's previous emotional profile (if any else null) - For the above combination of mood and time of the day, it will give you an idea about:
+2. User current Mood (from the query) and Time of the day (Morning, Afternoon, Evening, or Night) - It will help you to understand the user's emotional state based on the time of day. \n
+3. User's previous emotional profile (if any else null) - For the above combination of mood and time of the day, it will give you an idea about:
     a. Emotional Level (1-10) - Intensity of user emotions at that point of time and how much they prefer emotional responses \n
     b. Logical Level (1-10) - How logically the user thinks and prefers logical discussions. \n
     c. Social Level (1-10) - How socially active the user is and how much they are influenced by their social interactions. Introvert, Ambivert or Extrovert\n
     d. Context Summary - The respective pattern, preferences and behavior summary of the user for that particular combination of mood and time of the day. \n
+4. Recent Conversation history (if any else null) \n
 
 # Task:
 From the Above information, you have to analayze the user behaviour in various fields (emotional, logical, social) and build the emotional profile. \n
@@ -77,12 +77,12 @@ From the Above information, you have to analayze the user behaviour in various f
 1. Analyze the user's current query and understand the emotion and intent behind it. \n
     a. Is he/she happy? Sad? Angry? Neutral? \n
     b. Is it a question, statement, command, or feedback? \n
-2. Compare user intent with the STM summary and session preferences to understand the user's current context and preferences. \n
+2. Compare user intent with the recent conversation history to understand the user's current context and preferences. \n
     a. Is user response is because of not meeting their expectations? \n
     b. Is response is because of some change in user's preferences or context? \n
 3. Compare user intent with the previous emotional profile (if present) \n
     a. Is user preference was different but now changed? \n
-    b. Is user different levels increasing or decreasing? \n
+    b. Is user different levels (emotional, logical, social) increasing or decreasing? \n
 4. Based on the above analysis, build the updated emotional profile for the user for that particular combination of mood and time of the day. \n
 
 # Notes regarding Context Summary
@@ -90,20 +90,19 @@ From the Above information, you have to analayze the user behaviour in various f
 2. Don't mention value of emotional level, logical level, or social level in the context summary. \n
 3. Don't mention the user query, emotion, or time of the day in the context summary. \n
 4. Content should be in a way that it can help in generating better response in future given mood and time of the day. \n
-5. If user wants to remember something for a particular time, then content should include that information also. \n
+5. If user wants to remember something for a particular time or particular mood, then content should include that information also. \n
 
 # Input
 1. User's current query {user_query} \n
-2. User's STM summary {stm_summary} \n
-3. User's Session preferences {session_preferences} \n
-4. User's current Mood {user_emotion} \n
-5. User's current Time of the day {user_time_of_day} \n
-6. User's previous emotional profile {previous_emotional_profile} \n
+2. User's current Mood {user_emotion} \n
+3. User's current Time of the day {user_time_of_day} \n
+4. User's previous emotional profile {previous_emotional_profile} \n
+5. Recent conversation history: {recent_conversation} \n
 
 # Response: \n
 Format response as JSON strictly following the structure below:
 {format_instructions}
-No other text, function call, chat message, etc. \n
+Don't mention any other text, function call, chat message, explanation, code, etc. \n
 """
 
 MEMORY_CLIENT_BUILD_USER_KNOWLEDGE = """
@@ -114,22 +113,22 @@ You will be provided with following information:
     b. Statement (I have a friend named John who loves hiking) \n
     c. Command (Remember that I don't like ice cream) \n
     d. Feedback (Your last response was not relevant to my query) \n
-2. User's STM summary and session preferences - It will give you an idea about the user's current context, preferences, and emotional state. \n
-3. User current Mood (from the query) (can be happy, sad, angry, etc.). It will help you to understand the user's emotional state. \n
-4. Previous user long term memory (if any) \n
-5. Recent conversation history (if any else null) \n
+2. User current Mood (from the query) and Time of the day (Morning, Afternoon, Evening, or Night) - It will help you to understand the user's emotional state based on the time of day. \n
+3. Previous user long term memory (if any) \n
+4. Recent conversation history (if any else null) \n
 
 # Objective:
-You are a smart builder of user's long term memory for a conversational AI system. From the above information, you have to provide a set of instructions to build the long term user memory.\n
+You are a smart builder of user's long term memory from the conversations. From the provided information, you have to provide a set of instructions to build the long term user memory.\n
 
 # Steps
 1. Analyze the user's current query and understand the emotion and intent behind it. \n
-    a. Is he/she happy? Sad? Angry? Neutral? \n
-    b. Is it a question, statement, command, or feedback? \n
-    c. What he/she wants to remember or forget?
-2. Check for User's current context and preferences from STM summary, session preferences, and recent conversation history. \n
-3. Based on the above information and analysis, build the user long term memory providing the content and corresponding strictness level. \n
+a. Is he/she happy? Sad? Angry? Neutral? \n
+b. Is it a question, statement, command, or feedback? \n
+c. If he/she wants to remember or forget something?
+2. Check for User's current context and preferences based on the recent conversation if provided. \n
+3. Based on the above information and analysis, you have to extract the information which builds long term memory. It can be null also in some cases. \n
 4. If previous user memory is given, then also compare the new memory with the previous memory and check whether its better to update previous memory, create new one, or discard the new one. \n
+You have to provide the content and corresponding strictness level. \n
 
 # How to allocate Strictness Levels: \n
 1. Before allocating any level, keep in mind that "Strictiness Level" determines the priority of one memory item over the other. For example, if there is a conflict between two memory items, then the one with higher strictness level will be followed. \n
@@ -145,16 +144,17 @@ MUST (Positive Rule) = CANNOT (Negavtive Rule) > SHOULD > CAN \n
 # Instructions for content: \n
 1. Content must not include user query or AI responses. \n
 2. Content must not include any information about AI behaviour. \n
-3. Content must include things like "user ask this, user ask that". \n
+3. Content must not include things like "user ask this, user ask that". \n
 4. Content must include only user preferences, behaviour, habits or facts related information. \n
+5. Seleted content must be relevant and useful for long run holding only and not for short term context understanding. \n
+6. Short term context handling is done by STM Builder, You are Long Term Memory builder, so you must focus on building long term memory only. \n
 
 # Input
 1. User's current query {user_query} \n
-2. User's STM summary {stm_summary} \n
-3. User's Session preferences {session_preferences} \n
-4. User's current Mood {user_emotion} \n
-5. Previous user long term memory {previous_user_knowledge} \n
-6. Recent conversation history {recent_conversation} \n
+2. User's current Mood {user_emotion} \n
+3. User's current Time of the day {user_time_of_day} \n
+4. Previous user long term memory {previous_user_knowledge} \n
+5. Recent conversation history: {recent_conversation} \n
 
 # Must follow Guidelines: \n
 ### Scenario 1: If nothing is relevant enough to be added or updated in long term memory, then simply respond with an empty list. \n
@@ -222,11 +222,10 @@ def get_memory_client_prompts(
             template=MEMORY_CLIENT_BUILD_EMOTIONAL_PROFILE,
             input_variables=[
                 "user_query",
-                "stm_summary",
-                "session_preferences",
                 "user_emotion",
                 "user_time_of_day",
                 "previous_emotional_profile",
+                "recent_conversation",
                 "format_instructions"
             ],
         )
@@ -237,9 +236,8 @@ def get_memory_client_prompts(
             template=MEMORY_CLIENT_BUILD_USER_KNOWLEDGE,
             input_variables=[
                 "user_query",
-                "stm_summary",
-                "session_preferences",
                 "user_emotion",
+                "user_time_of_day",
                 "previous_user_knowledge",
                 "recent_conversation",
                 "format_instructions"

@@ -162,19 +162,19 @@ def get_similar(
     **filters: Any,
 ) -> list[tuple[ModelT, float]]:
     """
-    ### Retrieve the most similar items based on their embeddings using the specified distance metric. \n
+    ### Retrieve the most similar items based on their embeddings using the specified metric. \n
     **Parameters**: \n
     - `session`: The database session to use for the query. \n
     - `model`: The SQLModel class representing the database table to query. \n
     - `query_embedding`: The embedding vector to compare against the stored embeddings. \n
     - `embedding_field`: The name of the field in the model that contains the embedding vector. Default is "embedding". \n
-    - `metric`: The distance metric to use for similarity comparison. Can be "cosine", "l2", or "inner_product". Default is "cosine". \n
+    - `metric`: The metric to use for comparison. Can be "cosine", "l2", or "inner_product". Default is "cosine". \n
     - `top_k`: The number of most similar items to return. Default is 5. \n
     - `offset`: The number of similar items to skip before returning results (for pagination). Default is 0. \n
     - `filters`: Additional field-value pairs to filter the query (e.g., by user_id, session_id, etc.). \n
     
     **Returns**: \n
-    A list of tuples, where each tuple contains a model instance and its corresponding distance score to the query embedding. The list is sorted by similarity (most similar first).
+    A list of tuples, where each tuple contains a model instance and its corresponding similarity score to the query embedding. The list is sorted by similarity (most similar first).
     """
     if not hasattr(model, embedding_field):
         raise ValueError(f"{model.__name__} has no '{embedding_field}' field.")
@@ -184,14 +184,17 @@ def get_similar(
 
     if metric == "cosine":
         distance_expr: ColumnElement[float] = embedding_col.cosine_distance(query_vector)
+        similarity_expr: ColumnElement[float] = (1.0 - distance_expr)
     elif metric == "l2":
         distance_expr = embedding_col.l2_distance(query_vector)
+        similarity_expr = (1.0 / (1.0 + distance_expr))
     elif metric == "inner_product":
         distance_expr = embedding_col.max_inner_product(query_vector)
+        similarity_expr = (-1 * distance_expr)
     else:
         raise ValueError(f"Unsupported metric '{metric}'.")
 
-    statement = select(model, distance_expr.label("distance"))
+    statement = select(model, similarity_expr.label("similarity"))
 
     for field_name, field_value in filters.items():
         statement = statement.where(getattr(model, field_name) == field_value)
@@ -200,8 +203,8 @@ def get_similar(
     statement = statement.where(embedding_col.is_not(None))
     statement = statement.where(func.vector_dims(embedding_col) == len(query_vector))
     
-    #Sort by distance (closest first) and apply pagination
-    statement = statement.order_by(distance_expr).offset(offset).limit(top_k)
+    # Sort by similarity (highest first) and apply pagination.
+    statement = statement.order_by(similarity_expr.desc()).offset(offset).limit(top_k)
 
     rows = session.exec(statement).all()
     return [(row[0], float(row[1])) for row in rows]

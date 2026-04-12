@@ -2,7 +2,7 @@ from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor
 from utility.logger import get_logger
 from utility.huggingface.config import models
 from utility.sensory.config import STT_CONFIG
-from utility.models import STT_MODEL, STT_PROCCESSOR
+from utility.models import STT_MODEL, STT_PROCESSOR
 import io
 import soundfile as sf
 import numpy as np
@@ -25,7 +25,7 @@ class STTModel:
         self.logger = get_logger("SENSORY")
         self.model_cfg = models.get("stt", {})
         self.np_dtype = np.dtype(self.model_cfg.get("model_np_dtype", "float32"))
-        self.processor = STT_PROCCESSOR
+        self.processor = STT_PROCESSOR
         self.sample_rate = STT_CONFIG.get("sample_rate")
         self.model = STT_MODEL
         self.max_source_positions = int(self.model_cfg.get("max_source_positions"))

@@ -42,7 +42,7 @@ class MemoryModel:
         state.short_term_memory = UserSTM(
             stm_summary=res.stm_summary,
             session_preferences=res.session_preferences,
-            recent_conversation=None # reset recent conversation after summary build up
+            recent_conversation=prev_stm.recent_conversation if prev_stm else "" # keep recent conversation same
         )
         return state.short_term_memory
 
@@ -70,9 +70,8 @@ class MemoryModel:
         res = chain.invoke({
             "user_query": query,
             "user_emotion": user_emotion,
-            "stm_summary": prev_stm.stm_summary if prev_stm else "",
-            "session_preferences": prev_stm.session_preferences if prev_stm else {},
             "user_time_of_day": time_of_day,
+            "recent_conversation": prev_stm.recent_conversation if prev_stm else "",
             "previous_emotional_profile": state.emotional_profile.model_dump_json() if state.emotional_profile else ""
         })
         return res
@@ -91,9 +90,8 @@ class MemoryModel:
         chain = formatted_prompt | self.plan_model | parser
         res = chain.invoke({
             "user_query": query,
-            "stm_summary": prev_stm.stm_summary if prev_stm else "",
-            "session_preferences": prev_stm.session_preferences if prev_stm else {},
             "user_emotion": user_emotion,
+            "user_time_of_day": state.query_time,
             "previous_user_knowledge": state.older_knowledge_base if state.older_knowledge_base else "",
             "recent_conversation": prev_stm.recent_conversation if prev_stm else "",
         })

@@ -511,7 +511,7 @@ class MemoryClient:
                         session=session,
                         model=UserKnowledgeBase,
                         query_embedding=rke,
-                        top_k=2,
+                        top_k=3,
                         user_id=user_id,
                     )
                 knowledge_base.extend(res)
@@ -525,6 +525,25 @@ class MemoryClient:
                     user_id=user_id,
                 )
             knowledge_base.extend(res)
+
+        deduped_knowledge: dict[str, tuple[UserKnowledgeBase, float]] = {}
+        for item, similarity in knowledge_base:
+            trait_key = str(item.trait_id)
+            existing = deduped_knowledge.get(trait_key)
+            if existing is None or similarity > existing[1]:
+                deduped_knowledge[trait_key] = (item, similarity)
+        
+        ACCEPTABLE_SIMILARITY_THRESHOLD = state.orchestration_state.user_knowledge_acceptance_threshold if state.orchestration_state else 0.5
+        self.logger.info(f"Deduped knowledge items count before applying similarity threshold: {len(deduped_knowledge)}")
+        deduped_knowledge = {
+            trait_id: (item, sim) for trait_id, (item, sim) in deduped_knowledge.items() if sim >= ACCEPTABLE_SIMILARITY_THRESHOLD
+        }                
+        
+        knowledge_base = sorted(
+            deduped_knowledge.values(),
+            key=lambda pair: pair[1],
+            reverse=True,
+        )
         
         knowledge_base = [
             UserKnowledge(
@@ -535,6 +554,8 @@ class MemoryClient:
             ) for item, score in knowledge_base
         ] if knowledge_base else None
 
+        self.logger.info(f"Fetched relevant knowledge base items: {knowledge_base} with acceptance threshold: {ACCEPTABLE_SIMILARITY_THRESHOLD}")
+        
         return {
             "knowledge_base": knowledge_base,
         }

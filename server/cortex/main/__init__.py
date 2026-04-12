@@ -5,7 +5,7 @@ from typing import AsyncGenerator
 from cortex.graph.workflow import (
     main_workflow, 
     build_memory_workflow,
-    # test_workflow,
+    test_workflow,
     # test_workflow_2
 )
 from cortex.task import MainTaskQueue, TaskStatus, TaskItem
@@ -201,29 +201,30 @@ class MainClient:
             #     instructions=""
             # )
             
-            # state.orchestration_state = OrchestrationState(
-            #     user_knowledge_retrieval_keywords=["tea", "good mood"],
-            #     is_message_referred=False,
-            #     is_tool_required=True,
-            #     selected_tools=CortexToolList(root=[web_tool])
-            # )
+            state.orchestration_state = OrchestrationState(
+                user_knowledge_retrieval_keywords=['profession', 'job title', 'work'],
+                is_message_referred=False,
+                is_tool_required=False,
+                # selected_tools=CortexToolList(root=[web_tool]),
+                user_knowledge_acceptance_threshold=0.6
+            )
             
             # state1 = test_workflow.invoke(state)
             # memory_state = self.initialize_memory_state(state1)
             # res = test_workflow_2.invoke(memory_state)
-            # res = test_workflow.invoke(state)
+            res = test_workflow.invoke(state)
             # self.logger.info("Test workflow result: %s", res)
             
-            # final_response_text = "Dummy response for query: " + query
+            final_response_text = "Dummy response for query: " + query
             
             # ************** original flow *****************
-            res = main_workflow.invoke(state)
+            # res = main_workflow.invoke(state)
 
-            workflow_final_response = res.get("final_response") if isinstance(res, dict) else getattr(res, "final_response", None)
-            final_response_text = self._extract_final_response_text(workflow_final_response)
+            # workflow_final_response = res.get("final_response") if isinstance(res, dict) else getattr(res, "final_response", None)
+            # final_response_text = self._extract_final_response_text(workflow_final_response)
             
-            # Build memory
-            asyncio.create_task(self._build_memory_workflow(res))
+            # # Build memory
+            # asyncio.create_task(self._build_memory_workflow(res))
 
             self.logger.info("Final response generated: %s", res)
             self.logger.info("Response from main workflow >> %s", final_response_text if final_response_text else "No final response generated")

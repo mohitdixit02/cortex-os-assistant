@@ -151,7 +151,8 @@ class OrchestrationState(BaseModel):
     referred_message_keywords: Annotated[Optional[str], Field(description="Keywords from the referred message")] = None
     is_tool_required: Annotated[bool, Field(description="Whether any tool is required to process the user query or not")]
     selected_tools: Annotated[Optional[CortexToolList], Field(description="List of selected tools")] = None
-
+    user_knowledge_acceptance_threshold: Annotated[float, Field(le=0.6, ge=0.2, description="Similarity threshold for accepting user knowledge items retrieved based on the keywords")]
+    
 class FinalResponseGenerationState(BaseModel):
     """Represents the state of final response generation done by Response Generator based on the orchestration plan and evaluation"""
     response: Annotated[Optional[str], Field(description="The final response generated for the user query")] = None

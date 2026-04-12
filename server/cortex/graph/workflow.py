@@ -80,29 +80,43 @@ def display_workflow_graph(worflow):
     img = Image.open(io.BytesIO(image_data))
     img.show()
 
-display_workflow_graph(main_workflow)
-display_workflow_graph(build_memory_workflow)
+# display_workflow_graph(main_workflow)
+# display_workflow_graph(build_memory_workflow)
 
 # test workflow
-# test_graph = StateGraph(ConversationState)
+test_graph = StateGraph(ConversationState)
 # test_graph_2 = StateGraph(MemoryState)
-# test_graph.add_node("fetch_stm", memory_client.fetch_relevant_stm)
+test_graph.add_node("orchestrator_plan", orchestrator.build_main_orchestration_plan)
+test_graph.add_node("ukb", memory_client.fetch_relevant_knowledge_base)
+test_graph.add_node("evaluate_plan", orchestrator.evaluate_plan)
+test_graph.add_edge(START, "orchestrator_plan")
+test_graph.add_edge("orchestrator_plan", "ukb")
+test_graph.add_edge("ukb", "evaluate_plan")
+test_graph.add_conditional_edges(
+    "evaluate_plan", 
+    orchestrator.route_condition_orchestration_evaluation,
+    {
+        "plan_main_orchestration": "orchestrator_plan",
+        "final_response_generation": END,
+    },
+)
+# test_graph.add_edge(START, "ukb")
+# test_graph.add_edge("ukb", END)
+
 # test_graph_2.add_node("build_stm", memory_client.build_stm)
-# test_graph.add_edge(START, "fetch_stm")
-# test_graph.add_edge("fetch_stm", END)
 # test_graph_2.add_edge(START, "build_stm")
 # test_graph_2.add_edge("build_stm", END)
 
-# test_workflow = test_graph.compile()
+test_workflow = test_graph.compile()
 # test_workflow_2 = test_graph_2.compile()
 
-# display_workflow_graph(test_workflow)
+display_workflow_graph(test_workflow)
 # display_workflow_graph(test_workflow_2)
 
 __all__ = [
     "main_workflow",
     "build_memory_workflow",
-    # "test_workflow",
+    "test_workflow",
     # "test_workflow_2",
 ]
 
