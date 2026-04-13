@@ -119,10 +119,12 @@ CREATE TABLE IF NOT EXISTS tasks (
     message_id UUID NOT NULL REFERENCES messages(message_id) ON DELETE CASCADE,
     tool_id UUID REFERENCES tools(tool_id) ON DELETE RESTRICT,
     task_name VARCHAR(255) NOT NULL,
+    task_description TEXT,
     status task_status NOT NULL,
     payload JSONB NOT NULL,
     status_response JSONB,
     task_metadata JSONB,
+    embedding VECTOR,
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL
 );

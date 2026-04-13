@@ -129,7 +129,9 @@ class VoiceClient:
             else:
                 emotion = self.emotion_model.get_emotion(query)
                 fallback_response = self.model.stream_fallback_response(query)
-
+                task_name = route_res.task_name
+                task_description = route_res.task_description
+    
                 async def _submit_main_task() -> None:
                     try:
                         task_item = await MainTaskQueue.add_task(
@@ -137,7 +139,8 @@ class VoiceClient:
                                 "query": query,
                                 "emotion": emotion.get("label", "neutral")
                             },
-                            task_name="audio_query",
+                            task_name=task_name,
+                            task_description=task_description,
                             user_id="11111111-1111-1111-1111-111111111111",
                             session_id="22222222-2222-2222-2222-222222222222",
                             voice_client_response=fallback_response
@@ -331,12 +334,15 @@ class VoiceClient:
         #         yield token
         
         casual_response = "Ok sure, I will look into that for you."
+        task_name = "audio_query"
+        task_description = "Process user query and generate response for audio streaming"
         task_item = await MainTaskQueue.add_task(
             payload={
                 "query": query,
                 "emotion": emotion.get("label", "neutral")
             },
-            task_name="audio_query",
+            task_name=task_name,
+            task_description=task_description,
             user_id="11111111-1111-1111-1111-111111111111",
             session_id="22222222-2222-2222-2222-222222222222",
             voice_client_response=casual_response

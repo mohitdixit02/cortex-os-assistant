@@ -81,10 +81,12 @@ class MemorySaver:
         message_id: str,
         tool_id: Optional[str],
         task_name: str,
+        task_description: str,
         status: TaskStatus,
         payload: dict,
         status_response: Optional[dict[str, Any]] = None,
-        task_metadata: Optional[dict[str, Any]] = None
+        task_metadata: Optional[dict[str, Any]] = None,
+        embedding: Optional[list[float]] = None
     ) -> Task:
         """
         ### Add a new task to the database. \n
@@ -92,10 +94,12 @@ class MemorySaver:
         - `message_id`: The ID of the message associated with the task. \n
         - `tool_id`: (Optional) The ID of the tool associated with the task, if applicable. \n
         - `task_name`: The name of the task. \n
+        - `task_description`: A description of the task. \n
         - `status`: The status of the task (e.g., INITIALIZED, QUEUED). \n
         - `payload`: The input arguments for the task (e.g., {"number": "123", "text": "Hi"}). \n
         - `status_response`: (Optional) The response data associated with the task status, if applicable. \n
         - `task_metadata`: (Optional) Additional metadata for the task, if applicable. \n
+        - `embedding`: (Optional) The embedding for the task, if applicable. \n
         **Output**: The created task object
         """
         self.logger.info("Adding new task for message_id: %s, task_name: %s", message_id, task_name)
@@ -107,10 +111,12 @@ class MemorySaver:
                     message_id=message_id,
                     tool_id=tool_id,
                     task_name=task_name,
+                    task_description=task_description,
                     status=status,
                     payload=payload,
                     status_response=status_response,
-                    task_metadata=task_metadata
+                    task_metadata=task_metadata,
+                    embedding=embedding
                 )
                 task_obj = create_one(
                     session=session,

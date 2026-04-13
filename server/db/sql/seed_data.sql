@@ -137,17 +137,19 @@ INSERT INTO tools (
 ON CONFLICT (tool_id) DO NOTHING;
 
 INSERT INTO tasks (
-    task_id, message_id, tool_id, task_name, status, payload, status_response, task_metadata, created_at, updated_at
+    task_id, message_id, tool_id, task_name, task_description, status, payload, status_response, task_metadata, embedding, created_at, updated_at
 ) VALUES
 (
     '88888888-8888-8888-8888-888888888881',
     '33333333-3333-3333-3333-333333333332',
     '77777777-7777-7777-7777-777777777772',
     'TextResponseTask',
+    'Create a reminder from the user query and provide confirmation output.',
     'COMPLETED',
     '{"query":"Set a reminder for tomorrow at 9 AM"}'::jsonb,
     '{"response":"Reminder scheduled for tomorrow at 9 AM"}'::jsonb,
     '{"retry_count":0,"execution_time_ms":1200}'::jsonb,
+    NULL,
     NOW(),
     NOW()
 ),
@@ -156,10 +158,12 @@ INSERT INTO tasks (
     '33333333-3333-3333-3333-333333333332',
     '77777777-7777-7777-7777-777777777771',
     'NotifyUserTask',
+    'Notify the user via WhatsApp that the reminder has been created.',
     'QUEUED',
     '{"number":"+15550001111","text":"Your reminder is ready"}'::jsonb,
     NULL,
     '{"retry_count":0}'::jsonb,
+    NULL,
     NOW(),
     NOW()
 )

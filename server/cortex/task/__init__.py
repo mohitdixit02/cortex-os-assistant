@@ -26,6 +26,7 @@ class TaskItem:
     task_id: str
     payload: Any
     task_name: Optional[str] = None
+    task_description: Optional[str] = None
     status: TaskStatus = TaskStatus.INITIALIZED
     result: Any = None
     error: Optional[str] = None
@@ -67,7 +68,8 @@ class TaskQueue:
         self._ready.wait() # Flag for Queues and Loop are ready or not
         self.logger = get_logger("TASK_QUEUE")
         self.logger.info("TaskQueue initialized...")
-        self.memory_saver = MemorySaver(engine=engine, model=EmbeddingModel())
+        self.model = EmbeddingModel()
+        self.memory_saver = MemorySaver(engine=engine, model=self.model)
 
     def _run_loop(self) -> None:
         """
@@ -95,7 +97,8 @@ class TaskQueue:
     async def add_task(
         self, 
         payload: Any,
-        task_name: Optional[str] = None, 
+        task_name: str,
+        task_description: str,
         **metadata: Any
         ) -> TaskItem:
         """
@@ -107,7 +110,8 @@ class TaskQueue:
         - `payload`: The actual data or parameters associated with the task which the consumer will process. \n
         - `task_id`: Optional unique identifier for the task. If not provided, a UUID will be generated automatically. \n
         - `metadata`: Additional key-value pairs that can be associated with the task for tracking or processing purposes. \n
-        - `task_name`: An optional human-readable name for the task \n
+        - `task_name`: An human-readable name for the task \n
+        - `task_description`: A description of the task \n
         """
         user_id = metadata.get("user_id")
         session_id = metadata.get("session_id")
@@ -140,11 +144,13 @@ class TaskQueue:
         task_obj = self.memory_saver.add_new_task(
             message_id=user_msg.message_id,
             tool_id=None,
-            task_name=task_name or "Unnamed Task",
+            task_name=task_name,
+            task_description=task_description,
             status=TaskStatus.QUEUED,
             payload=payload,
             status_response=None,
-            task_metadata=dict(metadata)
+            task_metadata=dict(metadata),
+            embedding=self.model.generate_embeddings(task_description)
         )
         
         item = TaskItem(
@@ -152,6 +158,7 @@ class TaskQueue:
             payload=payload,
             metadata=dict(metadata),
             task_name=task_name,
+            task_description=task_description,
             status=TaskStatus.QUEUED
         )
         

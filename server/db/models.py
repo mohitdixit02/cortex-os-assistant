@@ -200,10 +200,12 @@ class Task(SQLModel, table=True):
         sa_column=Column(PGUUID(as_uuid=True), ForeignKey("tools.tool_id", ondelete="RESTRICT"), nullable=True, index=True)
     )
     task_name: str = Field(sa_column=Column(String(255), nullable=False))
+    task_description: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
     status: TaskStatus = Field(sa_column=Column(SAEnum(TaskStatus, name="task_status"), nullable=False, index=True))
     payload: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
     status_response: Optional[dict[str, Any]] = Field(default=None, sa_column=Column(JSONB, nullable=True))
     task_metadata: Optional[dict[str, Any]] = Field(default=None, sa_column=Column(JSONB, nullable=True))
+    embedding: Optional[list[float]] = Field(default=None, sa_column=Column(Vector(), nullable=True))
     created_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
 

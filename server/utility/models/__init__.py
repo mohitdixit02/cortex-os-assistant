@@ -9,22 +9,19 @@ logger = get_logger("MODELS_LOADER")
 
 # ************** STT Model *******************
 logger.info("Initializing STTModel...")
-STT_MODEL = None
-STT_PROCESSOR = None
-# stt_model_cfg = models.get("stt", {})
-# STT_PROCESSOR = AutoProcessor.from_pretrained(stt_model_cfg.get("name"))
-# STT_MODEL = AutoModelForSpeechSeq2Seq.from_pretrained(
-#     stt_model_cfg.get("name"),
-#     torch_dtype=stt_model_cfg.get("dtype"),
-#     low_cpu_mem_usage=True,
-#     use_safetensors=True,
-# ).to(stt_model_cfg.get("device"))
+stt_model_cfg = models.get("stt", {})
+STT_PROCESSOR = AutoProcessor.from_pretrained(stt_model_cfg.get("name"))
+STT_MODEL = AutoModelForSpeechSeq2Seq.from_pretrained(
+    stt_model_cfg.get("name"),
+    torch_dtype=stt_model_cfg.get("dtype"),
+    low_cpu_mem_usage=True,
+    use_safetensors=True,
+).to(stt_model_cfg.get("device"))
 logger.info("STT model loaded..")
 
 # ************** TTS Model *******************
 logger.info("Initializing TTS Pipeline...")
-# TTS_PIPELINE = KPipeline(lang_code="a")
-TTS_PIPELINE = None
+TTS_PIPELINE = KPipeline(lang_code="a")
 logger.info("TTS Pipeline loaded..")
 
 # *************** Main Model *******************
@@ -51,16 +48,15 @@ logger.info("Planner model loaded..")
 
 # *************** Voice Emotion Model *******************
 logger.info("Initializing Voice Emotion Model...")
-VOICE_EMOTION_PIPELINE = None
-# emotion_model_config = models.get("voice_emotion", {})
-# emotion_model_name = emotion_model_config.get("name")
-# emotion_model = AutoModelForSequenceClassification.from_pretrained(emotion_model_name)
-# emotion_tokenizer = AutoTokenizer.from_pretrained(emotion_model_name)
-# VOICE_EMOTION_PIPELINE = pipeline(
-#     emotion_model_config.get("task"), 
-#     model=emotion_model, 
-#     tokenizer=emotion_tokenizer
-# )
+emotion_model_config = models.get("voice_emotion", {})
+emotion_model_name = emotion_model_config.get("name")
+emotion_model = AutoModelForSequenceClassification.from_pretrained(emotion_model_name)
+emotion_tokenizer = AutoTokenizer.from_pretrained(emotion_model_name)
+VOICE_EMOTION_PIPELINE = pipeline(
+    emotion_model_config.get("task"), 
+    model=emotion_model, 
+    tokenizer=emotion_tokenizer
+)
 logger.info("Voice Emotion model loaded..")
 
 # ****************** Embeddings Model *******************

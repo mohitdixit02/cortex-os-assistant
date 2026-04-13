@@ -83,10 +83,12 @@ task_id: UUID (PK)
 message_id: UUID (FK -> Messages.message_id) — Links the task to the specific user request.
 tool_id: UUID (FK -> Tools.tool_id, Nullable)
 task_name: String
+task_description: Text (Nullable) — Canonical description used for embedding generation and retrieval.
 status: Enum(INITIALIZED, QUEUED, PROCESSING, COMPLETED, FAILED)
 payload: JSON — The input arguments (e.g., {"number": "123", "text": "Hi"}).
 status_response: JSON/Text — The output or error message from the tool.
 metadata: JSON — Extra info like 'retry_count' or 'execution_time_ms'.
+embedding: Vector (Nullable) — Vector embedding of task_description for semantic search.
 created_at: Timestamp
 updated_at: Timestamp
 
