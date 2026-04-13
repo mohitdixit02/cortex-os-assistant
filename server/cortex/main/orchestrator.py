@@ -1,14 +1,48 @@
 from cortex.main.model import CortexMainModel
-from cortex.graph.state import ConversationState
+from cortex.graph.state import ConversationState, OrchestrationState, PlanEvaluationState
 from utility.logger import get_logger
 from typing import Literal
+
+MAX_ITERATIONS_LIMIT = 3
 
 class Orchestrator:
     def __init__(self):
         self.model = CortexMainModel()
         self.logger = get_logger("CORTEX_MAIN")
+        
+    def main_orchestration(self, state: ConversationState):
+        """Graph node placeholder for the orchestration stage.
 
-    def build_main_orchestration_plan(self, state: ConversationState):
+        Routing is handled by `route_main_orchestration` via conditional edges.
+        """
+        self.logger.info("Entering main orchestration node.")
+        return {}
+
+    def route_main_orchestration(
+        self,
+        state: ConversationState,
+    ) -> Literal["build_knowledge_plan", "build_messages_plan", "build_tools_plan", "final_response_generation"] | list[str]:
+        feedback = state.plan_feedback
+        if not feedback:
+            self.logger.info("No prior feedback found. Routing all planning branches.")
+            return ["build_knowledge_plan", "build_messages_plan", "build_tools_plan"]
+
+        routes = []
+        if feedback.is_knowledge_feedback_required:
+            routes.append("build_knowledge_plan")
+        if feedback.is_message_feedback_required:
+            routes.append("build_messages_plan")
+        if feedback.is_tool_selection_feedback_required:
+            routes.append("build_tools_plan")
+
+        if routes:
+            self.logger.info("Routing only required planning branches: %s", routes)
+            return routes
+
+        self.logger.info("No plan branch requires rebuild. Routing to final response generation.")
+        return "final_response_generation"
+
+    def build_knowledge_plan(self, state: ConversationState):
         """
         Build the orchestration plan for the main workflow based on the current conversation state. \n
         **Input**: \n
@@ -16,14 +50,50 @@ class Orchestrator:
         **Returns**: \n
         - The orchestration plan or prompt that will guide the main workflow in processing the query and generating a response.
         """
-        res = self.model.build_main_orchestration_plan(state)
-        self.logger.info("Orchestration plan generated: %s", res)
-        state.orchestration_state = res
+        res = self.model.build_main_orchestration_knowledge_plan(state)
+        self.logger.info("Knowledge Orchestration plan generated: %s", res)
         return {
-            "orchestration_state": state.orchestration_state,
+            "orchestration_state": OrchestrationState(
+                user_knowledge_retrieval_keywords=res.user_knowledge_retrieval_keywords,
+                user_knowledge_acceptance_threshold=res.user_knowledge_acceptance_threshold,
+            ),
         }
-    
-    def evaluate_plan(self, state: ConversationState):
+        
+    def build_messages_plan(self, state: ConversationState):
+        """
+        Build the orchestration plan for the main workflow based on the current conversation state. \n
+        **Input**: \n
+        - `state`: The current conversation state containing all relevant information about the user query, emotional profile, short term memory, etc. \n
+        **Returns**: \n
+        - The orchestration plan or prompt that will guide the main workflow in processing the query and generating a response.
+        """
+        res = self.model.build_main_orchestration_messages_plan(state)
+        self.logger.info("Messages Orchestration plan generated: %s", res)
+        return {
+            "orchestration_state": OrchestrationState(
+                is_message_referred=res.is_message_referred,
+                referred_message_keywords=res.referred_message_keywords,
+            ),
+        }
+        
+    def build_tools_plan(self, state: ConversationState):
+        """
+        Build the orchestration plan specifically for tool selection and execution based on the current conversation state. \n
+        **Input**: \n
+        - `state`: The current conversation state containing all relevant information about the user query, emotional profile, short term memory, orchestration state, etc. \n
+        **Returns**: \n
+        - The orchestration plan or prompt that will guide the tool selection and execution workflow in processing the query and generating a response.
+        """
+        res = self.model.build_main_orchestration_tools_plan(state)
+        self.logger.info("Tools orchestration plan generated: %s", res)
+        return {
+            "orchestration_state": OrchestrationState(
+                is_tool_required=res.is_tool_required,
+                selected_tools=res.selected_tools,
+            ),
+        }
+        
+    def evaluate_tools_plan(self, state: ConversationState):
         """
         Evaluate the orchestration plan based on the feedback from the Evaluator. \n
         **Input**: \n
@@ -31,19 +101,57 @@ class Orchestrator:
         **Returns**: \n
         - Updated conversation state with any necessary modifications to the orchestration plan based on the feedback.
         """
-        res = self.model.evaluate_orchestration_plan(state)
-        self.logger.info("Plan evaluation result: %s", res)
+        res = self.model.evaluate_orchestration_tools_plan(state)
+        self.logger.info("Tools Plan evaluation result: %s", res)
+        return {
+            "plan_feedback": PlanEvaluationState(
+                is_tool_selection_feedback_required=res.is_feedback_required,
+                tool_selection_feedback=res.tool_selection_feedback,
+            ),
+        }
 
-        # Iteration count update
-        previous_feedback = state.plan_feedback
-        previous_iteration = previous_feedback.iteration_count if previous_feedback else 0
-
-        state.plan_feedback = res.model_copy(update={
-            "iteration_count": previous_iteration + 1,
-        })
+    def evaluate_messages_plan(self, state: ConversationState):
+        """
+        Evaluate the orchestration plan based on the feedback from the Evaluator. \n
+        **Input**: \n
+        - `state`: The current conversation state containing the orchestration state and feedback from the Evaluator. \n
+        **Returns**: \n
+        - Updated conversation state with any necessary modifications to the orchestration plan based on the feedback.
+        """
+        res = self.model.evaluate_orchestration_messages_plan(state)
+        self.logger.info("Messages Plan evaluation result: %s", res)
+        return {
+            "plan_feedback": PlanEvaluationState(
+                is_message_feedback_required=res.is_feedback_required,
+                message_retrieval_feedback=res.message_retrieval_feedback,
+            ),
+        }
+    
+    def evaluate_knowledge_plan(self, state: ConversationState):
+        """
+        Evaluate the orchestration plan based on the feedback from the Evaluator. \n
+        **Input**: \n
+        - `state`: The current conversation state containing the orchestration state and feedback from the Evaluator. \n
+        **Returns**: \n
+        - Updated conversation state with any necessary modifications to the orchestration plan based on the feedback.
+        """
+        res = self.model.evaluate_orchestration_knowledge_plan(state)
+        self.logger.info("Knowledge Plan evaluation result: %s", res)
+        return {
+            "plan_feedback": PlanEvaluationState(
+                is_knowledge_feedback_required=res.is_feedback_required,
+                user_knowledge_retrieval_feedback=res.user_knowledge_retrieval_feedback,
+            ),
+        }
+        
+    def evaluation_aggregator(self, state: ConversationState):
+        previous_iteration = state.plan_feedback.iteration_count if state.plan_feedback else 0
+        current_feedback = state.plan_feedback or PlanEvaluationState()
 
         return {
-            "plan_feedback": state.plan_feedback,
+            "plan_feedback": current_feedback.model_copy(update={
+                "iteration_count": previous_iteration + 1,
+            }),
         }
     
     def route_condition_orchestration_evaluation(
@@ -62,11 +170,15 @@ class Orchestrator:
             self.logger.info("No orchestration state or plan feedback found. Routing to default response generation.")
             return "final_response_generation"
 
-        if feedback.iteration_count >= 3:
+        if feedback.iteration_count > MAX_ITERATIONS_LIMIT:
             self.logger.info("Maximum iteration count reached for plan evaluation. Routing to default response generation.")
             return "final_response_generation"
-        
-        if feedback.is_feedback_required:
+
+        if (
+            feedback.is_knowledge_feedback_required
+            or feedback.is_message_feedback_required
+            or feedback.is_tool_selection_feedback_required
+        ):
             self.logger.info("Feedback is required for the current plan. Routing to plan modification.")
             return "plan_main_orchestration"
         else:
@@ -76,7 +188,7 @@ class Orchestrator:
     def route_condition_fetch_messages(
         self,
         state: ConversationState
-    ) -> Literal["fetch_message_history", "plan_evaluation"]:
+    ) -> Literal["fetch_message_history", "skip_message_retrieval"]:
         """
         Route the workflow based on whether message retrieval is required or not. \n
         **Input**: \n
@@ -88,9 +200,9 @@ class Orchestrator:
             self.logger.info("Message retrieval is required for the current query. Routing to fetch_message_history.")
             return "fetch_message_history"
         else:
-            self.logger.info("Message retrieval is not required for the current query. Routing to plan evaluation.")
-            return "plan_evaluation"
-        
+            self.logger.info("Message retrieval is not required for the current query. Routing to skip message retrieval.")
+            return "skip_message_retrieval"
+
     def generate_final_response(self, state: ConversationState):
         """
         Generate the final response for the user query based on the current conversation state and orchestration plan. \n
@@ -151,7 +263,7 @@ class Orchestrator:
             self.logger.info("No final response feedback found. Routing to workflow termination.")
             return "terminate"
 
-        if feedback.iteration_count >= 3:
+        if feedback.iteration_count > MAX_ITERATIONS_LIMIT:
             self.logger.info("Maximum iteration count reached for final response evaluation. Routing to workflow termination.")
             return "terminate"
         

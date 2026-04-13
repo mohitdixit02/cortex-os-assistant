@@ -10,6 +10,32 @@ def prefer_latest_non_none(current, incoming):
     """Reducer for LangGraph concurrent updates: keep newest non-None value."""
     return incoming if incoming is not None else current
 
+def merge_orchestration_state(current, incoming):
+    """Merge orchestration updates from parallel branches without overwriting untouched fields."""
+    if incoming is None:
+        return current
+    if current is None:
+        return incoming
+    current_data = current.model_dump(exclude_unset=True)
+    incoming_data = incoming.model_dump(exclude_unset=True)
+    merged = {**current_data, **incoming_data}
+    return OrchestrationState(**merged)
+
+def merge_plan_feedback(current, incoming):
+    """Merge evaluation feedback from parallel branches without clobbering other feedback channels."""
+    if incoming is None:
+        return current
+    if current is None:
+        return incoming
+    current_data = current.model_dump(exclude_unset=True)
+    incoming_data = incoming.model_dump(exclude_unset=True)
+    
+    # iteration_count is updated only in evaluation_aggregator.
+    incoming_data.pop("iteration_count", None)
+    
+    merged = {**current_data, **incoming_data}
+    return PlanEvaluationState(**merged)
+
 """
     Conversation State Models
 """                           
@@ -129,7 +155,9 @@ class CortexToolList(RootModel[list[CortexTool]]):
 
 class PlanEvaluationState(BaseModel):
     """Represents the state of Plan evaluation done by Evaluator over Orchestrator's plan"""
-    is_feedback_required: Annotated[bool, Field(description="Whether user feedback is required for the current response or plan or not")]
+    is_knowledge_feedback_required: Annotated[bool, Field(description="Whether user feedback is required for the knowledge retrieval part of the plan or not")] = False
+    is_message_feedback_required: Annotated[bool, Field(description="Whether user feedback is required for the message retrieval part of the plan or not")] = False
+    is_tool_selection_feedback_required: Annotated[bool, Field(description="Whether user feedback is required for the tool selection part of the plan or not")] = False
     user_knowledge_retrieval_feedback: Annotated[Optional[str], Field(description="Feedback on the user knowledge retrieval part of the plan")] = None
     message_retrieval_feedback: Annotated[Optional[str], Field(description="Feedback on the message retrieval part of the plan")] = None
     tool_selection_feedback: Annotated[Optional[str], Field(description="Feedback on the tool selection part of the plan")] = None
@@ -148,11 +176,11 @@ class OrchestrationState(BaseModel):
     # tool_selection_state: Optional[ToolSelectionState] = None
     # feedback_by_evaluator: Optional[PlanEvaluationState] = None
     user_knowledge_retrieval_keywords: Annotated[list[str], Field(description="List of keywords relevant enough to retrieve user knowledge base for the current query")] = []
-    is_message_referred: Annotated[bool, Field(description="Whether the user query is referring to any past message in the conversation or not")]
+    is_message_referred: Annotated[bool, Field(description="Whether the user query is referring to any past message in the conversation or not")] = False
     referred_message_keywords: Annotated[Optional[str], Field(description="Keywords from the referred message")] = None
-    is_tool_required: Annotated[bool, Field(description="Whether any tool is required to process the user query or not")]
+    is_tool_required: Annotated[bool, Field(description="Whether any tool is required to process the user query or not")] = False
     selected_tools: Annotated[Optional[CortexToolList], Field(description="List of selected tools")] = None
-    user_knowledge_acceptance_threshold: Annotated[float, Field(le=0.6, ge=0.2, description="Similarity threshold for accepting user knowledge items retrieved based on the keywords")]
+    user_knowledge_acceptance_threshold: Annotated[float, Field(le=0.6, ge=0.2, description="Similarity threshold for accepting user knowledge items retrieved based on the keywords")] = 0.35
     
 class FinalResponseGenerationState(BaseModel):
     """Represents the state of final response generation done by Response Generator based on the orchestration plan and evaluation"""
@@ -184,7 +212,7 @@ class ConversationState(BaseModel):
     short_term_memory: Optional[UserSTM] = None
     knowledge_base: Optional[list[UserKnowledge]] = None
     message_history: Optional[MessageStateList] = None
-    orchestration_state: Optional[OrchestrationState] = None
-    plan_feedback: Optional[PlanEvaluationState] = None
+    orchestration_state: Annotated[Optional[OrchestrationState], merge_orchestration_state] = None
+    plan_feedback: Annotated[Optional[PlanEvaluationState], merge_plan_feedback] = None
     final_response: Optional[FinalResponseGenerationState] = None
     final_response_feedback: Optional[FinalResponseFeedbackState] = None
