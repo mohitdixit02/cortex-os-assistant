@@ -2,7 +2,7 @@ from cortex.memory import MemoryClient
 from cortex.manager import ManagerClient
 from langgraph.graph import StateGraph, START, END
 from cortex.main.orchestrator import Orchestrator
-from cortex.graph.state import ConversationState, MemoryState
+from cortex.graph.state import ConversationState, MemoryState, ToolManagerState
 from db import engine
 from PIL import Image
 import io
@@ -30,6 +30,31 @@ memory_graph.add_edge(["build_emotional_profile", "build_user_knowledge_base"], 
 memory_graph.add_edge("persist_memory_state", END)
 
 build_memory_workflow = memory_graph.compile()
+
+# Tool Execution Workflow
+tool_manager_graph = StateGraph(ToolManagerState)
+tool_manager_graph.add_node("tools_manager", manager_client.tools_manager)
+tool_manager_graph.add_node("web_search_tool", manager_client.web_search_tool)
+tool_manager_graph.add_node("summarize_tool_results", manager_client.summarize_tool_results)
+tool_manager_graph.add_node("task_retriever_tool", manager_client.task_retriever_tool)
+tool_manager_graph.add_node("tool_result_aggregator", manager_client.tool_result_aggregator)
+
+tool_manager_graph.add_edge(START, "tools_manager")
+tool_manager_graph.add_conditional_edges(
+    "tools_manager",
+    manager_client.execute_tools_route,
+    {
+        "web_search_tool": "web_search_tool",
+        "task_retrieval_tool": "task_retriever_tool",
+        "tool_result_aggregator": "tool_result_aggregator",
+    }
+)
+tool_manager_graph.add_edge("web_search_tool", "summarize_tool_results")
+tool_manager_graph.add_edge("summarize_tool_results", "tool_result_aggregator")
+tool_manager_graph.add_edge("task_retriever_tool", "tool_result_aggregator")
+tool_manager_graph.add_edge("tool_result_aggregator", END)
+
+tool_manager_workflow = tool_manager_graph.compile()
 
 # Main Graph for the conversation workflow
 main_graph = StateGraph(ConversationState)
@@ -86,58 +111,64 @@ def display_workflow_graph(worflow):
 # test workflow
 test_graph = StateGraph(ConversationState)
 # test_graph_2 = StateGraph(MemoryState)
-test_graph.add_node("main_orchestration", orchestrator.main_orchestration)
-test_graph.add_node("build_knowledge_plan", orchestrator.build_knowledge_plan)
-test_graph.add_node("build_messages_plan", orchestrator.build_messages_plan)
-test_graph.add_node("build_tools_plan", orchestrator.build_tools_plan)
-test_graph.add_node("evaluate_knowledge_plan", orchestrator.evaluate_knowledge_plan)
-test_graph.add_node("evaluate_messages_plan", orchestrator.evaluate_messages_plan)
-test_graph.add_node("evaluate_tools_plan", orchestrator.evaluate_tools_plan)
-test_graph.add_node("evaluation_aggregator", orchestrator.evaluation_aggregator)
-test_graph.add_node("fetch_user_knowledge_base", memory_client.fetch_relevant_knowledge_base)
-test_graph.add_node("fetch_message_history", memory_client.fetch_relevant_message_history)
 
-test_graph.add_edge(START, "main_orchestration")
-test_graph.add_conditional_edges(
-    "main_orchestration",
-    orchestrator.route_main_orchestration,
-    {
-        "build_knowledge_plan": "build_knowledge_plan",
-        "build_messages_plan": "build_messages_plan",
-        "build_tools_plan": "build_tools_plan",
-        "final_response_generation": END,
-    },
-)
+# ******************* merging pending with main_workflow *******************
+# test_graph.add_node("main_orchestration", orchestrator.main_orchestration)
+# test_graph.add_node("build_knowledge_plan", orchestrator.build_knowledge_plan)
+# test_graph.add_node("build_messages_plan", orchestrator.build_messages_plan)
+# test_graph.add_node("build_tools_plan", orchestrator.build_tools_plan)
+# test_graph.add_node("evaluate_knowledge_plan", orchestrator.evaluate_knowledge_plan)
+# test_graph.add_node("evaluate_messages_plan", orchestrator.evaluate_messages_plan)
+# test_graph.add_node("evaluate_tools_plan", orchestrator.evaluate_tools_plan)
+# test_graph.add_node("evaluation_aggregator", orchestrator.evaluation_aggregator)
+# test_graph.add_node("fetch_user_knowledge_base", memory_client.fetch_relevant_knowledge_base)
+# test_graph.add_node("fetch_message_history", memory_client.fetch_relevant_message_history)
 
-test_graph.add_edge("build_knowledge_plan", "fetch_user_knowledge_base")
-test_graph.add_edge("fetch_user_knowledge_base", "evaluate_knowledge_plan")
-test_graph.add_conditional_edges(
-    "build_messages_plan",
-    orchestrator.route_condition_fetch_messages,
-    {
-        "fetch_message_history": "fetch_message_history",
-        "skip_message_retrieval": "evaluate_messages_plan",
-    }
-)
-test_graph.add_edge("fetch_message_history", "evaluate_messages_plan")
-test_graph.add_edge("build_tools_plan", "evaluate_tools_plan")
-test_graph.add_edge(
-    ["evaluate_knowledge_plan", "evaluate_messages_plan", "evaluate_tools_plan"],
-    "evaluation_aggregator",
-)
+# test_graph.add_edge(START, "main_orchestration")
+# test_graph.add_conditional_edges(
+#     "main_orchestration",
+#     orchestrator.route_main_orchestration,
+#     {
+#         "build_knowledge_plan": "build_knowledge_plan",
+#         "build_messages_plan": "build_messages_plan",
+#         "build_tools_plan": "build_tools_plan",
+#         "final_response_generation": END,
+#     },
+# )
 
-test_graph.add_conditional_edges(
-    "evaluation_aggregator",
-    orchestrator.route_condition_orchestration_evaluation,
-    {
-        "plan_main_orchestration": "main_orchestration",
-        "final_response_generation": END,
-    },
-)
+# test_graph.add_edge("build_knowledge_plan", "fetch_user_knowledge_base")
+# test_graph.add_edge("fetch_user_knowledge_base", "evaluate_knowledge_plan")
+# test_graph.add_conditional_edges(
+#     "build_messages_plan",
+#     orchestrator.route_condition_fetch_messages,
+#     {
+#         "fetch_message_history": "fetch_message_history",
+#         "skip_message_retrieval": "evaluate_messages_plan",
+#     }
+# )
+# test_graph.add_edge("fetch_message_history", "evaluate_messages_plan")
+# test_graph.add_edge("build_tools_plan", "evaluate_tools_plan")
+# test_graph.add_edge(
+#     ["evaluate_knowledge_plan", "evaluate_messages_plan", "evaluate_tools_plan"],
+#     "evaluation_aggregator",
+# )
+
+# test_graph.add_conditional_edges(
+#     "evaluation_aggregator",
+#     orchestrator.route_condition_orchestration_evaluation,
+#     {
+#         "plan_main_orchestration": "main_orchestration",
+#         "final_response_generation": END,
+#     },
+# )
 
 # test_graph_2.add_node("build_stm", memory_client.build_stm)
 # test_graph_2.add_edge(START, "build_stm")
 # test_graph_2.add_edge("build_stm", END)
+
+test_graph.add_node("test_node", lambda state: print("This is a test node"))
+test_graph.add_edge(START, "test_node")
+test_graph.add_edge("test_node", END)
 
 test_workflow = test_graph.compile()
 # test_workflow_2 = test_graph_2.compile()

@@ -314,7 +314,7 @@ class VoiceClient:
         # emotion =self.emotion_model.get_emotion(query)
         emotion = {"label": "neutral", "confidence": 0.99}
         
-        # route_res = self.model.get_response_route(query)
+        route_res = self.model.get_response_route(query)
         # logger.info("Determined route type: %s", route_res.request_type)
         # if route_res.request_type == "casual":
         #     casual_response = self.model.stream_text_tokens(query)
@@ -334,8 +334,8 @@ class VoiceClient:
         #         yield token
         
         casual_response = "Ok sure, I will look into that for you."
-        task_name = "audio_query"
-        task_description = "Process user query and generate response for audio streaming"
+        task_name = route_res.task_name
+        task_description = route_res.task_description
         task_item = await MainTaskQueue.add_task(
             payload={
                 "query": query,

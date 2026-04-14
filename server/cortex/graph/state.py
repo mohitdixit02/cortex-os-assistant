@@ -120,6 +120,27 @@ class MemoryState(BaseModel):
     stm_start_update_timestamp: Optional[datetime] = None
     stm_end_update_timestamp: Optional[datetime] = None
     
+"""
+    Manager State Models
+"""
+class WebSearchToolState(BaseModel):
+    instructions: Optional[str] = None
+    tool_result: Optional[str] = None
+    tool_exec_status: Optional[str] = None
+    
+class TaskRetrieverToolState(BaseModel):
+    task_description: Optional[str] = None
+    instructions: Optional[str] = None
+    tool_result: Optional[list[dict]] = None
+    tool_exec_status: Optional[str] = None
+
+class ToolManagerState(BaseModel):
+    user_id: str
+    session_id: str
+    task_id: str
+    query: str
+    web_search_tool: Optional[WebSearchToolState] = None
+    task_retriever_tool: Optional[TaskRetrieverToolState] = None
 
 """
     Orchestration State Models
@@ -203,6 +224,7 @@ class ConversationState(BaseModel):
     # Available Before Orchestartor Decision
     user_id: str
     session_id: str
+    task_id: str
     query: str
     voice_client_response: Optional[str] = None
     query_emotion: Optional[str] = None

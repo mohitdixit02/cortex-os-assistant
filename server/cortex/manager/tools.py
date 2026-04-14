@@ -1,10 +1,11 @@
 import asyncio
-from typing import Type
+from typing import Type, Optional, Annotated
 from enum import Enum
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeoutError
 from pydantic import BaseModel, Field
 import json
 from contextlib import nullcontext
+from db import Task, TaskStatus, engine
 
 from cortex.graph.state import CortexTool
 from langchain_core.tools import BaseTool
@@ -15,54 +16,18 @@ try:
 except Exception:  # pragma: no cover - fallback for environments without this helper
     tracing_context = None
 
-web_search_tool = CortexTool(
-    tool_id="web_search_01",
-    tool_name="web_search",
-    tool_description="Use this tool to search the web for up-to-date information. Input should be a search query. Output will be a list of relevant search results.",
-)
-
-email_tool = CortexTool(
-        tool_id="email_02",
-        tool_name="email",
-        tool_description="Use this tool to send emails. Input should be the recipient, subject, and body of the email.",
-    )
-
-calendar_tool = CortexTool(
-    tool_id="calendar_03",
-    tool_name="calendar",
-    tool_description="Use this tool to manage calendar events. Input should specify the action (create, update, delete) and the event details.",
-)
-
-# class TasksLoaderTool(CortexTool):
-#     """
-#     Tool for loading and managing tasks in the Cortex Main Client. \n 
-#     """
-    
-#     def __init__(self):
-#         super().__init__(
-#             tool_id="task_loader_01",
-#             tool_name="Task Loader",
-#             tool_description="Handles the tasks submitted by the Task Queue",
-#         )
-
-#     @tool("tasks_loader_00")
-#     def load_tasks(self, *args, **kwargs):
-#         """
-#         Load the list of task items based on the similarity wih the task name.
-#         """
-        
 class WebSearchInput(BaseModel):
     """Input schema for web search tool."""
     query: list[str] = Field(..., description="The list of strings where each string has relevant keywords to search for.")
 
 class WebSearchTool(BaseTool):
-    """LangChain BaseTool implementation backed by native DDGS search and WebBaseLoader scraping."""
+    """
+    Use this tool to search the web for up-to-date information. \n
+    Instructions should include specifc keywords or context to search for. \n
+    """
 
-    name: str = "web_search"
-    description: str = (
-        "Use this tool to search the web for up-to-date information. "
-        "Input must be a list of search queries."
-    )
+    name: str = "WebSearchTool"
+    description: str = __doc__
     args_schema: Type[BaseModel] = WebSearchInput
     max_results: int = 2
     max_query_workers: int = 6
@@ -196,17 +161,57 @@ class WebSearchTool(BaseTool):
 
         return results
     
+class TaskRetrieverInput(BaseModel):
+    """Input schema for task retriever tool."""
+    task_description: str = Field(..., description="Description or type of tasks to retrieve.")
+    instructions: Annotated[Optional[str], Field(description="Additional instructions for task retrieval, if any.")] = None
+    
+class TaskRetrieverTool(BaseTool):
+    """
+    Tool for retrieving and managing tasks that are executed in the past by Task Queue \n
+    Instructions should specify the type, description or nature of task. If provided, itw ill be used to search for tasks \n. 
+    """
+    
+    name: str = "TaskRetrieverTool"
+    description: str = __doc__
+    args_schema: Type[BaseModel] = TaskRetrieverInput
+    max_results: int = 2
+    
+    @traceable(enabled=False)
+    def _run(
+        
+    ):
+        """Execute a synchronous task retrieval."""
+        return []
+    
+    def retrieve_tasks(
+        self,
+        input: TaskRetrieverInput,
+        task_id: Optional[str] = None,
+    ) -> list[dict]:
+        """
+        Retrieve semantically matching tasks based on the input task description and instructions. \n
+        if `task_id` is provided, that specific task will be skipped.
+        """
+        return []
+    
 class AvailableToolsType(str, Enum):
     WEB_SEARCH_TOOL = "web_search_01"
-    EMAIL_TOOL = "email_02"
+    TASK_RETRIEVER_TOOL = "task_retriever_02"
     CALENDAR_TOOL = "calendar_03"
+    EMAIL_TOOL = "email_04"
 
 AVAILABLE_TOOLS = [
     {
         "tool_id": AvailableToolsType.WEB_SEARCH_TOOL.value,
         "tool_name": WebSearchTool.__name__,
         "tool_description": WebSearchTool.__doc__,
-    }
+    },
+    {
+        "tool_id": AvailableToolsType.TASK_RETRIEVER_TOOL.value,
+        "tool_name": TaskRetrieverTool.__name__,
+        "tool_description": TaskRetrieverTool.__doc__,
+    },
 ]
 
 __all__ = [

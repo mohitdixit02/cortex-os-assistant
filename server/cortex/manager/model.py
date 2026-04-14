@@ -1,7 +1,7 @@
 from langchain_huggingface import HuggingFacePipeline, HuggingFaceEmbeddings, HuggingFaceEndpoint, ChatHuggingFace, HuggingFaceEndpointEmbeddings
 from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
 from pydantic import BaseModel, Field
-from cortex.graph.state import ConversationState, CortexTool, OrchestrationState
+from cortex.graph.state import ConversationState, CortexTool, OrchestrationState, ToolManagerState
 from cortex.manager.prompts import get_manager_client_prompts, WebQueryPlanResult
 from typing import TypedDict, Annotated, Literal, Optional, Dict, Any
 import numpy as np
@@ -45,8 +45,7 @@ class ManagerModel:
                 
     def build_web_search_plan(
         self,
-        query: str,
-        tool: CortexTool,
+        state: ToolManagerState,
     ) -> WebQueryPlanResult:
         """
         Build the input for web search tool based on the user query and orchestrator instructions using the generation model. \n
@@ -60,18 +59,13 @@ class ManagerModel:
         )
         chain = formatted_prompt | self.model | parser
         
-        instructions = tool.instructions if tool.instructions else ""
+        instructions = state.web_search_tool.instructions if state.web_search_tool.instructions else ""
 
         res = chain.invoke({
-            "user_query": query,
+            "user_query": state.query,
             "orchestrator_instructions": instructions
         })
-        web_input = WebQueryPlanResult(
-            query=res.query,
-            context=res.context,
-            is_diversified=res.is_diversified
-        )
-        return web_input
+        return res
 
     def summarize_tool_result(
         self,
