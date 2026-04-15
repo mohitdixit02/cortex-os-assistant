@@ -7,20 +7,16 @@ from cortex.graph.state import (
     OrchestrationState, 
     CortexToolList, 
     CortexTool,
-    ToolManagerState, 
-    WebSearchToolState, 
-    TaskRetrieverToolState
 )
-from cortex.manager.tools import AvailableToolsType, WebSearchTool, WebSearchInput
 from utility.main import iterate_tokens_async
 from nltk.tokenize import sent_tokenize
 from typing import AsyncGenerator
 from cortex.graph.workflow import (
     main_workflow, 
-    build_memory_workflow,
     test_workflow,
     # test_workflow_2
 )
+from cortex.graph.memory import build_memory_workflow
 from cortex.task import MainTaskQueue, TaskStatus, TaskItem
 from utility.logger import get_logger
 from db import TimeOfDay
@@ -86,9 +82,9 @@ class MainClient:
         self.logger.info("Initializing conversation state for user_id: %s, session_id: %s, query: %s, emotion: %s", user_id, session_id, query, emotion)
         
         state = ConversationState(
-            user_id=user_id,
-            session_id=session_id,
-            task_id=task_id,
+            user_id=str(user_id),
+            session_id=str(session_id),
+            task_id=str(task_id),
             query=query,
             query_emotion=emotion,
             voice_client_response=voice_client_response
@@ -176,68 +172,6 @@ class MainClient:
             await build_memory_workflow.ainvoke(memory_state)
         except Exception as memory_exc:
             self.logger.exception("Memory workflow failed after response generation: %s", memory_exc)
-            
-    def execute_tools(
-        self,
-        state: ConversationState,
-    ):
-        orchestrator_state = state.orchestration_state
-        if orchestrator_state is None:
-            self.logger.warning("No orchestration state found in the conversation state. Skipping tool execution.")
-            return {}
-    
-        if orchestrator_state.is_tool_required is False:
-            self.logger.info("No tool is required for the current query as per the orchestration state. Skipping tool execution.")
-            return {}
-        
-        selected_tools = orchestrator_state.selected_tools
-        selected_tools_list = selected_tools.root if hasattr(selected_tools, "root") else selected_tools
-        
-        tool_manager_state = ToolManagerState(
-            user_id=state.user_id,
-            session_id=state.session_id,
-            task_id=state.task_id,
-            query=state.query,
-        )
-        
-        updated_tools = []
-        for tool in selected_tools_list:
-            if isinstance(tool, CortexTool):
-                if tool.tool_id == AvailableToolsType.WEB_SEARCH_TOOL.value:
-                    tool_manager_state.web_search_tool = WebSearchToolState(
-                        instructions=tool.instructions,
-                    )
-                if tool.tool_id == AvailableToolsType.TASK_RETRIEVER_TOOL.value:
-                    tool_manager_state.task_retriever_tool = TaskRetrieverToolState(
-                        instructions=tool.instructions,
-                    )
-                # try:
-                #     res = self._execute_tool(tool, query=state.query)
-                #     updated_tools.append(
-                #         tool.model_copy(update={
-                #             "tool_result": res,
-                #             "tool_exec_status": "completed",
-                #         })
-                #     )
-                # except Exception as e:
-                #     self.logger.error(f"Error occurred while executing tool {tool}: {e}")
-                #     updated_tools.append(
-                #         tool.model_copy(update={
-                #             "tool_result": None,
-                #             "tool_exec_status": "failed",
-                #         })
-                #     )
-            else:
-                self.logger.warning(f"Invalid tool format: {tool}. Skipping this tool.")
-        
-        #  manager execute tools workflow
-        
-        state.orchestration_state.selected_tools = selected_tools.model_copy(update={
-            "root": updated_tools,
-        })
-        return {
-            "orchestration_state": state.orchestration_state,
-        }
                 
     async def _handle_task_queue(self, taskItem: TaskItem) -> TaskItem:
         """

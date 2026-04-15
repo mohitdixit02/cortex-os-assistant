@@ -1,5 +1,5 @@
 from cortex.manager.tools import AvailableToolsType, WebSearchTool, WebSearchInput
-from cortex.graph.state import ConversationState, CortexTool, ToolManagerState, WebSearchToolState, TaskRetrieverToolState
+from cortex.graph.state import CortexTool, ToolManagerState, WebSearchToolState, TaskRetrieverToolState
 from cortex.manager.model import ManagerModel
 from utility.logger import get_logger
 from langchain_core.documents import Document
@@ -80,15 +80,17 @@ class ManagerClient():
         state: ToolManagerState
     ):
         try:
-            state.task_retriever_tool = state.task_retriever_tool.model_copy(update={
-                "tool_result": "I got your task but not in mood to tell it to you, hehe!!",
-                "tool_exec_status": "completed",
-            })
+            state.task_retriever_tool = TaskRetrieverToolState(
+                task_description="This is a dummy task retrieved by the task retriever tool.",
+                tool_result="I got your task but not in mood to tell it to you, hehe!!",
+                tool_exec_status="completed",
+            )
             return {
                 "task_retriever_tool": state.task_retriever_tool,
             }
         except Exception as e:
-            self.logger.error(f"Error executing task retriever tool: {str(e)}")
+            self.logger.error(e)
+            self.logger.error(f"[MANAGER] Error executing task retriever tool: {str(e)}")
             state.task_retriever_tool = state.task_retriever_tool.model_copy(update={
                 "tool_result": "Failed to retrieve task.",
                 "tool_exec_status": "failed",
@@ -105,18 +107,21 @@ class ManagerClient():
         """
         Entry Node for Tools Execution Workflow
         """
+        self.logger.info("Executing tools manager...")
         return {}
     
     def execute_tools_route(
         self, 
-        state: ConversationState
-    ) -> Literal["web_search_tool", "task_retrieval_tool", "tool_result_aggregator"]:
+        state: ToolManagerState
+    ) -> Literal["web_search_tool", "task_retriever_tool", "tool_result_aggregator"]:
         
         called_tools = []
         if state.web_search_tool is not None:
+            self.logger.info("Web search tool selected for execution...")
             called_tools.append("web_search_tool")
-        if state.task_retrieval_tool is not None:
-            called_tools.append("task_retrieval_tool")
+        if state.task_retriever_tool is not None:
+            self.logger.info("Task retriever tool selected for execution...")
+            called_tools.append("task_retriever_tool")
             
         if len(called_tools) == 0:
             self.logger.info("No tools to execute based on the current conversation state.")

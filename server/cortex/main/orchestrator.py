@@ -1,5 +1,20 @@
 from cortex.main.model import CortexMainModel
-from cortex.graph.state import ConversationState, OrchestrationState, PlanEvaluationState
+from cortex.graph.state import (
+    ConversationState, 
+    MemoryState, 
+    MemoryEmotionalProfile, 
+    EmotionalProfile, 
+    FinalResponseGenerationState,
+    OrchestrationState, 
+    PlanEvaluationState,
+    CortexToolList, 
+    CortexTool,
+    ToolManagerState,
+    WebSearchToolState, 
+    TaskRetrieverToolState
+)
+from cortex.manager.tools import AvailableToolsType, WebSearchTool, WebSearchInput
+from cortex.graph.manager import tool_manager_workflow
 from utility.logger import get_logger
 from typing import Literal
 
@@ -273,3 +288,81 @@ class Orchestrator:
         else:
             self.logger.info("Final response evaluation is not required. Routing to workflow termination.")
             return "terminate"
+
+    def execute_tools(
+        self,
+        state: ConversationState,
+    ):
+        orchestration_state = state.orchestration_state
+        
+        # ************* Demo Purpose ****************
+        orchestration_state = OrchestrationState(
+            is_tool_required=True,
+            selected_tools=CortexToolList(root=[
+                CortexTool(
+                    tool_id=AvailableToolsType.WEB_SEARCH_TOOL.value,
+                    instructions=""
+                ),
+                CortexTool(
+                    tool_id=AvailableToolsType.TASK_RETRIEVER_TOOL.value,
+                    instructions=""
+                )
+            ])
+        )
+            
+        
+        if orchestration_state is None:
+            self.logger.warning("No orchestration state found in the conversation state. Skipping tool execution.")
+            return {}
+    
+        if orchestration_state.is_tool_required is False:
+            self.logger.info("No tool is required for the current query as per the orchestration state. Skipping tool execution.")
+            return {}
+        
+        selected_tools = orchestration_state.selected_tools
+        selected_tools_list = selected_tools.root if hasattr(selected_tools, "root") else selected_tools
+        
+        tool_manager_state = ToolManagerState(
+            user_id=state.user_id,
+            session_id=state.session_id,
+            task_id=state.task_id,
+            query=state.query,
+        )
+        
+        for tool in selected_tools_list:
+            if isinstance(tool, CortexTool):
+                if tool.tool_id == AvailableToolsType.WEB_SEARCH_TOOL.value:
+                    tool_manager_state.web_search_tool = WebSearchToolState(
+                        instructions=tool.instructions,
+                    )
+                if tool.tool_id == AvailableToolsType.TASK_RETRIEVER_TOOL.value:
+                    tool_manager_state.task_retriever_tool = TaskRetrieverToolState(
+                        instructions=tool.instructions,
+                    )
+            else:
+                self.logger.warning(f"Invalid tool format: {tool}. Skipping this tool.")
+        
+        #  manager execute tools workflow
+        res = tool_manager_workflow.invoke(tool_manager_state)
+        res = ToolManagerState.model_validate(res)
+        self.logger.info("[ORCHESTRATOR] Tools execution completed with results: %s", res)
+        tools_result = []
+        if res.web_search_tool:
+            tools_result.append(CortexTool(
+                tool_id=AvailableToolsType.WEB_SEARCH_TOOL.value,
+                instructions=res.web_search_tool.instructions,
+                tool_result=res.web_search_tool.tool_result,
+                tool_exec_status=res.web_search_tool.tool_exec_status
+            ))
+        if res.task_retriever_tool:
+            tools_result.append(CortexTool(
+                tool_id=AvailableToolsType.TASK_RETRIEVER_TOOL.value,
+                instructions=res.task_retriever_tool.instructions,
+                tool_result=res.task_retriever_tool.tool_result,
+                tool_exec_status=res.task_retriever_tool.tool_exec_status
+            ))
+            
+        orchestration_state.selected_tools = CortexToolList(root=tools_result)
+        return {
+            "orchestration_state": orchestration_state,
+        }

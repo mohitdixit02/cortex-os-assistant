@@ -1,60 +1,13 @@
 from cortex.memory import MemoryClient
-from cortex.manager import ManagerClient
 from langgraph.graph import StateGraph, START, END
 from cortex.main.orchestrator import Orchestrator
 from cortex.graph.state import ConversationState, MemoryState, ToolManagerState
+from cortex.graph.memory import memory_client
 from db import engine
 from PIL import Image
 import io
 
 orchestrator = Orchestrator()
-memory_client = MemoryClient(engine=engine)
-manager_client = ManagerClient()
-
-# Build Memory for the conversation
-memory_graph = StateGraph(MemoryState)
-
-memory_graph.add_node("persist_ai_response", memory_client.persist_ai_response)
-memory_graph.add_node("retrieve_unsummarized_messages", memory_client.retrieve_unsummarized_messages)
-memory_graph.add_node("build_stm", memory_client.build_stm)
-memory_graph.add_node("build_emotional_profile", memory_client.build_emotional_profile)
-memory_graph.add_node("build_user_knowledge_base", memory_client.build_user_knowledge_base)
-memory_graph.add_node("persist_memory_state", memory_client.persist_memory_state)
-
-memory_graph.add_edge(START, "persist_ai_response")
-memory_graph.add_edge("persist_ai_response", "retrieve_unsummarized_messages")
-memory_graph.add_conditional_edges("retrieve_unsummarized_messages", memory_client.route_build_stm_required)
-memory_graph.add_edge("build_stm", "build_emotional_profile")
-memory_graph.add_edge("build_stm", "build_user_knowledge_base")
-memory_graph.add_edge(["build_emotional_profile", "build_user_knowledge_base"], "persist_memory_state")
-memory_graph.add_edge("persist_memory_state", END)
-
-build_memory_workflow = memory_graph.compile()
-
-# Tool Execution Workflow
-tool_manager_graph = StateGraph(ToolManagerState)
-tool_manager_graph.add_node("tools_manager", manager_client.tools_manager)
-tool_manager_graph.add_node("web_search_tool", manager_client.web_search_tool)
-tool_manager_graph.add_node("summarize_tool_results", manager_client.summarize_tool_results)
-tool_manager_graph.add_node("task_retriever_tool", manager_client.task_retriever_tool)
-tool_manager_graph.add_node("tool_result_aggregator", manager_client.tool_result_aggregator)
-
-tool_manager_graph.add_edge(START, "tools_manager")
-tool_manager_graph.add_conditional_edges(
-    "tools_manager",
-    manager_client.execute_tools_route,
-    {
-        "web_search_tool": "web_search_tool",
-        "task_retrieval_tool": "task_retriever_tool",
-        "tool_result_aggregator": "tool_result_aggregator",
-    }
-)
-tool_manager_graph.add_edge("web_search_tool", "summarize_tool_results")
-tool_manager_graph.add_edge("summarize_tool_results", "tool_result_aggregator")
-tool_manager_graph.add_edge("task_retriever_tool", "tool_result_aggregator")
-tool_manager_graph.add_edge("tool_result_aggregator", END)
-
-tool_manager_workflow = tool_manager_graph.compile()
 
 # Main Graph for the conversation workflow
 main_graph = StateGraph(ConversationState)
@@ -166,9 +119,9 @@ test_graph = StateGraph(ConversationState)
 # test_graph_2.add_edge(START, "build_stm")
 # test_graph_2.add_edge("build_stm", END)
 
-test_graph.add_node("test_node", lambda state: print("This is a test node"))
-test_graph.add_edge(START, "test_node")
-test_graph.add_edge("test_node", END)
+test_graph.add_node("execute_tools", orchestrator.execute_tools)
+test_graph.add_edge(START, "execute_tools")
+test_graph.add_edge("execute_tools", END)
 
 test_workflow = test_graph.compile()
 # test_workflow_2 = test_graph_2.compile()
@@ -178,7 +131,6 @@ display_workflow_graph(test_workflow)
 
 __all__ = [
     "main_workflow",
-    "build_memory_workflow",
     "test_workflow",
     # "test_workflow_2",
 ]

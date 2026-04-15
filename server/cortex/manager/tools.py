@@ -1,4 +1,5 @@
 import asyncio
+import time
 from typing import Type, Optional, Annotated
 from enum import Enum
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeoutError
@@ -35,6 +36,7 @@ class WebSearchTool(BaseTool):
     max_urls_per_query: int = 4
     ddg_timeout_s: int = 8
     scrape_timeout_s: float = 8.0
+    overall_search_timeout_s: float = 40.0
 
     def _no_trace_context(self):
         """Return a context manager that disables LangSmith tracing when available."""
@@ -116,17 +118,29 @@ class WebSearchTool(BaseTool):
             return []
 
         results: list[dict] = []
-        with ThreadPoolExecutor(max_workers=self.max_url_workers) as executor:
+        deadline = time.monotonic() + (self.scrape_timeout_s * max(1, len(urls)))
+        executor = ThreadPoolExecutor(max_workers=self.max_url_workers)
+        try:
             futures = [executor.submit(self._load_single_url, url) for url in urls]
-            for future in as_completed(futures):
+            while futures:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
                 try:
-                    item = future.result(timeout=self.scrape_timeout_s + 2)
+                    completed_iter = as_completed(futures, timeout=remaining)
+                    future = next(completed_iter)
+                except (FutureTimeoutError, StopIteration):
+                    break
+
+                futures.remove(future)
+                try:
+                    item = future.result()
                     if item is not None:
                         results.append(item)
-                except FutureTimeoutError:
-                    continue
                 except Exception:
                     continue
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
         return results
 
     def search(
@@ -142,22 +156,37 @@ class WebSearchTool(BaseTool):
             return []
 
         results: list[dict] = []
-        with ThreadPoolExecutor(max_workers=self.max_query_workers) as executor:
+        start_time = time.monotonic()
+        executor = ThreadPoolExecutor(max_workers=self.max_query_workers)
+        try:
             future_to_query = {
                 executor.submit(self._search_single_query, query): query
                 for query in cleaned_queries
             }
-            for future in as_completed(future_to_query):
+            pending = list(future_to_query.keys())
+
+            while pending:
+                remaining_timeout = self.overall_search_timeout_s - (time.monotonic() - start_time)
+                if remaining_timeout <= 0:
+                    break
                 try:
-                    docs = future.result(
-                        timeout=self.ddg_timeout_s + (self.scrape_timeout_s * self.max_urls_per_query) + 2
-                    )
+                    completed_iter = as_completed(pending, timeout=remaining_timeout)
+                    future = next(completed_iter)
+                except (FutureTimeoutError, StopIteration):
+                    break
+
+                pending.remove(future)
+                try:
+                    docs = future.result()
                     if docs:
                         results.extend(docs)
-                except FutureTimeoutError:
-                    continue
                 except Exception:
                     continue
+
+            for future in pending:
+                future.cancel()
+        finally:
+            executor.shutdown(wait=False, cancel_futures=True)
 
         return results
     

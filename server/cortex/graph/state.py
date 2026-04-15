@@ -131,7 +131,7 @@ class WebSearchToolState(BaseModel):
 class TaskRetrieverToolState(BaseModel):
     task_description: Optional[str] = None
     instructions: Optional[str] = None
-    tool_result: Optional[list[dict]] = None
+    tool_result: Optional[str] = None # change it to valid one later
     tool_exec_status: Optional[str] = None
 
 class ToolManagerState(BaseModel):
