@@ -1,4 +1,4 @@
-from cortex.manager.tools import AvailableToolsType, WebSearchTool, WebSearchInput
+from cortex.manager.tools import AvailableToolsType, WebSearchTool, WebSearchInput, TaskRetrieverTool, TaskRetrieverInput, TaskRetrieverResult
 from cortex.graph.state import CortexTool, ToolManagerState, WebSearchToolState, TaskRetrieverToolState
 from cortex.manager.model import ManagerModel
 from utility.logger import get_logger
@@ -6,6 +6,7 @@ from langchain_core.documents import Document
 from cortex.manager.utility import retrieve_relevant_docs_utility
 from cortex.memory.embedding import EmbeddingModel
 from typing import Literal, Optional
+import json
 
 class ManagerClient():
     """Manages the tool executions based on Orchestrator's plan"""
@@ -80,9 +81,28 @@ class ManagerClient():
         state: ToolManagerState
     ):
         try:
+            self.logger.info(f"Task retriever tool: {state.task_retriever_tool}")
+            task_description = self.model.generate_task_description(state=state)
+            task_retriever_tool = TaskRetrieverTool()
+            tool_input = TaskRetrieverInput(
+                task_description=task_description,
+                task_id=state.task_id,
+                user_id=state.user_id,
+                session_id=state.session_id,
+            )
+            task_res = task_retriever_tool.retrieve_tasks(
+                input=tool_input,
+                model=self.embd_model,
+            )
+            
+            tool_result = [task.model_dump() for task in task_res]
+                        
+            self.logger.info(f"Retrieved {len(task_res)} tasks from task retriever tool.")
+            self.logger.info(f"Task retriever tool results: {task_res}")
+                            
             state.task_retriever_tool = TaskRetrieverToolState(
-                task_description="This is a dummy task retrieved by the task retriever tool.",
-                tool_result="I got your task but not in mood to tell it to you, hehe!!",
+                task_description=task_description,
+                tool_result=json.dumps(tool_result),
                 tool_exec_status="completed",
             )
             return {

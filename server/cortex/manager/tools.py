@@ -6,9 +6,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as
 from pydantic import BaseModel, Field
 import json
 from contextlib import nullcontext
-from db import Task, TaskStatus, engine
+from sqlalchemy import func
+from sqlmodel import Session, select
+from db import Message, Task, TaskStatus, engine
 
 from cortex.graph.state import CortexTool
+from cortex.memory.embedding import EmbeddingModel
 from langchain_core.tools import BaseTool
 from langchain_community.document_loaders import WebBaseLoader
 from langsmith import traceable
@@ -192,37 +195,96 @@ class WebSearchTool(BaseTool):
     
 class TaskRetrieverInput(BaseModel):
     """Input schema for task retriever tool."""
+    user_id: str = Field(..., description="The ID of the user for whom to retrieve tasks.")
+    session_id: str = Field(..., description="The session ID for which to retrieve tasks.")
     task_description: str = Field(..., description="Description or type of tasks to retrieve.")
-    instructions: Annotated[Optional[str], Field(description="Additional instructions for task retrieval, if any.")] = None
+    task_id: Optional[str] = Field(default=None, description="Current task ID to exclude from the search results.")
+    
+class TaskRetrieverResult(BaseModel):
+    """Output schema for task retriever tool."""
+    task_name: str
+    task_description: str
+    status: TaskStatus
+    status_response: Optional[dict]
+    created_at: str
+    similarity: float
     
 class TaskRetrieverTool(BaseTool):
     """
     Tool for retrieving and managing tasks that are executed in the past by Task Queue \n
-    Instructions should specify the type, description or nature of task. If provided, itw ill be used to search for tasks \n. 
+    Instructions should specify the type, description or nature of task. If provided, it will be used to search for tasks \n. 
     """
     
     name: str = "TaskRetrieverTool"
     description: str = __doc__
     args_schema: Type[BaseModel] = TaskRetrieverInput
+    minimum_acceptable_similarity: float = 0.55
     max_results: int = 2
     
     @traceable(enabled=False)
     def _run(
-        
-    ):
+        self,
+        input: TaskRetrieverInput,
+        model: EmbeddingModel,
+    ) -> list[dict]:
         """Execute a synchronous task retrieval."""
-        return []
+        user_id = input.user_id
+        session_id = input.session_id
+        task_description = input.task_description
+        task_id = input.task_id
+
+        query_embedding = model.generate_embeddings(task_description)
+
+        with Session(engine) as session:
+            similarity_expr = (1.0 - Task.embedding.cosine_distance(query_embedding)).label("similarity")
+            statement = (
+                select(
+                    Task.task_name,
+                    Task.task_description,
+                    Task.status,
+                    Task.status_response,
+                    Task.created_at,
+                    similarity_expr
+                )
+                .join(Message, Task.message_id == Message.message_id)
+                .where(Message.user_id == user_id)
+                .where(Message.session_id == session_id)
+                .where(Task.embedding.is_not(None))
+                .where(func.vector_dims(Task.embedding) == len(query_embedding))
+                .where(similarity_expr >= self.minimum_acceptable_similarity)
+            )
+
+            if task_id:
+                statement = statement.where(Task.task_id != task_id)
+
+            statement = statement.order_by(similarity_expr.desc()).limit(self.max_results)
+            rows = session.exec(statement).all()
+
+        results: list[TaskRetrieverResult] = []
+        for row in rows:
+            task_data = TaskRetrieverResult(
+                task_name=row.task_name,
+                task_description=row.task_description,
+                status=row.status,
+                status_response=row.status_response,
+                created_at=row.created_at.isoformat(),
+                similarity=row.similarity,
+            )
+            results.append(task_data)
+            
+        return results
     
     def retrieve_tasks(
         self,
         input: TaskRetrieverInput,
-        task_id: Optional[str] = None,
-    ) -> list[dict]:
+        model: EmbeddingModel,
+    ) -> list[TaskRetrieverResult]:
         """
         Retrieve semantically matching tasks based on the input task description and instructions. \n
         if `task_id` is provided, that specific task will be skipped.
         """
-        return []
+        print(f"Retrieving tasks with description: {input.task_description}, user_id: {input.user_id}, session_id: {input.session_id}, excluding task_id: {input.task_id}")
+        return self._run(input=input, model=model)
     
 class AvailableToolsType(str, Enum):
     WEB_SEARCH_TOOL = "web_search_01"

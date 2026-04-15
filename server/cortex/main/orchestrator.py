@@ -295,22 +295,6 @@ class Orchestrator:
     ):
         orchestration_state = state.orchestration_state
         
-        # ************* Demo Purpose ****************
-        orchestration_state = OrchestrationState(
-            is_tool_required=True,
-            selected_tools=CortexToolList(root=[
-                CortexTool(
-                    tool_id=AvailableToolsType.WEB_SEARCH_TOOL.value,
-                    instructions=""
-                ),
-                CortexTool(
-                    tool_id=AvailableToolsType.TASK_RETRIEVER_TOOL.value,
-                    instructions=""
-                )
-            ])
-        )
-            
-        
         if orchestration_state is None:
             self.logger.warning("No orchestration state found in the conversation state. Skipping tool execution.")
             return {}

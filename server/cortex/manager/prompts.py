@@ -84,6 +84,28 @@ The tool used is Web Search Tool. The tool result will contain concatenated cont
 1. Some of the content might have repeative data, so make sure to not include repeative information. \n
 2. Make sure that user query is fully addressed in the summary and no relevant information is missed. \n
 """
+
+TASK_DESCRIPTION_GENERATION_PROMPT = """
+# Context: \n
+You will be provided following as input: \n
+1. User Query: Question or information that user have asked regarding some previous task which have been executed in the past. \n
+2. Orchestrator Instructions (can be null or empty): Additional instructions provided by orchestrator to condition the task description generation. \n 
+
+# Objective: \n
+1. You are the task description generator for the task retriever tool. \n
+2. When task was submitted and executed in the past, it was given a task description which is a concise string describing the task type, purpose, etc. \n
+3. Your job is to generate a concise description of the task based on the user query and orchestrator instructions which can be used by the task retriever tool to semantically match and retrieve the same relevant tasks from the past. \n
+4. The generated task description should be concise yet informative enough to capture the essence of the task that user is referring to in the query. \n
+
+# Input: \n
+User Query: {user_query}
+Orchestrator Instructions: {orchestrator_instructions}
+
+# Response Format: \n
+String of the task description with no extra explanation, text, formatting, python function, etc. Just the concise task description string.
+```your task_description here```
+"""
+
 def get_manager_client_prompts(
     type: str,
     tool_type: Optional[str] = None,
@@ -114,3 +136,14 @@ def get_manager_client_prompts(
         
         if tool_type == AvailableToolsType.WEB_SEARCH_TOOL.value:
             return prompt.partial(tool_instructions=WEB_TOOL_SPECIFIC_INSTRUCTIONS), parser
+        
+    elif type == "task_description_generation":
+        parser = StrOutputParser()
+        prompt = PromptTemplate(
+            template=TASK_DESCRIPTION_GENERATION_PROMPT,
+            input_variables=[
+                "user_query",
+                "orchestrator_instructions",
+            ],
+        )
+        return prompt, parser
