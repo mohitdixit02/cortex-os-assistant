@@ -7,7 +7,7 @@ from utility.logger import get_logger
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from cortex.manager.tools import AVAILABLE_TOOLS
 import json
-from utility.models import MAIN_MODEL, PLANNER_MODEL
+from utility.models import MAIN_MODEL, PLANNER_MODEL, HEAVY_PLANNER_MODEL
 from cortex.main.prompts import get_main_orchestrator_evaluate_prompt, get_main_orchestrator_plan_prompt, get_main_orchestrator_res_prompt
 from cortex.main.prompts.main_evaluator import (
     InternalFeedbackKnowledge,
@@ -34,6 +34,7 @@ class CortexMainModel:
         self.logger = get_logger("CORTEX_MAIN")
         self.model = MAIN_MODEL
         self.plan_model = PLANNER_MODEL
+        self.heavy_plan_model = HEAVY_PLANNER_MODEL
         # self.template_provider = TemplateProvider()
         # self.str_parser = StrOutputParser()
         
@@ -98,7 +99,7 @@ class CortexMainModel:
         formatted_prompt, parser = get_main_orchestrator_plan_prompt(
             type="main_orchestration_knowledge",
         )
-        chain = formatted_prompt | self.plan_model | parser
+        chain = formatted_prompt | self.heavy_plan_model | parser
         
         feedback = state.plan_feedback
         if feedback and feedback.user_knowledge_retrieval_feedback:
@@ -122,7 +123,7 @@ class CortexMainModel:
         formatted_prompt, parser = get_main_orchestrator_plan_prompt(
             type="main_orchestration_messages",
         )
-        chain = formatted_prompt | self.plan_model | parser
+        chain = formatted_prompt | self.heavy_plan_model | parser
                 
         feedback = state.plan_feedback
             
@@ -151,7 +152,7 @@ class CortexMainModel:
         formatted_prompt, parser = get_main_orchestrator_plan_prompt(
             type="main_orchestration_tools",
         )
-        chain = formatted_prompt | self.plan_model | parser
+        chain = formatted_prompt | self.heavy_plan_model | parser
         available_tools = "\n".join([f"{tool.get('tool_name')}: {tool.get('tool_description')} - {tool.get('tool_id')}" for tool in AVAILABLE_TOOLS])
         
         feedback = state.plan_feedback
@@ -191,7 +192,7 @@ class CortexMainModel:
         formatted_prompt, parser = get_main_orchestrator_evaluate_prompt(
             type="plan_evaluation_knowledge",
         )
-        chain = formatted_prompt | self.model | parser
+        chain = formatted_prompt | self.heavy_plan_model | parser
         
         retrieved_user_knowledge = ""
         if state.knowledge_base:
@@ -199,10 +200,10 @@ class CortexMainModel:
                 retrieved_user_knowledge += f"- {item.strictness}: {item.content}\n"
         
         feedback = state.plan_feedback
-        if feedback:
-            feedback_by_evaluator = feedback.model_dump()
+        if feedback and feedback.user_knowledge_retrieval_feedback:
+            feedback_by_evaluator = feedback.user_knowledge_retrieval_feedback
         else:
-            feedback_by_evaluator = None
+            feedback_by_evaluator = ""
 
         specific_orchestration_plan = OrchestrationState(
             user_knowledge_retrieval_keywords=state.orchestration_state.user_knowledge_retrieval_keywords,
@@ -213,7 +214,7 @@ class CortexMainModel:
             "user_query": state.query,
             "orchestration_plan": specific_orchestration_plan.model_dump_json() if specific_orchestration_plan else None,
             "retrieved_user_knowledge": retrieved_user_knowledge,
-            "previous_feedback": json.dumps(feedback_by_evaluator) if feedback_by_evaluator else None,
+            "previous_feedback": feedback_by_evaluator,
             "user_mood": state.query_emotion,
             "user_emotional_profile": state.emotional_profile.model_dump_json() if state.emotional_profile else None,
         })
@@ -223,7 +224,7 @@ class CortexMainModel:
         formatted_prompt, parser = get_main_orchestrator_evaluate_prompt(
             type="plan_evaluation_messages",    
         )
-        chain = formatted_prompt | self.model | parser
+        chain = formatted_prompt | self.heavy_plan_model | parser
         
         if state.message_history and state.message_history.root:
             retrieved_messages = ""
@@ -238,11 +239,11 @@ class CortexMainModel:
                 retrieved_user_knowledge += f"- {item.strictness}: {item.content}\n"
         
         feedback = state.plan_feedback
-        if feedback:
-            feedback_by_evaluator = feedback.model_dump()
+        if feedback and state.plan_feedback.message_retrieval_feedback:
+            feedback_by_evaluator = feedback.message_retrieval_feedback
         else:
-            feedback_by_evaluator = None
-            
+            feedback_by_evaluator = ""
+
         specific_orchestration_plan = OrchestrationState(
             is_message_referred=state.orchestration_state.is_message_referred if state.orchestration_state else False,
             referred_message_keywords=state.orchestration_state.referred_message_keywords if state.orchestration_state else None,
@@ -252,7 +253,7 @@ class CortexMainModel:
             "user_query": state.query,
             "orchestration_plan": specific_orchestration_plan.model_dump_json() if specific_orchestration_plan else None,
             "retrieved_messages": retrieved_messages,
-            "previous_feedback": json.dumps(feedback_by_evaluator) if feedback_by_evaluator else None,
+            "previous_feedback": feedback_by_evaluator,
             "user_mood": state.query_emotion,
             "retrieved_user_knowledge": retrieved_user_knowledge,
         })
@@ -262,13 +263,13 @@ class CortexMainModel:
         formatted_prompt, parser = get_main_orchestrator_evaluate_prompt(
             type="plan_evaluation_tools",
         )
-        chain = formatted_prompt | self.model | parser
+        chain = formatted_prompt | self.heavy_plan_model | parser
         
         feedback = state.plan_feedback
-        if feedback:
-            feedback_by_evaluator = feedback.model_dump()
+        if feedback and state.plan_feedback.tool_selection_feedback:
+            feedback_by_evaluator = feedback.tool_selection_feedback
         else:
-            feedback_by_evaluator = None
+            feedback_by_evaluator = ""
 
         available_tools = "\n".join([f"{tool.get('tool_name')}: {tool.get('tool_description')} - {tool.get('tool_id')}" for tool in AVAILABLE_TOOLS])
         
@@ -292,7 +293,7 @@ class CortexMainModel:
         res = chain.invoke({
             "user_query": state.query,
             "orchestration_plan": specific_orchestration_plan.model_dump_json() if specific_orchestration_plan else None,
-            "previous_feedback": json.dumps(feedback_by_evaluator) if feedback_by_evaluator else None,
+            "previous_feedback": feedback_by_evaluator,
             "user_mood": state.query_emotion,
             "user_emotional_profile": state.emotional_profile.model_dump_json() if state.emotional_profile else None,
             "available_tools": available_tools,

@@ -37,9 +37,14 @@ models = {
     },
     "planner":{
         "name":"Qwen/Qwen2.5-7B-Instruct",
-        # "name":"meta-llama/Llama-3.3-70B-Instruct",
         "task":"conversational",
         "max_new_tokens":1024,
         "temperature":0.2,
+    },
+    "heavy_planner":{
+        "name":"openai/gpt-oss-20b",
+        "task":"conversational",
+        "max_new_tokens":1024,
+        "temperature":0.6,
     }
 }
