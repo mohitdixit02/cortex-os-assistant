@@ -27,6 +27,7 @@ class WebSearchInput(BaseModel):
 class WebSearchTool(BaseTool):
     """
     Use this tool to search the web for up-to-date information. \n
+    Use it when user query involve information, facts, or any kind of context which required web search. \n
     Instructions should include specifc keywords or context to search for. \n
     """
 
@@ -211,7 +212,11 @@ class TaskRetrieverResult(BaseModel):
     
 class TaskRetrieverTool(BaseTool):
     """
-    Tool for retrieving and managing tasks that are executed in the past by the you (AI Application). \n
+    Tool for retrieving and managing tasks that you have done in the past. \n
+    **When to use:** \n
+    - User about any past task or task related information, or something he/she has asked to do in the past. \n
+    - User ask about the status of any task. \n
+    Response will include the tasks that are done in past based on the task description and instructions provided. \n
     Instructions should specify the type, description or nature of task. If provided, it will be used to search for tasks \n. 
     """
     

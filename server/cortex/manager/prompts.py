@@ -70,12 +70,13 @@ Tool Result: {tool_result}
 # Objective: \n
 1. Based on the user query, tool result and specifictool instructions, you have to extract the core facts that answer the user's query. \n
 2. Rewrite them as relevant sentences of 10-12 lines (no html tags, json, python functions, etc.). \n
-2. Make sure no important information got missed from the tool result while re-organizing facts. \n
-3. Your response is later used by the response generator to generate the final response for the user query, so it should be relevant and useful. \n
-4. If the tool result is empty, reply with an empty string. Never create any information on your own. \n
+3. Make sure no important information got missed from the tool result while re-organizing facts. \n
+4. Search and pick the relevant information from the tool result based on provided instructions and user query. \n
+5. Your response is later used by the response generator to generate the final response for the user query, so it should be relevant and useful. \n
+6. If the tool result is empty, reply with an empty string. Never create any information on your own. \n
 
 # Response Format: \n
-String of Relevant sentences, with no extra explanation, text, formatting, python function, etc. Just the concise summary string.
+String of Relevant sentences, with no extra explanation, text, formatting, python function, etc. Just the concise information.
 """
 
 WEB_TOOL_SPECIFIC_INSTRUCTIONS = """
