@@ -31,16 +31,20 @@ main_graph.add_node("final_response_alignment", orchestrator.align_final_respons
 main_graph.add_edge(START, "fetch_stm")
 main_graph.add_edge(START, "fetch_emotional_profile")
 main_graph.add_edge(["fetch_stm", "fetch_emotional_profile"], "main_orchestration")
-main_graph.add_conditional_edges(
-    "main_orchestration",
-    orchestrator.route_main_orchestration,
-    {
-        "build_knowledge_plan": "build_knowledge_plan",
-        "build_messages_plan": "build_messages_plan",
-        "build_tools_plan": "build_tools_plan",
-        "route_execute_tools": "execute_tools_manager",
-    },
-)
+# main_graph.add_conditional_edges(
+#     "main_orchestration",
+#     orchestrator.route_main_orchestration,
+#     {
+#         "build_knowledge_plan": "build_knowledge_plan",
+#         "build_messages_plan": "build_messages_plan",
+#         "build_tools_plan": "build_tools_plan",
+#         "route_execute_tools": "execute_tools_manager",
+#     },
+# )
+
+main_graph.add_edge("main_orchestration", "build_knowledge_plan")
+main_graph.add_edge("main_orchestration", "build_messages_plan")
+main_graph.add_edge("main_orchestration", "build_tools_plan")
 
 main_graph.add_conditional_edges(
     "build_knowledge_plan",

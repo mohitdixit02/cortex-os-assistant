@@ -33,33 +33,33 @@ class Orchestrator:
         self.logger.info("Entering main orchestration node.")
         return {}
 
-    def route_main_orchestration(
-        self,
-        state: ConversationState,
-    ) -> Literal["build_knowledge_plan", "build_messages_plan", "build_tools_plan", "route_execute_tools"] | list[str]:
-        feedback = state.plan_feedback
-        if not feedback:
-            self.logger.info("No prior feedback found. Routing all planning branches.")
-            return ["build_knowledge_plan", "build_messages_plan", "build_tools_plan"]
+    # def route_main_orchestration(
+    #     self,
+    #     state: ConversationState,
+    # ) -> Literal["build_knowledge_plan", "build_messages_plan", "build_tools_plan", "route_execute_tools"] | list[str]:
+    #     feedback = state.plan_feedback
+    #     if not feedback:
+    #         self.logger.info("No prior feedback found. Routing all planning branches.")
+    #         return ["build_knowledge_plan", "build_messages_plan", "build_tools_plan"]
 
-        # routes = []
-        # if feedback.is_knowledge_feedback_required:
-        #     routes.append("build_knowledge_plan")
-        # if feedback.is_message_feedback_required:
-        #     routes.append("build_messages_plan")
-        # if feedback.is_tool_selection_feedback_required:
-        #     routes.append("build_tools_plan")
+    #     # routes = []
+    #     # if feedback.is_knowledge_feedback_required:
+    #     #     routes.append("build_knowledge_plan")
+    #     # if feedback.is_message_feedback_required:
+    #     #     routes.append("build_messages_plan")
+    #     # if feedback.is_tool_selection_feedback_required:
+    #     #     routes.append("build_tools_plan")
         
-        if (bool(feedback.is_knowledge_feedback_required) or 
-        bool(feedback.is_message_feedback_required) or 
-        bool(feedback.is_tool_selection_feedback_required)):
-            self.logger.info("Feedback requested for branches %s; routing all planning branches for stable join semantics.")
-            return ["build_knowledge_plan", "build_messages_plan", "build_tools_plan"]
+    #     if (bool(feedback.is_knowledge_feedback_required) or 
+    #     bool(feedback.is_message_feedback_required) or 
+    #     bool(feedback.is_tool_selection_feedback_required)):
+    #         self.logger.info("Feedback requested for branches %s; routing all planning branches for stable join semantics.")
+    #         return ["build_knowledge_plan", "build_messages_plan", "build_tools_plan"]
             
-        # if routes:
+    #     # if routes:
 
-        self.logger.info("No plan branch requires rebuild. Routing to final response generation.")
-        return "route_execute_tools"
+    #     self.logger.info("No plan branch requires rebuild. Routing to final response generation.")
+    #     return "route_execute_tools"
 
     def build_knowledge_plan(self, state: ConversationState):
         """
