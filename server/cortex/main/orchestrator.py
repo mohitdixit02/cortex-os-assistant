@@ -36,26 +36,30 @@ class Orchestrator:
     def route_main_orchestration(
         self,
         state: ConversationState,
-    ) -> Literal["build_knowledge_plan", "build_messages_plan", "build_tools_plan", "final_response_generation"] | list[str]:
+    ) -> Literal["build_knowledge_plan", "build_messages_plan", "build_tools_plan", "route_execute_tools"] | list[str]:
         feedback = state.plan_feedback
         if not feedback:
             self.logger.info("No prior feedback found. Routing all planning branches.")
             return ["build_knowledge_plan", "build_messages_plan", "build_tools_plan"]
 
-        routes = []
-        if feedback.is_knowledge_feedback_required:
-            routes.append("build_knowledge_plan")
-        if feedback.is_message_feedback_required:
-            routes.append("build_messages_plan")
-        if feedback.is_tool_selection_feedback_required:
-            routes.append("build_tools_plan")
-
-        if routes:
-            self.logger.info("Routing only required planning branches: %s", routes)
-            return routes
+        # routes = []
+        # if feedback.is_knowledge_feedback_required:
+        #     routes.append("build_knowledge_plan")
+        # if feedback.is_message_feedback_required:
+        #     routes.append("build_messages_plan")
+        # if feedback.is_tool_selection_feedback_required:
+        #     routes.append("build_tools_plan")
+        
+        if (bool(feedback.is_knowledge_feedback_required) or 
+        bool(feedback.is_message_feedback_required) or 
+        bool(feedback.is_tool_selection_feedback_required)):
+            self.logger.info("Feedback requested for branches %s; routing all planning branches for stable join semantics.")
+            return ["build_knowledge_plan", "build_messages_plan", "build_tools_plan"]
+            
+        # if routes:
 
         self.logger.info("No plan branch requires rebuild. Routing to final response generation.")
-        return "final_response_generation"
+        return "route_execute_tools"
 
     def build_knowledge_plan(self, state: ConversationState):
         """
@@ -65,6 +69,10 @@ class Orchestrator:
         **Returns**: \n
         - The orchestration plan or prompt that will guide the main workflow in processing the query and generating a response.
         """
+        if state.plan_feedback and not state.plan_feedback.is_knowledge_feedback_required:
+            self.logger.info("Skipping knowledge plan rebuild for this iteration.")
+            return {}
+
         res = self.model.build_main_orchestration_knowledge_plan(state)
         self.logger.info("Knowledge Orchestration plan generated: %s", res)
         return {
@@ -82,6 +90,10 @@ class Orchestrator:
         **Returns**: \n
         - The orchestration plan or prompt that will guide the main workflow in processing the query and generating a response.
         """
+        if state.plan_feedback and not state.plan_feedback.is_message_feedback_required:
+            self.logger.info("Skipping messages plan rebuild for this iteration.")
+            return {}
+
         res = self.model.build_main_orchestration_messages_plan(state)
         self.logger.info("Messages Orchestration plan generated: %s", res)
         return {
@@ -99,6 +111,10 @@ class Orchestrator:
         **Returns**: \n
         - The orchestration plan or prompt that will guide the tool selection and execution workflow in processing the query and generating a response.
         """
+        if state.plan_feedback and not state.plan_feedback.is_tool_selection_feedback_required:
+            self.logger.info("Skipping tools plan rebuild for this iteration.")
+            return {}
+
         res = self.model.build_main_orchestration_tools_plan(state)
         self.logger.info("Tools orchestration plan generated: %s", res)
         return {
@@ -116,6 +132,14 @@ class Orchestrator:
         **Returns**: \n
         - Updated conversation state with any necessary modifications to the orchestration plan based on the feedback.
         """
+        if (
+            state.plan_feedback
+            and (state.plan_feedback.iteration_count or 0) > 0
+            and not state.plan_feedback.is_tool_selection_feedback_required
+        ):
+            self.logger.info("Skipping tools plan evaluation for this iteration.")
+            return {}
+
         res = self.model.evaluate_orchestration_tools_plan(state)
         self.logger.info("Tools Plan evaluation result: %s", res)
         return {
@@ -133,6 +157,14 @@ class Orchestrator:
         **Returns**: \n
         - Updated conversation state with any necessary modifications to the orchestration plan based on the feedback.
         """
+        if (
+            state.plan_feedback
+            and (state.plan_feedback.iteration_count or 0) > 0
+            and not state.plan_feedback.is_message_feedback_required
+        ):
+            self.logger.info("Skipping messages plan evaluation for this iteration.")
+            return {}
+
         res = self.model.evaluate_orchestration_messages_plan(state)
         self.logger.info("Messages Plan evaluation result: %s", res)
         return {
@@ -150,6 +182,14 @@ class Orchestrator:
         **Returns**: \n
         - Updated conversation state with any necessary modifications to the orchestration plan based on the feedback.
         """
+        if (
+            state.plan_feedback
+            and (state.plan_feedback.iteration_count or 0) > 0
+            and not state.plan_feedback.is_knowledge_feedback_required
+        ):
+            self.logger.info("Skipping knowledge plan evaluation for this iteration.")
+            return {}
+
         res = self.model.evaluate_orchestration_knowledge_plan(state)
         self.logger.info("Knowledge Plan evaluation result: %s", res)
         return {
@@ -158,6 +198,16 @@ class Orchestrator:
                 user_knowledge_retrieval_feedback=res.user_knowledge_retrieval_feedback,
             ),
         }
+
+    def route_condition_fetch_knowledge(
+        self,
+        state: ConversationState,
+    ) -> Literal["fetch_user_knowledge_base", "skip_knowledge_retrieval"]:
+        """Skip knowledge retrieval fetch when this branch is not requested in current feedback cycle."""
+        if state.plan_feedback and not state.plan_feedback.is_knowledge_feedback_required:
+            self.logger.info("Knowledge retrieval is not required this iteration. Skipping fetch_user_knowledge_base.")
+            return "skip_knowledge_retrieval"
+        return "fetch_user_knowledge_base"
         
     def evaluation_aggregator(self, state: ConversationState):
         previous_iteration = state.plan_feedback.iteration_count if state.plan_feedback else 0
@@ -172,7 +222,7 @@ class Orchestrator:
     def route_condition_orchestration_evaluation(
         self, 
         state: ConversationState
-        ) -> Literal["plan_main_orchestration", "final_response_generation"]:
+        ) -> Literal["plan_main_orchestration", "route_execute_tools"]:
         """
         Route the orchestration flow based on the conditions defined in the orchestration state. \n
         **Input**: \n
@@ -183,22 +233,24 @@ class Orchestrator:
         feedback = state.plan_feedback
         if not state.orchestration_state or not feedback:
             self.logger.info("No orchestration state or plan feedback found. Routing to default response generation.")
-            return "final_response_generation"
+            return "route_execute_tools"
 
         if feedback.iteration_count > MAX_ITERATIONS_LIMIT:
             self.logger.info("Maximum iteration count reached for plan evaluation. Routing to default response generation.")
-            return "final_response_generation"
+            return "route_execute_tools"
 
-        if (
-            feedback.is_knowledge_feedback_required
-            or feedback.is_message_feedback_required
-            or feedback.is_tool_selection_feedback_required
-        ):
+        requires_feedback = (
+            bool(feedback.is_knowledge_feedback_required)
+            or bool(feedback.is_message_feedback_required)
+            or bool(feedback.is_tool_selection_feedback_required)
+        )
+
+        if (requires_feedback):
             self.logger.info("Feedback is required for the current plan. Routing to plan modification.")
             return "plan_main_orchestration"
         else:
             self.logger.info("No feedback required for the current plan. Routing to response generation.")
-            return "final_response_generation"
+            return "route_execute_tools"
         
     def route_condition_fetch_messages(
         self,
@@ -211,6 +263,10 @@ class Orchestrator:
         **Returns**: \n
         - The next node or step in the workflow to route to based on whether message retrieval is required or not.
         """
+        if state.plan_feedback and not state.plan_feedback.is_message_feedback_required:
+            self.logger.info("Message retrieval is not required this iteration. Routing to skip_message_retrieval.")
+            return "skip_message_retrieval"
+
         if state.orchestration_state and state.orchestration_state.is_message_referred:
             self.logger.info("Message retrieval is required for the current query. Routing to fetch_message_history.")
             return "fetch_message_history"

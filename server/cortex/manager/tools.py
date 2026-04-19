@@ -211,7 +211,7 @@ class TaskRetrieverResult(BaseModel):
     
 class TaskRetrieverTool(BaseTool):
     """
-    Tool for retrieving and managing tasks that are executed in the past by Task Queue \n
+    Tool for retrieving and managing tasks that are executed in the past by the you (AI Application). \n
     Instructions should specify the type, description or nature of task. If provided, it will be used to search for tasks \n. 
     """
     

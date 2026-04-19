@@ -22,19 +22,26 @@ def merge_orchestration_state(current, incoming):
     return OrchestrationState(**merged)
 
 def merge_plan_feedback(current, incoming):
-    """Merge evaluation feedback from parallel branches without clobbering other feedback channels."""
+    """Merge plan feedback by applying only explicitly-set incoming fields."""
     if incoming is None:
         return current
     if current is None:
         return incoming
-    current_data = current.model_dump(exclude_unset=True)
-    incoming_data = incoming.model_dump(exclude_unset=True)
-    
-    # iteration_count is updated only in evaluation_aggregator.
-    incoming_data.pop("iteration_count", None)
-    
-    merged = {**current_data, **incoming_data}
-    return PlanEvaluationState(**merged)
+
+    current_data = current.model_dump()
+    incoming_data = incoming.model_dump()
+    explicit_fields = getattr(incoming, "model_fields_set", set())
+
+    for key in explicit_fields:
+        current_data[key] = incoming_data[key]
+
+    # iteration_count should change only when explicitly set by the aggregator.
+    if "iteration_count" in explicit_fields:
+        current_data["iteration_count"] = incoming_data["iteration_count"]
+    else:
+        current_data["iteration_count"] = current.iteration_count
+
+    return PlanEvaluationState(**current_data)
 
 """
     Conversation State Models

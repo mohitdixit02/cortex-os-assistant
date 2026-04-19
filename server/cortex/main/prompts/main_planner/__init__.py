@@ -142,10 +142,11 @@ d. Each selected tool in the list must be in following format:
 }}
 ```
 e. tool_id must exactly match one id from the available tools list. Do not invent tool ids, class names, aliases, or new tool names. \n
-    
+f. You can select one tool , multiple tools or no tool at all based on the user query and context. \n
+
 ### Note for Tool Instructions:
 1. Since you have better understanding of the user query, preferences, behaviour, emotional profile and the context, you can provide specific instructions to the tool to make it more effective and personalized. \n
-2. `Importnat`: While building the instruction, strictly note that tool executor don't know user's preferences or what user like or dislike. It only knows your instructions. So your instructions must be specific.
+2. `Important`: While building the instruction, strictly note that tool executor don't know user's preferences or what user like or dislike. It only knows your instructions. So your instructions must be specific.
 3. For example, for web search tool, one of the instruction (only a example) can be "Also search for sweet dishes as user is in sad mood, and prefers sweet dishes when he is sad", and not "Search for user's favourite dishes, because he is sad" \n
 4. Simialrly, you can have instruction of your choice for tools that you select.
 5. Any examples in this prompt are illustrative only. Never copy example wording into your output. \n
@@ -155,7 +156,7 @@ e. tool_id must exactly match one id from the available tools list. Do not inven
 # Available Tools: 
 {available_tools}
 
-### Tool Specific Feedback:
+### Feedback from Evaluator:
 {tool_selection_feedback}
 
 # Response

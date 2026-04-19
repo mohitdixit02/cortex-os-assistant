@@ -74,6 +74,8 @@ d. If information retrieved is relevant and sufficient, then keep the feedback e
 # Strict Guidelines for Feedback:
 1. If you have added any feedback, then provide `is_feedback_required` as `True`, else `False`. \n
 2. Don't repeat the same feedback again and again in the future evaluations. \n
+3. If the current plan/retrieval has already addressed previous feedback, set `is_feedback_required` to `False` and keep feedback null. \n
+4. Do not generate "nice-to-have" or stylistic suggestions when retrieval is already relevant and sufficient. In such cases, `is_feedback_required` must be `False`. \n
 
 # Response:
 After evaluating the plan, you have to provide the feedback strictly in the below mentioned format. Strictly follow format and never print any function, code, explanation, text, etc.
@@ -119,10 +121,14 @@ d. It should include instructions to either add the reference, remove the refere
 e. Also suggest relevant keywords or references to be added or removed from the referred_message_keywords for improving the message retrieval. \n
 f. Check whether number of keywords in referred_message_keywords are atleast 3, else suggest to increase it also.
 g. If its relevant and sufficient, then keep it empty or null. \n
+h. If retrieval is relevant and sufficient, do not request additional keyword tweaks just for optimization. Mark `is_feedback_required` as `False`. \n
+i. If previous feedback is already reflected in current keywords/retrieval quality, mark `is_feedback_required` as `False` and keep feedback null. \n
 
 # Strict Guidelines for Feedback:
 1. If you have added any feedback, then provide `is_feedback_required` as `True`, else `False`. \n
 2. Don't repeat the same feedback again and again in the future evaluations. \n
+3. If selected tools and instructions are already relevant and sufficient, set `is_feedback_required` to `False` and feedback null. \n
+4. If previous feedback has already been incorporated in the current plan, do not repeat it. Set `is_feedback_required` to `False`. \n
 
 # Response:
 After evaluating the plan, you have to provide the feedback strictly in the below mentioned format. Strictly follow format and never print any function, code, explanation, text, etc.
@@ -185,7 +191,8 @@ iv. Tool instructsions require modifications based on user query, user long term
 
 # Strict Guidelines for Feedback:
 1. If you have added any feedback, then provide `is_feedback_required` as `True`, else `False`. \n
-2. Don't repeat the same feedback again and again in the future evaluations. \n
+2. If selected tools and instructions are already relevant and sufficient, set `is_feedback_required` to `False` and feedback null. \n
+3. If previous feedback has already been incorporated in the current plan, do not repeat it.
 
 # Response:
 After evaluating the plan, you have to provide the feedback strictly in the below mentioned format. Strictly follow format and never print any function, code, explanation, text, etc.

@@ -13,7 +13,7 @@ from nltk.tokenize import sent_tokenize
 from typing import AsyncGenerator
 from cortex.graph.workflow import (
     main_workflow, 
-    test_workflow,
+    # test_workflow,
     # test_workflow_2
 )
 from cortex.graph.memory import build_memory_workflow
@@ -224,24 +224,25 @@ class MainClient:
             # state1 = test_workflow.invoke(state)
             # memory_state = self.initialize_memory_state(state1)
             # res = test_workflow_2.invoke(memory_state)
-            res = test_workflow.invoke(state)
+            # res = test_workflow.invoke(state)
             # self.logger.info("Test workflow result: %s", res)
             
-            final_response_text = "Dummy response for query: " + query
+            # final_response_text = "Dummy response for query: " + query
             
             # ************** original flow *****************
-            # res = main_workflow.invoke(state)
+            res = main_workflow.invoke(state)
 
-            # workflow_final_response = res.get("final_response") if isinstance(res, dict) else getattr(res, "final_response", None)
-            # final_response_text = self._extract_final_response_text(workflow_final_response)
-            
-            # # Build memory
-            # asyncio.create_task(self._build_memory_workflow(res))
+            workflow_final_response = res.get("final_response") if isinstance(res, dict) else getattr(res, "final_response", None)
+            final_response_text = self._extract_final_response_text(workflow_final_response)
 
             self.logger.info("Final response generated: %s", res)
             self.logger.info("Response from main workflow >> %s", final_response_text if final_response_text else "No final response generated")
             if final_response_text:
                 self.logger.info("Generated response: %s", final_response_text)
+                
+                # Build memory
+                asyncio.create_task(self._build_memory_workflow(res))
+                
                 taskItem.result = {
                     "response_type": "text_stream",
                     "response": final_response_text,

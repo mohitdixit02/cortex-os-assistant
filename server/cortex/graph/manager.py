@@ -31,12 +31,12 @@ tool_manager_graph.add_edge("tool_result_aggregator", END)
 
 tool_manager_workflow = tool_manager_graph.compile()
 
-def display_workflow_graph(worflow):
-    image_data = worflow.get_graph(xray=True).draw_mermaid_png()
-    img = Image.open(io.BytesIO(image_data))
-    img.show()
+# def display_workflow_graph(worflow):
+#     image_data = worflow.get_graph(xray=True).draw_mermaid_png()
+#     img = Image.open(io.BytesIO(image_data))
+#     img.show()
     
-display_workflow_graph(tool_manager_workflow)
+# display_workflow_graph(tool_manager_workflow)
 
 __all__ = [
     "tool_manager_workflow",

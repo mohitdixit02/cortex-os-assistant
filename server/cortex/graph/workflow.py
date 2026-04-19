@@ -38,11 +38,18 @@ main_graph.add_conditional_edges(
         "build_knowledge_plan": "build_knowledge_plan",
         "build_messages_plan": "build_messages_plan",
         "build_tools_plan": "build_tools_plan",
-        "final_response_generation": "execute_tools_manager",
+        "route_execute_tools": "execute_tools_manager",
     },
 )
 
-main_graph.add_edge("build_knowledge_plan", "fetch_user_knowledge_base")
+main_graph.add_conditional_edges(
+    "build_knowledge_plan",
+    orchestrator.route_condition_fetch_knowledge,
+    {
+        "fetch_user_knowledge_base": "fetch_user_knowledge_base",
+        "skip_knowledge_retrieval": "evaluate_knowledge_plan",
+    }
+)
 main_graph.add_edge("fetch_user_knowledge_base", "evaluate_knowledge_plan")
 main_graph.add_conditional_edges(
     "build_messages_plan",
@@ -64,7 +71,7 @@ main_graph.add_conditional_edges(
     orchestrator.route_condition_orchestration_evaluation,
     {
         "plan_main_orchestration": "main_orchestration",
-        "final_response_generation": "execute_tools_manager",
+        "route_execute_tools": "execute_tools_manager",
     },
 )
 main_graph.add_edge("execute_tools_manager", "final_response_generation")
@@ -90,7 +97,7 @@ display_workflow_graph(main_workflow)
 # display_workflow_graph(build_memory_workflow)
 
 # test workflow
-test_graph = StateGraph(ConversationState)
+# test_graph = StateGraph(ConversationState)
 # test_graph_2 = StateGraph(MemoryState)
 
 # ******************* merging pending with main_workflow *******************
@@ -147,14 +154,14 @@ test_graph = StateGraph(ConversationState)
 # test_graph_2.add_edge(START, "build_stm")
 # test_graph_2.add_edge("build_stm", END)
 
-test_graph.add_node("execute_tools", orchestrator.execute_tools)
-test_graph.add_edge(START, "execute_tools")
-test_graph.add_edge("execute_tools", END)
+# test_graph.add_node("execute_tools", orchestrator.execute_tools)
+# test_graph.add_edge(START, "execute_tools")
+# test_graph.add_edge("execute_tools", END)
 
-test_workflow = test_graph.compile()
+# test_workflow = test_graph.compile()
 # test_workflow_2 = test_graph_2.compile()
 
-display_workflow_graph(test_workflow)
+# display_workflow_graph(test_workflow)
 # display_workflow_graph(test_workflow_2)
 
 __all__ = [
