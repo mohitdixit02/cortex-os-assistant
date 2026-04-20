@@ -133,6 +133,12 @@ class CortexMainModel:
             retrieved_messages = ""
         
         feedback = state.plan_feedback
+        
+        if feedback and feedback.iteration_count:
+            iteration_count = feedback.iteration_count
+        else:
+            iteration_count = 0
+        
         if feedback and feedback.user_knowledge_retrieval_feedback:
             user_knowledge_retrieval_feedback = feedback.user_knowledge_retrieval_feedback
         else:
@@ -163,6 +169,7 @@ class CortexMainModel:
             "stm_summary": state.short_term_memory.stm_summary if state.short_term_memory else "",
             "stm_preferences": state.short_term_memory.session_preferences if state.short_term_memory else {},
             "available_tools": available_tools,
+            "iteration_count": iteration_count,
         })
         
         return res

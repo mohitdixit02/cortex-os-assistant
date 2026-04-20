@@ -48,6 +48,7 @@ def get_main_orchestrator_plan_prompt(
                 "stm_summary",
                 "stm_preferences",
                 "available_tools",
+                "iteration_count",
                 "format_instructions"
             ],
         )
