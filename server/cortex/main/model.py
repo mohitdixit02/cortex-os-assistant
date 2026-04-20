@@ -1,6 +1,6 @@
 from langchain_huggingface import HuggingFacePipeline, HuggingFaceEmbeddings, HuggingFaceEndpoint, ChatHuggingFace, HuggingFaceEndpointEmbeddings
 from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
-from cortex.graph.state import ConversationState, OrchestrationState
+from cortex.graph.state import ConversationState, OrchestrationState, CortexToolList
 from typing import TypedDict, Annotated, Literal, Optional, Dict, Any
 import numpy as np
 from utility.logger import get_logger
@@ -19,6 +19,7 @@ from cortex.main.prompts.main_planner import (
     InternalPlanMessages,
     InternalPlanTools,
 )
+from cortex.main.prompts.orchestrator import MainOrchestrationDecision
 text = """
     Hi, It is Cortex Main Model. I am main Orchestrator for handling user queries and generating responses. I can understand and respond to a wide range of queries, providing concise and accurate answers.
 """
@@ -94,7 +95,78 @@ class CortexMainModel:
             token = self._chunk_to_text(chunk)
             if token:
                 yield token
+      
+    def build_main_orchestration_plan(self, state: ConversationState) -> MainOrchestrationDecision:
+        formatted_prompt, parser = get_main_orchestrator_plan_prompt(
+            type="main_orchestration",
+        )
+        chain = formatted_prompt | self.heavy_plan_model | parser
+        
+        orchestration_plan = state.orchestration_state
+        if orchestration_plan and orchestration_plan.user_knowledge_retrieval_keywords:
+            knowledge_plan_builder_output = json.dumps(orchestration_plan.user_knowledge_retrieval_keywords)
+        else:
+            knowledge_plan_builder_output = "[]"
+            
+        if orchestration_plan and orchestration_plan.referred_message_keywords:
+            conversation_history_plan_builder_output = orchestration_plan.referred_message_keywords
+        else:
+            conversation_history_plan_builder_output = ""
+            
+        if orchestration_plan and orchestration_plan.selected_tools:
+            tools_payload = orchestration_plan.selected_tools.root if hasattr(orchestration_plan.selected_tools, "root") else orchestration_plan.selected_tools
+            tools_payload = [tool.model_dump() if hasattr(tool, "model_dump") else tool for tool in tools_payload]
+            tool_selection_plan_builder_output = json.dumps(tools_payload)
+        else:
+            tool_selection_plan_builder_output = "[]"
+            
+        retrieved_user_knowledge = ""
+        if state.knowledge_base:
+            for item in state.knowledge_base:
+                retrieved_user_knowledge += f"- {item.strictness}: {item.content}\n"
                 
+        if state.message_history and state.message_history.root:
+            retrieved_messages = ""
+            for msg in state.message_history.root:
+                retrieved_messages += f"{msg.role}: {msg.content}\n"
+        else:
+            retrieved_messages = ""
+        
+        feedback = state.plan_feedback
+        if feedback and feedback.user_knowledge_retrieval_feedback:
+            user_knowledge_retrieval_feedback = feedback.user_knowledge_retrieval_feedback
+        else:
+            user_knowledge_retrieval_feedback = ""
+            
+        if feedback and feedback.message_retrieval_feedback:
+            message_retrieval_feedback = feedback.message_retrieval_feedback
+        else:
+            message_retrieval_feedback = ""
+        
+        if feedback and feedback.tool_selection_feedback:
+            tool_selection_feedback = feedback.tool_selection_feedback
+        else:
+            tool_selection_feedback = ""
+            
+        available_tools = "\n".join([f"{tool.get('tool_name')}: {tool.get('tool_description')} - {tool.get('tool_id')}" for tool in AVAILABLE_TOOLS])
+
+        res = chain.invoke({
+            "knowledge_plan_builder_output": knowledge_plan_builder_output,
+            "conversation_history_plan_builder_output": conversation_history_plan_builder_output,
+            "tool_selection_plan_builder_output": tool_selection_plan_builder_output,
+            "retrieved_user_knowledge": retrieved_user_knowledge,
+            "retrieved_messages": retrieved_messages,
+            "knowledge_plan_builder_feedback": user_knowledge_retrieval_feedback,
+            "conversation_history_plan_builder_feedback": message_retrieval_feedback,
+            "tool_selection_feedback": tool_selection_feedback,
+            "user_query": state.query,
+            "stm_summary": state.short_term_memory.stm_summary if state.short_term_memory else "",
+            "stm_preferences": state.short_term_memory.session_preferences if state.short_term_memory else {},
+            "available_tools": available_tools,
+        })
+        
+        return res
+
     def build_main_orchestration_knowledge_plan(self, state: ConversationState) -> InternalPlanKnowledge:
         formatted_prompt, parser = get_main_orchestrator_plan_prompt(
             type="main_orchestration_knowledge",

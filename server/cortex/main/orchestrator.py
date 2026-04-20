@@ -31,7 +31,25 @@ class Orchestrator:
         Routing is handled by `route_main_orchestration` via conditional edges.
         """
         self.logger.info("Entering main orchestration node.")
-        return {}
+        
+        iteration = state.plan_feedback.iteration_count if state.plan_feedback else 0
+        self.logger.info(f"Current iteration count for orchestration: {iteration}")
+        
+        if iteration == 0:
+            self.logger.info("Initial iteration of orchestration. Routing to build all plans.")
+            return {}
+        
+        revised_plan = self.model.build_main_orchestration_plan(state)
+        self.logger.info("Revised orchestration plan generated: %s", revised_plan)
+        revised_plan_feedback = state.plan_feedback.model_copy(update={
+            "is_knowledge_feedback_required": revised_plan.is_knowledge_feedback_required,
+            "is_message_feedback_required": revised_plan.is_message_feedback_required,
+            "is_tool_selection_feedback_required": revised_plan.is_tool_selection_feedback_required,
+        }) if state.plan_feedback else None
+        
+        return {
+            "plan_feedback": revised_plan_feedback
+        }
 
     # def route_main_orchestration(
     #     self,
