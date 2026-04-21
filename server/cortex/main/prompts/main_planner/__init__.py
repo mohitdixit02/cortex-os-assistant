@@ -3,14 +3,17 @@ from typing import Annotated, Optional
 from cortex.graph.state import ConversationState, OrchestrationState, CortexToolList
 
 class InternalPlanKnowledge(BaseModel):
+    reasoning: Annotated[str, Field(description="The reasoning behind the selection of keywords and acceptance threshold for user knowledge retrieval. It should be based on the user query, context and feedback from evaluator if any.")]
     user_knowledge_retrieval_keywords: Annotated[list[str], Field(description="List of keywords relevant enough to retrieve user knowledge base for the current query")] = []
     user_knowledge_acceptance_threshold: Annotated[float, Field(le=0.6, ge=0.2, description="Similarity threshold for accepting user knowledge items retrieved based on the keywords")]
 
 class InternalPlanMessages(BaseModel):
+    reasoning: Annotated[str, Field(description="The reasoning behind the selection of keywords and acceptance threshold for user knowledge retrieval. It should be based on the user query, context and feedback from evaluator if any.")]
     is_message_referred: Annotated[bool, Field(description="Whether the user query is referring to any past message in the conversation or not")]
     referred_message_keywords: Annotated[Optional[str], Field(description="Keywords from the referred message")] = None
 
 class InternalPlanTools(BaseModel):
+    reasoning: Annotated[str, Field(description="The reasoning behind the selection of tools for processing the user query. It should be based on the user query, context and feedback from evaluator if any.")]
     is_tool_required: Annotated[bool, Field(description="Whether any tool is required to process the user query or not")]
     selected_tools: Annotated[Optional[CortexToolList], Field(description="List of selected tools")] = None
 
@@ -59,6 +62,7 @@ ii. user_knowledge_acceptance_threshold - a float between 0.2 and 0.6, represent
 2. The keywords should be relevant enough to fetch the useful information from the user knowledge base for generating the response. \n
 3. Note that, each string of keywords will be used to retrieve a specific type of user knowledge, so keep similar keywords in one string and each string semantic meaning should be as different as possible, to cover different aspects of the user knowledge base. \n
 4. Strictky follow the feedback if any. \n
+5. You have to provide the reasoning behind your decision in the `reasoning` field of the response. \n
 
 # Response
 Follow the below format strictly and only respond with the format mentioned without any additional text or explanation. \n
@@ -96,6 +100,8 @@ iii. Keep minimum 3 and atmost 7 keywords in the referred_message_keywords strin
 c. If no, then respond with is_message_referred as false and keep the referred_message_keywords field empty or null. \n
 d. All Feedbacks by Evaluator: {message_retrieval_feedback}. If feedback is provided, then you must have to take that into account while making the plan. \n
 e. For example, if the feedback asks to add more keywords or references, then you have to modify the plan accordingly. \n
+
+### You have to provide the reasoning behind your decision in the `reasoning` field of the response. \n
 
 # Response
 Follow the below format strictly and only respond with the format mentioned without any additional text or explanation. \n
@@ -154,6 +160,8 @@ f. You can select one tool, multiple tools or no tool at all based on the user q
 5. Any examples in this prompt are illustrative only. Never copy example wording into your output. \n
 6. Instructions can be null as well if you think no specific instructions are required for the tool. \n
 7. If any feedback from evaluator is providing regarding tool selection or tool instructions, then you must have to follow that feedback strictly while making the plan. \n
+
+### You have to provide the reasoning behind your decision in the `reasoning` field of the response. \n
 
 # Available Tools: 
 {available_tools}

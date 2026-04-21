@@ -3,14 +3,17 @@ from typing import Annotated, Optional
 from cortex.graph.state import ConversationState, OrchestrationState
 
 class InternalFeedbackKnowledge(BaseModel):
+    reasoning: Annotated[str, Field(description="The reasoning behind the feedback provided for user knowledge retrieval plan")]
     is_feedback_required: Annotated[bool, Field(description="Whether feedback is required for the current response or not")]
     user_knowledge_retrieval_feedback: Annotated[Optional[str], Field(description="Feedback on the user knowledge retrieval part of the plan")] = None
 
 class InternalFeedbackMessages(BaseModel):
+    reasoning: Annotated[str, Field(description="The reasoning behind the feedback provided for message retrieval plan")]
     is_feedback_required: Annotated[bool, Field(description="Whether feedback is required for the current response or not")]
     message_retrieval_feedback: Annotated[Optional[str], Field(description="Feedback on the message retrieval part of the plan")] = None
 
 class InternalFeedbackTools(BaseModel):
+    reasoning: Annotated[str, Field(description="The reasoning behind the feedback provided for tool selection plan")]
     is_feedback_required: Annotated[bool, Field(description="Whether feedback is required for the current response or not")]
     tool_selection_feedback: Annotated[Optional[str], Field(description="Feedback on the tool selection part of the plan")] = None
 
@@ -83,6 +86,8 @@ iii. Give straight feedback, never say, "Your information is relevant but insuff
 ## If you don't have to provide any feedback, then 
 i. keep the feedback empty or null and set `is_feedback_required` to `False`. \n
 
+### Whether feedback is given or not, you have to provide the reasoning behind it in the `reasoning` field of the response. \n
+
 # Response:
 After evaluating the plan, you have to provide the feedback strictly in the below mentioned format. Strictly follow format and never print any function, code, explanation, text, etc.
 {format_instructions}
@@ -141,6 +146,8 @@ iii. Give straight feedback, never say, "Your information is relevant but insuff
 
 ## If you don't have to provide any feedback, then 
 i. keep the feedback empty or null and set `is_feedback_required` to `False`.
+
+### Whether feedback is given or not, you have to provide the reasoning behind it in the `reasoning` field of the response. \n
 
 # Response:
 After evaluating the plan, you have to provide the feedback strictly in the below mentioned format. Strictly follow format and never print any function, code, explanation, text, etc.
@@ -210,6 +217,8 @@ iii. If orchestrator has already incorporated the previous feedback in the curre
 ## If you don't have to provide any feedback, then
 1. keep the feedback empty or null and set `is_feedback_required` to `False`. \n
 2. Do not generate "nice-to-have" or stylistic suggestions when selected tools and instructions are already relevant and sufficient.
+
+### Whether feedback is given or not, you have to provide the reasoning behind it in the `reasoning` field of the response. \n
 
 ### Available Tools:
 {available_tools}
