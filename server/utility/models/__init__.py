@@ -57,6 +57,17 @@ HEAVY_PLANNER_MODEL = ChatHuggingFace(llm=HuggingFaceEndpoint(
 ))
 logger.info("Heavy Planner model loaded..")
 
+# *************** Heavy Response Model *******************
+logger.info("Initializing Heavy Response Model...")
+heavy_response_model_config = models.get("heavy_response_model", {})
+HEAVY_RESPONSE_MODEL = ChatHuggingFace(llm=HuggingFaceEndpoint(
+    repo_id=heavy_response_model_config.get("name"),
+    task=heavy_response_model_config.get("task", "conversational"),
+    max_new_tokens=heavy_response_model_config.get("max_new_tokens", 200),
+    temperature=heavy_response_model_config.get("temperature", 0.2)
+))
+logger.info("Heavy Response model loaded..")
+
 # *************** Voice Emotion Model *******************
 logger.info("Initializing Voice Emotion Model...")
 emotion_model_config = models.get("voice_emotion", {})

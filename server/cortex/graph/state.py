@@ -212,10 +212,12 @@ class OrchestrationState(BaseModel):
     
 class FinalResponseGenerationState(BaseModel):
     """Represents the state of final response generation done by Response Generator based on the orchestration plan and evaluation"""
+    reasoning: Annotated[Optional[str], Field(description="Reasoning for how you generate the response based on the provided context")] = None
     response: Annotated[Optional[str], Field(description="The final response generated for the user query")] = None
 
 class FinalResponseFeedbackState(BaseModel):
     """Represents the state of final response evaluation done by Evaluator based on user feedback"""
+    reasoning: Annotated[Optional[str], Field(description="Reasoning for how you approach at this evaluation")] = None
     is_feedback_required: Annotated[bool, Field(description="Whether feedback is required for the current response or not")]
     feedback: Annotated[Optional[list[str]], Field(description="Feedback for the response generator")] = None
     iteration_count: Annotated[Optional[int], Field(description="Number of iterations or attempts made to generate the response")] = 0

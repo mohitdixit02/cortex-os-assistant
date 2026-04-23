@@ -46,5 +46,11 @@ models = {
         "task":"conversational",
         "max_new_tokens":1024,
         "temperature":0.6,
+    },
+    "heavy_response_model":{
+        "name":"meta-llama/Llama-3.3-70B-Instruct",
+        "task":"conversational",
+        "max_new_tokens":1024,
+        "temperature":0.6,
     }
 }

@@ -7,7 +7,7 @@ from utility.logger import get_logger
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from cortex.manager.tools import AVAILABLE_TOOLS
 import json
-from utility.models import MAIN_MODEL, PLANNER_MODEL, HEAVY_PLANNER_MODEL
+from utility.models import HEAVY_PLANNER_MODEL, HEAVY_RESPONSE_MODEL
 from cortex.main.prompts import get_main_orchestrator_evaluate_prompt, get_main_orchestrator_plan_prompt, get_main_orchestrator_res_prompt
 from cortex.main.prompts.main_evaluator import (
     InternalFeedbackKnowledge,
@@ -33,14 +33,10 @@ def demo_response(chunk_size: int = 24):
 class CortexMainModel:
     def __init__(self):
         self.logger = get_logger("CORTEX_MAIN")
-        self.model = MAIN_MODEL
-        self.plan_model = PLANNER_MODEL
         self.heavy_plan_model = HEAVY_PLANNER_MODEL
+        self.heavy_response_model = HEAVY_RESPONSE_MODEL
         # self.template_provider = TemplateProvider()
         # self.str_parser = StrOutputParser()
-        
-    def get_model(self):
-        return self.model
     
     def _chunk_to_text(self, chunk: Any) -> str:
         if chunk is None:
@@ -405,7 +401,7 @@ class CortexMainModel:
             
         tool_result_payload = self._serialize_tool_results(state)
         
-        chain = formatted_prompt | self.model | parser
+        chain = formatted_prompt | self.heavy_response_model | parser
         res = chain.invoke({
             "user_query": state.query,
             "stm_summary": state.short_term_memory.stm_summary if state.short_term_memory else "",
@@ -425,7 +421,7 @@ class CortexMainModel:
         formatted_prompt, parser = get_main_orchestrator_res_prompt(
             type="final_response_evaluation",
         )
-        chain = formatted_prompt | self.plan_model | parser
+        chain = formatted_prompt | self.heavy_response_model | parser
         
         if state.knowledge_base:
             retrieved_user_knowledge = ""
@@ -462,5 +458,6 @@ class CortexMainModel:
             "previous_feedback": json.dumps(feedback_by_evaluator) if feedback_by_evaluator else None,
             "tool_result": tool_result_payload,
             "fallback_response": state.voice_client_response if state.voice_client_response else "",
+            "iteration_count": feedback.iteration_count if feedback and feedback.iteration_count else 0,
         })
         return res

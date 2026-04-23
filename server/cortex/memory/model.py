@@ -5,13 +5,12 @@ from utility.config import env
 from cortex.graph.state import ConversationState, UserSTM, MemoryEmotionalProfile, MemoryState, MemoryUserKnowledgeList
 import json
 import re
-from utility.models import MAIN_MODEL, PLANNER_MODEL
+from utility.models import MAIN_MODEL, HEAVY_PLANNER_MODEL
 
 class MemoryModel:
     def __init__(self):
         self.model = MAIN_MODEL
-        self.plan_model = PLANNER_MODEL
-            
+        self.heavy_plan_model = HEAVY_PLANNER_MODEL
     
     def build_stm(self, state: MemoryState):
         """
@@ -87,7 +86,7 @@ class MemoryModel:
         formatted_prompt, parser = get_memory_client_prompts(
             type="build_user_knowledge"
         )
-        chain = formatted_prompt | self.plan_model | parser
+        chain = formatted_prompt | self.heavy_plan_model | parser
         res = chain.invoke({
             "user_query": query,
             "user_emotion": user_emotion,

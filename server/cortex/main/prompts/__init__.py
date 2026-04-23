@@ -196,6 +196,7 @@ def get_main_orchestrator_res_prompt(
                 "previous_feedback",
                 "tool_result",
                 "fallback_response",
+                "iteration_count", 
                 "format_instructions"
             ],
         )
