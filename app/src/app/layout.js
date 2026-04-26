@@ -1,5 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { AppProvider } from "../components/AppContext";
+import MainLayout from "../components/MainLayout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -12,14 +14,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Cortex OS Assistant",
-  description: "Your personal AI companion",
+  title: "Cortex AI Assistant",
+  description: "Advanced Voice Assistant with Memory",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body>{children}</body>
+      <body>
+        <AppProvider>
+          <MainLayout>
+            {children}
+          </MainLayout>
+        </AppProvider>
+      </body>
     </html>
   );
 }

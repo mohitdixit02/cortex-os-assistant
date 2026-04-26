@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useWebSocket } from "../components/socket/WebSocket";
-import styles from "./page.module.css";
+import { motion, AnimatePresence } from "framer-motion";
+import { FaStop, FaPlay } from "react-icons/fa";
+import AssistantOrb3D from "../components/AssistantOrb3D";
 
 export default function Home() {
   const backendUrl = useMemo(() => process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000", []);
@@ -26,30 +28,80 @@ export default function Home() {
   }, [backendUrl]);
 
   return (
-    <div className={styles.voicePanel}>
-      <div className={styles.orbStage} aria-label="Assistant activity indicator" role="status">
-        <div className={`${styles.orbShell} ${isListening ? styles.listening : ""} ${isSpeaking ? styles.speaking : ""}`}>
-          <div className={styles.orbGlow} />
-          <div className={styles.orbCore} id="assistant-orb" />
-          <div className={styles.rippleSet} aria-hidden="true">
-            <span className={styles.ripple} />
-            <span className={styles.ripple} />
-            <span className={styles.ripple} />
-          </div>
-        </div>
-      </div>
-
-      <div className={styles.voiceTextBlock}>
-        <p className={styles.kicker}>Voice Assistant Recorder</p>
-        <h2 className={styles.voiceTitle}>Memory Aware AI</h2>
-        <p className={styles.voiceSubtitle}>
-          {isSpeaking ? "Speaking" : isListening ? "Listening" : "Idle"}
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      height: '100%',
+      gap: '20px'
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <h1 style={{ fontSize: '36px', fontWeight: '800', marginBottom: '10px' }}>
+          Hello, <span className="gradient-text">{`I'm Cortex`}</span>
+        </h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: '18px' }}>
+          {isSpeaking ? "Speaking..." : isListening ? "I'm listening..." : "How can I help you today?"}
         </p>
       </div>
 
-      <div className={styles.voiceActions}>
-        <button className={styles.primaryButton} onClick={startAudioStreaming}>Start Conversation</button>
-        <button className={styles.secondaryButton} onClick={stopAudioStreaming}>Stop Conversation</button>
+      <div style={{
+        position: 'relative', 
+        width: '100%', 
+        maxWidth: '500px', 
+        height: '400px', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center' 
+      }}>
+        <AssistantOrb3D isListening={isListening} isSpeaking={isSpeaking} />
+      </div>
+
+      <div style={{ display: 'flex', gap: '20px', marginTop: '20px' }}>
+        {!isListening ? (
+          <button 
+            onClick={startAudioStreaming}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '16px 32px',
+              borderRadius: '50px',
+              background: 'var(--primary-gradient)',
+              color: 'white',
+              fontSize: '18px',
+              fontWeight: '600',
+              boxShadow: '0 10px 20px rgba(0,0,0,0.2)',
+              transition: 'transform 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            <FaPlay /> Start Conversation
+          </button>
+        ) : (
+          <button 
+            onClick={stopAudioStreaming}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '16px 32px',
+              borderRadius: '50px',
+              background: 'rgba(255, 255, 255, 0.1)',
+              color: 'white',
+              fontSize: '18px',
+              fontWeight: '600',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              transition: 'transform 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            <FaStop /> Stop Conversation
+          </button>
+        )}
       </div>
     </div>
   );
