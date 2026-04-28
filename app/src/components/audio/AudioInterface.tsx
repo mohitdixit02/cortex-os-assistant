@@ -7,6 +7,9 @@ type AssistantAPI = {
     stopMicRecording: () => Promise<RecorderStartResult>;
     onMicChunk: (handler: (chunk: unknown) => void) => () => void;
     onMicError: (handler: (error: string) => void) => () => void;
+    // Auth
+    openExternal: (url: string) => Promise<void>;
+    onAuthRedirect: (handler: (url: string) => void) => () => void;
 };
 
 type MicStreamRes = {

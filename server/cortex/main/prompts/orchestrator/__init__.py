@@ -84,19 +84,23 @@ Iteration Count: {iteration_count}
 
 # How to disable execution of a service: \n
 To disable execution of a service, set its corresponding flag to False. For example, if you don't want conversation_history_plan_builder to execute again, set is_message_feedback_required to False in the PlanEvaluationState, and vice-versa. \n
+
 ## Note: \n
-1. marking a feedback flag = false will stop execution of that service, so act carefully and understand completely before marking any service execution false. \n
+1. marking a feedback flag = false will do following:
+a. In case of knowledge_plan_builder and conversation_history_plan_builder, no further plan will be generated and no new data is fetched. Already fetched data is used for generating the response. \n
+b. In case of tool_selection_and_instruction_plan_builder, no further plan will be generated, and the already selected tools and instructions will be used to execute the respective tools and generate the response. \n
+c. So act carefully and understand completely before marking any service execution false. \n
 2. Total three feedback flags are there for three services: \n
 - is_knowledge_feedback_required
 - is_message_feedback_required
 - is_tool_selection_feedback_required. \n
 
 # Response:
-Return strictly one JSON object with exactly these three boolean keys and no additional keys:
+Return strictly one JSON object with exactly these three boolean keys and one reasoning key:
 - is_knowledge_feedback_required
 - is_message_feedback_required
 - is_tool_selection_feedback_required
 - reasoning: A detailed reasoning of why you have decided to stop or continue execution of each service based on the above provided information and feedback. \n
-Do not include markdown fences, explanation, comments, or any additional text.
+Do not include any additional keys, markdown fences, explanation, comments, or any additional text.
 {format_instructions}
 """

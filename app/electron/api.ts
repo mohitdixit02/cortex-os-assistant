@@ -1,4 +1,4 @@
-const { ipcMain } = require("electron");
+const { ipcMain, shell } = require("electron");
 const { AudioManager } = require("./audio");
 
 const audioManager = new AudioManager();
@@ -38,6 +38,11 @@ function registerIpcHandlers() {
   ipcMain.handle("assistant:mic-stop", async () => {
     await audioManager.stopMicRecorder();
     return { ok: true };
+  });
+
+  // Auth: Open external URL for OAuth
+  ipcMain.handle("auth:open-external", async (event, url) => {
+    await shell.openExternal(url);
   });
 }
 

@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, shell } = require("electron");
 const path = require("path");
 const { registerIpcHandlers, audioManager } = require("./api");
 
@@ -21,8 +21,10 @@ if (env.toLowerCase() === "development") {
   });
 }
 
+let mainWindow;
+
 function createWindow() {
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     minWidth: 560,
@@ -39,18 +41,59 @@ function createWindow() {
   if (isDev) {
     mainWindow.webContents.openDevTools({ mode: "detach" });
   }
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+  });
 }
 
-app.whenReady().then(() => {
-  registerIpcHandlers();
-  createWindow();
+// Deep linking registration
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient("cortex-ai", process.execPath, [path.resolve(process.argv[1])]);
+  }
+} else {
+  app.setAsDefaultProtocolClient("cortex-ai");
+}
 
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+// Handle deep links (macOS)
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  if (mainWindow) {
+    mainWindow.webContents.send("auth:redirect", url);
+  }
+});
+
+// Handle deep links (Windows/Linux)
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on("second-instance", (event, commandLine) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+
+      // Find the URL in the command line
+      const url = commandLine.find((arg) => arg.startsWith("cortex-ai://"));
+      if (url) {
+        mainWindow.webContents.send("auth:redirect", url);
+      }
     }
   });
-});
+
+  app.whenReady().then(() => {
+    registerIpcHandlers();
+    createWindow();
+
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createWindow();
+      }
+    });
+  });
+}
 
 app.on("before-quit", async () => {
   await audioManager.stopMicRecorder();

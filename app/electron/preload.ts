@@ -14,6 +14,14 @@ const rendererApi = {
     ipcRenderer.on("assistant:mic-error", listener);
     return () => ipcRenderer.removeListener("assistant:mic-error", listener);
   },
+  
+  // Auth API
+  openExternal: (url) => ipcRenderer.invoke("auth:open-external", url),
+  onAuthRedirect: (handler) => {
+    const listener = (_event, url) => handler(url);
+    ipcRenderer.on("auth:redirect", listener);
+    return () => ipcRenderer.removeListener("auth:redirect", listener);
+  }
 };
 
 const rendererAPIName = "assistantAPI";
