@@ -42,9 +42,9 @@ class Orchestrator:
         revised_plan = self.model.build_main_orchestration_plan(state)
         self.logger.info("Revised orchestration plan generated: %s", revised_plan)
         revised_plan_feedback = state.plan_feedback.model_copy(update={
-            "is_knowledge_feedback_required": revised_plan.is_knowledge_feedback_required,
-            "is_message_feedback_required": revised_plan.is_message_feedback_required,
-            "is_tool_selection_feedback_required": revised_plan.is_tool_selection_feedback_required,
+            "is_knowledge_feedback_required": revised_plan.is_knowledge_plan_refinement_required,
+            "is_message_feedback_required": revised_plan.is_message_plan_refinement_required,
+            "is_tool_selection_feedback_required": revised_plan.is_tool_selection_plan_refinement_required,
         }) if state.plan_feedback else None
         
         return {
