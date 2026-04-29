@@ -1,98 +1,22 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useAppContext } from './AppContext';
+import { signIn } from 'next-auth/react';
 import { FcGoogle } from 'react-icons/fc';
-import { AssistantAPI } from './audio/AudioInterface';
-
-const getAssistantApi = (): AssistantAPI | null => {
-  if (typeof window === 'undefined') return null;
-  return (window as Window & { assistantAPI?: AssistantAPI }).assistantAPI || null;
-};
 
 export default function Login() {
-  const { setIsLoggedIn, setUser } = useAppContext();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const api = getAssistantApi();
-    if (!api) return;
-
-    // Listen for auth redirect from Electron
-    const cleanup = api.onAuthRedirect(async (url) => {
-      try {
-        setIsLoading(true);
-        console.log("Received auth redirect:", url);
-        
-        // Extract the code from the URL (cortex-ai://auth?code=...)
-        const urlObj = new URL(url);
-        const code = urlObj.searchParams.get('code');
-        
-        if (code) {
-          await handleBackendExchange(code);
-        } else {
-          throw new Error("No authorization code found in redirect URL");
-        }
-      } catch (err: any) {
-        setError(err.message || "Authentication failed");
-        setIsLoading(false);
-      }
-    });
-
-    return cleanup;
-  }, []);
-
-  const handleBackendExchange = async (code: string) => {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
-    
-    try {
-      // NOTE: This is where the backend integration happens.
-      // You will need to implement this endpoint on your backend.
-      const response = await fetch(`${backendUrl}/api/auth/google/exchange`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, redirect_uri: "cortex-ai://auth" }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to exchange code with backend");
-      }
-
-      const userData = await response.json();
-      
-      // Expected backend response: { name, email, image, token, ... }
-      setUser(userData);
-      setIsLoggedIn(true);
-    } catch (err: any) {
-      console.error("Exchange error:", err);
-      // For now, if backend fails, we still allow demo login or show error
-      setError("Backend exchange failed. Ensure your backend is running.");
-      setIsLoading(false);
-    }
-  };
-
   const handleGoogleLogin = async () => {
-    const api = getAssistantApi();
-    if (!api) return;
-
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      setError("Google Client ID not configured in .env");
-      return;
-    }
-
-    const redirectUri = "cortex-ai://auth";
-    const scope = encodeURIComponent("openid email profile");
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${scope}`;
-
     try {
       setIsLoading(true);
       setError(null);
-      await api.openExternal(authUrl);
+      // next-auth signIn for google
+      await signIn('google');
     } catch (err: any) {
-      setError("Failed to open login window");
+      setError("Failed to initiate Google login");
       setIsLoading(false);
     }
   };

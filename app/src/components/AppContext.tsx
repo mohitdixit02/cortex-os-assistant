@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 
 interface AppContextType {
   isOnboarded: boolean;
@@ -16,58 +17,48 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [isOnboarded, setIsOnboarded] = useState(false);
+  const { data: session, status } = useSession();
+  
+  // Initialize from localStorage safely
+  const [isOnboarded, setIsOnboarded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('isOnboarded') === 'true';
+    }
+    return false;
+  });
+
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [isMounted, setIsMounted] = useState(false);
 
-  // Load state from localStorage on mount ONLY
+  // Sync with NextAuth session
   useEffect(() => {
-    setIsMounted(true);
-    const onboarded = localStorage.getItem('isOnboarded') === 'true';
-    const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    const savedUser = localStorage.getItem('user');
-
-    if (onboarded) setIsOnboarded(true);
-    if (loggedIn) setIsLoggedIn(true);
-    if (savedUser) setUser(JSON.parse(savedUser));
-  }, []);
+    if (status === 'authenticated' && session?.user) {
+      setIsLoggedIn(true);
+      setUser(session.user);
+    } else if (status === 'unauthenticated') {
+      setIsLoggedIn(false);
+      setUser(null);
+    }
+  }, [session, status]);
 
   const updateOnboarded = (val: boolean) => {
     setIsOnboarded(val);
-    localStorage.setItem('isOnboarded', String(val));
-  };
-
-  const updateLoggedIn = (val: boolean) => {
-    setIsLoggedIn(val);
-    localStorage.setItem('isLoggedIn', String(val));
-    if (!val) {
-      setUser(null);
-      localStorage.removeItem('user');
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('isOnboarded', String(val));
     }
   };
-
-  const updateUser = (u: any) => {
-    setUser(u);
-    localStorage.setItem('user', JSON.stringify(u));
-  };
-
-  // Prevent hydration mismatch by not rendering children until mounted
-  // or providing a consistent initial state. 
-  // For this app, we'll provide the context and let components handle their own mounting if needed,
-  // but standardizing the initial state to 'false' for SSR is key.
 
   return (
     <AppContext.Provider value={{ 
       isOnboarded, 
       setIsOnboarded: updateOnboarded, 
       isLoggedIn, 
-      setIsLoggedIn: updateLoggedIn,
+      setIsLoggedIn, // Still provided but mainly driven by session
       isSidebarCollapsed,
       setIsSidebarCollapsed,
       user,
-      setUser: updateUser
+      setUser
     }}>
       {children}
     </AppContext.Provider>

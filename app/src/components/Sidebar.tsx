@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, usePathname } from 'next/navigation';
 import { FaHome, FaHistory, FaCog, FaUser, FaSignOutAlt, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { useAppContext } from './AppContext';
+import { signOut } from 'next-auth/react';
 
 const navItems = [
   { name: 'Home', icon: <FaHome />, path: '/' },
@@ -16,7 +17,7 @@ const navItems = [
 export default function Sidebar() {
   const router = useRouter();
   const pathname = usePathname();
-  const { setIsLoggedIn, isSidebarCollapsed, setIsSidebarCollapsed } = useAppContext();
+  const { isSidebarCollapsed, setIsSidebarCollapsed } = useAppContext();
 
   return (
     <motion.div 
@@ -60,7 +61,7 @@ export default function Sidebar() {
               whiteSpace: 'nowrap'
             }}
           >
-            Cortex AI
+            Cortex Assistant
           </motion.h2>
         )}
         <button 
@@ -132,7 +133,7 @@ export default function Sidebar() {
       </nav>
 
       <button
-        onClick={() => setIsLoggedIn(false)}
+        onClick={() => signOut()}
         title={isSidebarCollapsed ? "Logout" : ""}
         style={{
           display: 'flex',
