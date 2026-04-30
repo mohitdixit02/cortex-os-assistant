@@ -3,17 +3,17 @@ from typing import Annotated, Optional
 from cortex.graph.state import ConversationState, OrchestrationState, CortexToolList
 
 class InternalPlanKnowledge(BaseModel):
-    reasoning: Annotated[str, Field(description="The reasoning behind the selection of keywords and acceptance threshold for user knowledge retrieval. It should be based on the user query, context and feedback from evaluator if any.")]
+    reasoning: Annotated[str, Field(description="The reasoning behind the selection of keywords and acceptance threshold for user knowledge retrieval. It should be based on the user query, context and feedback from evaluator if any. Not more than 80 words.")]
     user_knowledge_retrieval_keywords: Annotated[list[str], Field(description="List of keywords relevant enough to retrieve user knowledge base for the current query")] = []
     user_knowledge_acceptance_threshold: Annotated[float, Field(le=0.6, ge=0.2, description="Similarity threshold for accepting user knowledge items retrieved based on the keywords")]
 
 class InternalPlanMessages(BaseModel):
-    reasoning: Annotated[str, Field(description="The reasoning behind the selection of keywords and acceptance threshold for user knowledge retrieval. It should be based on the user query, context and feedback from evaluator if any.")]
+    reasoning: Annotated[str, Field(description="The reasoning behind the selection of keywords and acceptance threshold for user knowledge retrieval. It should be based on the user query, context and feedback from evaluator if any. Not more than 80 words.")]
     is_message_referred: Annotated[bool, Field(description="Whether the user query is referring to any past message in the conversation or not")]
     referred_message_keywords: Annotated[Optional[str], Field(description="Keywords from the referred message")] = None
 
 class InternalPlanTools(BaseModel):
-    reasoning: Annotated[str, Field(description="The reasoning behind the selection of tools for processing the user query. It should be based on the user query, context and feedback from evaluator if any.")]
+    reasoning: Annotated[str, Field(description="The reasoning behind the selection of tools for processing the user query. It should be based on the user query, context and feedback from evaluator if any. Not more than 80 words.")]
     is_tool_required: Annotated[bool, Field(description="Whether any tool is required to process the user query or not")]
     selected_tools: Annotated[Optional[CortexToolList], Field(description="List of selected tools")] = None
 
@@ -52,6 +52,8 @@ ii. To increase or decrease the user_knowledge_acceptance_threshold. \n
 
 ### user_knowledge_acceptance_threshold guidance:
 - Higher threshold makes more documents rejected and result more strict.
+- If evaluator has given user_knowledge_acceptance_threshold, use that strictly, and don't change it. \n
+- If no feedback is given then use it as per following: \n
 - For general knowledge retrieval: Use 0.25 to 0.45 (lower for broader matches)
 - For specific/strict knowledge: Use 0.45 to 0.6
 
@@ -122,6 +124,7 @@ CORTEX_MAIN_ORCHESTRATOR_TOOLS_PROMPT = """
 6. User's Long term Memory - Relevant facts, preferences, traits and behavious of the user persisted based on past interactions.
 7. User's Relevant Conversation History - Relevant past conversation messages based on the user query (if any).
 8. Feedback from the Evaluator (if any) - to make the plan more effective. \n
+9. Date/Time of the query
 
 # Input
 User Query: {user_query}
@@ -132,6 +135,8 @@ User Time of the day: {user_time}
 User Previous Emotional Profile: {user_emotional_profile}
 User's Long term Memory: {retrieved_user_knowledge}
 User's Relevant Conversation History: {retrieved_messages}
+Current Date/Time of the Query: {timestamp}
+
 # Objective:
 You are a smart decision planner for tools selection, you have to understand the given user query, context provided based on all the input fields and instructions, and decide what type of tools are required to answer the user query. \n
 Your selected tool-id and instructions are used by the `tool executor` to execute the respective tool and provide the output. \n
