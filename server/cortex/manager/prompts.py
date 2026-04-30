@@ -12,6 +12,7 @@ class WebQueryPlanResult(BaseModel):
     is_diversified: bool = Field(..., description="Whether the documents from web search are diversified.")
 
 class TaskPlanResult(BaseModel):
+    reasoning: str = Field(..., description="The reasoning behind selecting the fetch mode and generating the plan.")
     fetch_mode: Annotated[Literal["description", "time", "recent"], Field(description="Mode to fetch tasks (description, time, or recent)")] = "description"
     task_description: Optional[str] = Field(default=None, description="Description or type of tasks to retrieve.")
     time_start_range: Optional[str] = Field(default=None, description="Start of the time range for task creation. (only applicable when fetch_mode is 'time')")
@@ -111,10 +112,16 @@ Understand the user query and orchestrator instructions (if any) and then first 
 
 ## Plan based on each mode: \n
 ### Description: \n
-1. When task was submitted and executed in the past, it was given a task description which is a concise string describing the task type, purpose, etc. \n
-2. Your job is to generate a concise description of the task based on the user query and orchestrator instructions which can be used by the task retriever tool to semantically match and retrieve the same relevant tasks from the past. \n
-3. The generated task description should be concise yet informative enough to capture the essence of the task that user is referring to in the query. \n
-4. Provide it as a string without any formatting, python functions, etc. in the key 'task_description' in the output. \n
+1. Generate the description of the task which must include the what type of task it is, what it is related to, and what has to do to complete it. \n
+2. Formula: [What type] [Specific Logic and Relation] [Feature and Solution]. Must be a verbal phrase or statement that clearly describes the task, instead of simple keywords. \n
+3. Provide it as a string without any formatting, python functions, etc. in the key 'task_description' in the output. \n
+Example: \n
+a. User Query: "What is the status of the task in which I asked about the weather in New York?"
+Required Task Description: "Check for the weather in the New York city and provide the current weather information."
+Strictly Negative Task Description: "New York weather" - Do not use generic terms like 'python task', 'code snippet', or 'script'.
+b. User Query: "Tell me about the task in which I asked to search for some restaurants around me?"
+Required Task Description: "Search for restaurants around the user's location and provide a list of relevant restaurants."
+Strictly Negative Task Description: "Search for restaurants"
 
 ### Time: \n
 1. When user query is referring to a task based on when it was executed, you have to understand the time range in which the task was executed. \n

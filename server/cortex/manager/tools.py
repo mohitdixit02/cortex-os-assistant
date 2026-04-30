@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as
 from pydantic import BaseModel, Field
 import json
 from contextlib import nullcontext
-from sqlalchemy import func
+from sqlalchemy import Float, func
 from sqlmodel import Session, select
 from db import Message, Task, TaskStatus, engine
 
@@ -287,7 +287,7 @@ class TaskRetrieverTool(BaseTool):
                 Task.status,
                 Task.status_response,
                 Task.created_at,
-                func.cast(0.0, type_=float).label("similarity")
+                func.cast(0.0, Float).label("similarity")
             )
             .join(Message, Task.message_id == Message.message_id)
             .where(Message.user_id == user_id)
@@ -321,7 +321,7 @@ class TaskRetrieverTool(BaseTool):
                 Task.status,
                 Task.status_response,
                 Task.created_at,
-                func.cast(0.0, type_=float).label("similarity")
+                func.cast(0.0, Float).label("similarity")
             )
             .join(Message, Task.message_id == Message.message_id)
             .where(Message.user_id == user_id)

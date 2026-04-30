@@ -104,69 +104,11 @@ display_workflow_graph(main_workflow)
 # test_graph = StateGraph(ConversationState)
 # test_graph_2 = StateGraph(MemoryState)
 
-# ******************* merging pending with main_workflow *******************
-# test_graph.add_node("main_orchestration", orchestrator.main_orchestration)
-# test_graph.add_node("build_knowledge_plan", orchestrator.build_knowledge_plan)
-# test_graph.add_node("build_messages_plan", orchestrator.build_messages_plan)
-# test_graph.add_node("build_tools_plan", orchestrator.build_tools_plan)
-# test_graph.add_node("evaluate_knowledge_plan", orchestrator.evaluate_knowledge_plan)
-# test_graph.add_node("evaluate_messages_plan", orchestrator.evaluate_messages_plan)
-# test_graph.add_node("evaluate_tools_plan", orchestrator.evaluate_tools_plan)
-# test_graph.add_node("evaluation_aggregator", orchestrator.evaluation_aggregator)
-# test_graph.add_node("fetch_user_knowledge_base", memory_client.fetch_relevant_knowledge_base)
-# test_graph.add_node("fetch_message_history", memory_client.fetch_relevant_message_history)
-
-# test_graph.add_edge(START, "main_orchestration")
-# test_graph.add_conditional_edges(
-#     "main_orchestration",
-#     orchestrator.route_main_orchestration,
-#     {
-#         "build_knowledge_plan": "build_knowledge_plan",
-#         "build_messages_plan": "build_messages_plan",
-#         "build_tools_plan": "build_tools_plan",
-#         "final_response_generation": END,
-#     },
-# )
-
-# test_graph.add_edge("build_knowledge_plan", "fetch_user_knowledge_base")
-# test_graph.add_edge("fetch_user_knowledge_base", "evaluate_knowledge_plan")
-# test_graph.add_conditional_edges(
-#     "build_messages_plan",
-#     orchestrator.route_condition_fetch_messages,
-#     {
-#         "fetch_message_history": "fetch_message_history",
-#         "skip_message_retrieval": "evaluate_messages_plan",
-#     }
-# )
-# test_graph.add_edge("fetch_message_history", "evaluate_messages_plan")
-# test_graph.add_edge("build_tools_plan", "evaluate_tools_plan")
-# test_graph.add_edge(
-#     ["evaluate_knowledge_plan", "evaluate_messages_plan", "evaluate_tools_plan"],
-#     "evaluation_aggregator",
-# )
-
-# test_graph.add_conditional_edges(
-#     "evaluation_aggregator",
-#     orchestrator.route_condition_orchestration_evaluation,
-#     {
-#         "plan_main_orchestration": "main_orchestration",
-#         "final_response_generation": END,
-#     },
-# )
-
-# test_graph_2.add_node("build_stm", memory_client.build_stm)
-# test_graph_2.add_edge(START, "build_stm")
-# test_graph_2.add_edge("build_stm", END)
-
-# test_graph.add_node("execute_tools", orchestrator.execute_tools)
-# test_graph.add_edge(START, "execute_tools")
-# test_graph.add_edge("execute_tools", END)
+# test_graph.add_node("execute_tools_manager", orchestrator.execute_tools)
+# test_graph.add_edge(START, "execute_tools_manager")
+# test_graph.add_edge("execute_tools_manager", END)
 
 # test_workflow = test_graph.compile()
-# test_workflow_2 = test_graph_2.compile()
-
-# display_workflow_graph(test_workflow)
-# display_workflow_graph(test_workflow_2)
 
 __all__ = [
     "main_workflow",

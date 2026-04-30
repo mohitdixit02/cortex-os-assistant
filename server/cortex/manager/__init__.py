@@ -83,6 +83,7 @@ class ManagerClient():
         try:
             self.logger.info(f"Task retriever tool: {state.task_retriever_tool}")
             task_plan_res = self.model.build_task_retrieval_plan(state=state)
+            self.logger.info(f"Task retrieval plan result: {task_plan_res}")
             task_retriever_tool = TaskRetrieverTool()
             tool_input = TaskRetrieverInput(
                 fetch_mode=task_plan_res.fetch_mode,
