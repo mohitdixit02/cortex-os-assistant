@@ -100,7 +100,9 @@ def get_main_orchestrator_plan_prompt(
                 "retrieved_user_knowledge",
                 "retrieved_messages",
                 "tool_selection_feedback",
-                "format_instructions"
+                "format_instructions",
+                "iteration_count"
+                "timestamp"
             ],
         )
         return prompt.partial(format_instructions=parser.get_format_instructions()), parser

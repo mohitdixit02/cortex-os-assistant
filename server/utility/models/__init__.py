@@ -46,6 +46,17 @@ PLANNER_MODEL = ChatHuggingFace(llm=HuggingFaceEndpoint(
 ))
 logger.info("Planner model loaded..")
 
+# *************** Main Orchestrator Model *******************
+logger.info("Initializing Main Orchestrator Model...")
+main_orchestrator_model_config = models.get("main_orchestrator", {})
+MAIN_ORCHESTRATOR_MODEL = ChatHuggingFace(llm=HuggingFaceEndpoint(
+    repo_id=main_orchestrator_model_config.get("name"),
+    task=main_orchestrator_model_config.get("task", "conversational"),
+    max_new_tokens=main_orchestrator_model_config.get("max_new_tokens", 200),
+    temperature=main_orchestrator_model_config.get("temperature", 0.2)
+))
+logger.info("Main Orchestrator model loaded..")
+
 # *************** Heavy Planner Model *******************
 logger.info("Initializing Heavy Planner Model...")
 heavy_planner_model_config = models.get("heavy_planner", {})

@@ -82,10 +82,14 @@ class ManagerClient():
     ):
         try:
             self.logger.info(f"Task retriever tool: {state.task_retriever_tool}")
-            task_description = self.model.generate_task_description(state=state)
+            task_plan_res = self.model.build_task_retrieval_plan(state=state)
             task_retriever_tool = TaskRetrieverTool()
             tool_input = TaskRetrieverInput(
-                task_description=task_description,
+                fetch_mode=task_plan_res.fetch_mode,
+                task_description=task_plan_res.task_description,
+                time_start_range=task_plan_res.time_start_range,
+                time_end_range=task_plan_res.time_end_range,
+                recent_count=task_plan_res.recent_count,
                 task_id=state.task_id,
                 user_id=state.user_id,
                 session_id=state.session_id,
@@ -101,7 +105,7 @@ class ManagerClient():
             self.logger.info(f"Task retriever tool results: {task_res}")
                             
             state.task_retriever_tool = TaskRetrieverToolState(
-                task_description=task_description,
+                task_description=task_plan_res.task_description,
                 tool_result=json.dumps(tool_result),
                 tool_exec_status="completed",
             )

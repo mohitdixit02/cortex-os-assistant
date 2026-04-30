@@ -44,13 +44,19 @@ models = {
     "heavy_planner":{
         "name":"openai/gpt-oss-20b",
         "task":"conversational",
-        "max_new_tokens":1024,
-        "temperature":0.6,
+        "max_new_tokens":2048,
+        "temperature":0.4,
+    },
+    "main_orchestrator":{
+        "name":"openai/gpt-oss-20b",
+        "task":"conversational",
+        "max_new_tokens":4096,
+        "temperature":0.4,
     },
     "heavy_response_model":{
         "name":"meta-llama/Llama-3.3-70B-Instruct",
         "task":"conversational",
-        "max_new_tokens":1024,
+        "max_new_tokens":8192,
         "temperature":0.6,
     }
 }

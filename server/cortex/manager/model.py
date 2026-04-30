@@ -2,7 +2,7 @@ from langchain_huggingface import HuggingFacePipeline, HuggingFaceEmbeddings, Hu
 from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
 from pydantic import BaseModel, Field
 from cortex.graph.state import CortexTool, OrchestrationState, ToolManagerState
-from cortex.manager.prompts import get_manager_client_prompts, WebQueryPlanResult
+from cortex.manager.prompts import get_manager_client_prompts, WebQueryPlanResult, TaskPlanResult
 from typing import TypedDict, Annotated, Literal, Optional, Dict, Any
 import numpy as np
 from numpy import dot
@@ -12,6 +12,9 @@ from utility.huggingface.config import models
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 import json
 from utility.models import PLANNER_MODEL
+
+from datetime import datetime, timezone
+UTC_NOW = lambda: datetime.now(timezone.utc)
 
 class ManagerModel:
     def __init__(self):
@@ -95,22 +98,29 @@ class ManagerModel:
         summary = self._chunk_to_text(res)
         return summary
     
-    def generate_task_description(
+    def build_task_retrieval_plan(
         self,
         state: ToolManagerState
-    ) -> str:
+    ) -> TaskPlanResult:
         """
         Generate a task description based on the user query and orchestrator instructions.
         """
         formatted_prompt, parser = get_manager_client_prompts(
-            type="task_description_generation"
+            type="task_retrieval_plan_generation",
         )
         chain = formatted_prompt | self.model | parser
 
         instructions = state.task_retriever_tool.instructions if state.task_retriever_tool.instructions else ""
+        
+        timestamp = UTC_NOW()
+        if timestamp.tzinfo is not None and timestamp.tzinfo.utcoffset(timestamp) is not None:
+            local_timestamp = timestamp.astimezone()
+        else:
+            local_timestamp = timestamp
 
         res = chain.invoke({
             "user_query": state.query,
-            "orchestrator_instructions": instructions
+            "orchestrator_instructions": instructions,
+            "current_time": local_timestamp,
         })
         return res

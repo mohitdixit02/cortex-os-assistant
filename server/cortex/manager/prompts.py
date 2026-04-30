@@ -11,6 +11,13 @@ class WebQueryPlanResult(BaseModel):
     context: str = Field(None, description="Direct answer to the user query")
     is_diversified: bool = Field(..., description="Whether the documents from web search are diversified.")
 
+class TaskPlanResult(BaseModel):
+    fetch_mode: Annotated[Literal["description", "time", "recent"], Field(description="Mode to fetch tasks (description, time, or recent)")] = "description"
+    task_description: Optional[str] = Field(default=None, description="Description or type of tasks to retrieve.")
+    time_start_range: Optional[str] = Field(default=None, description="Start of the time range for task creation. (only applicable when fetch_mode is 'time')")
+    time_end_range: Optional[str] = Field(default=None, description="End of the time range for task creation. (only applicable when fetch_mode is 'time')")
+    recent_count: Optional[int] = Field(default=None, description="Number of recent tasks to retrieve when fetch_mode is 'recent'.")
+
 MANAGER_WEB_QUERY_PROMPT = """
 # Context: \n
 You are a smart query planner for the web search tool. 
@@ -86,25 +93,48 @@ The tool used is Web Search Tool. The tool result will contain concatenated cont
 2. Make sure that user query is fully addressed in the summary and no relevant information is missed. \n
 """
 
-TASK_DESCRIPTION_GENERATION_PROMPT = """
+TASK_RETRIEVAL_PLAN_PROMPT = """
 # Context: \n
 You will be provided following as input: \n
 1. User Query: Question or information that user have asked regarding some previous task which have been executed in the past. \n
 2. Orchestrator Instructions (can be null or empty): Additional instructions provided by orchestrator to condition the task description generation. \n 
+3. Current Time: The current time when the query is made. \n
 
 # Objective: \n
-1. You are the task description generator for the task retriever tool. \n
-2. When task was submitted and executed in the past, it was given a task description which is a concise string describing the task type, purpose, etc. \n
-3. Your job is to generate a concise description of the task based on the user query and orchestrator instructions which can be used by the task retriever tool to semantically match and retrieve the same relevant tasks from the past. \n
-4. The generated task description should be concise yet informative enough to capture the essence of the task that user is referring to in the query. \n
+1. You are the task retrieval plan generator. Your job is to generate a plan which is used by the task_retrieval_tool for retrieving relevant tasks. \n
+
+# How to generate the plan: \n
+Understand the user query and orchestrator instructions (if any) and then first decide the mode to fetch tasks for the task retriever tool. There are three modes and you have to select one: \n
+1. description: Use this mode when user query is referring to a task based on its description or type. Useful when task's description, information, or nature is provided.
+2. time: Use this mode when user query is referring to a task based on when it was executed. Useful only when you are sure about exact time range in which task is executed.
+3. recent: Use this mode when user query is referring to a task based on how recent it is. Useful only when you are sure that task is recent. for example, use of words: "latest", "most recent", "newest", "last", "previous two" etc.
+
+## Plan based on each mode: \n
+### Description: \n
+1. When task was submitted and executed in the past, it was given a task description which is a concise string describing the task type, purpose, etc. \n
+2. Your job is to generate a concise description of the task based on the user query and orchestrator instructions which can be used by the task retriever tool to semantically match and retrieve the same relevant tasks from the past. \n
+3. The generated task description should be concise yet informative enough to capture the essence of the task that user is referring to in the query. \n
+4. Provide it as a string without any formatting, python functions, etc. in the key 'task_description' in the output. \n
+
+### Time: \n
+1. When user query is referring to a task based on when it was executed, you have to understand the time range in which the task was executed. \n
+2. Based on the user query and orchestrator instructions, generate the start and end time range in ISO format in which the task was executed. \n
+3. The current time of the query is provided in the input, so you can use that to understand the time range. \n
+4. Provide the generated time range in the keys 'time_start_range' and 'time_end_range' in the output in ISO format. \n
+
+### Recent: \n
+1. When user query is referring to a task based on how recent it is, you have to understand how many recent tasks the user is referring to. \n
+2. Based on the user query and orchestrator instructions, generate the number of recent tasks to retrieve. \n For example, if user query is "What are the last 2 tasks I executed?", then the number of recent tasks to retrieve is 2. \n
+3. Provide the generated number in the key 'recent_count' in the output. \n
 
 # Input: \n
 User Query: {user_query}
 Orchestrator Instructions: {orchestrator_instructions}
+Current Time: {current_time}
 
 # Response Format: \n
-String of the task description with no extra explanation, text, formatting, python function, etc. Just the concise task description string.
-```your task_description here```
+You have to strictly reply in the following format with no extra explanation, text, formatting, python function, etc.
+{format_instructions}
 """
 
 def get_manager_client_prompts(
@@ -138,13 +168,15 @@ def get_manager_client_prompts(
         if tool_type == AvailableToolsType.WEB_SEARCH_TOOL.value:
             return prompt.partial(tool_instructions=WEB_TOOL_SPECIFIC_INSTRUCTIONS), parser
         
-    elif type == "task_description_generation":
-        parser = StrOutputParser()
+    elif type == "task_retrieval_plan_generation":
+        parser = PydanticOutputParser(pydantic_object=TaskPlanResult)
         prompt = PromptTemplate(
-            template=TASK_DESCRIPTION_GENERATION_PROMPT,
+            template=TASK_RETRIEVAL_PLAN_PROMPT,
             input_variables=[
                 "user_query",
                 "orchestrator_instructions",
+                "current_time",
+                "format_instructions"
             ],
         )
-        return prompt, parser
+        return prompt.partial(format_instructions=parser.get_format_instructions()), parser

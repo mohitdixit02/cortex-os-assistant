@@ -7,7 +7,7 @@ from utility.logger import get_logger
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from cortex.manager.tools import AVAILABLE_TOOLS
 import json
-from utility.models import HEAVY_PLANNER_MODEL, HEAVY_RESPONSE_MODEL
+from utility.models import HEAVY_PLANNER_MODEL, HEAVY_RESPONSE_MODEL, MAIN_ORCHESTRATOR_MODEL
 from cortex.main.prompts import get_main_orchestrator_evaluate_prompt, get_main_orchestrator_plan_prompt, get_main_orchestrator_res_prompt
 from cortex.main.prompts.main_evaluator import (
     InternalFeedbackKnowledge,
@@ -20,6 +20,10 @@ from cortex.main.prompts.main_planner import (
     InternalPlanTools,
 )
 from cortex.main.prompts.orchestrator import MainOrchestrationDecision
+
+from datetime import datetime, timezone
+UTC_NOW = lambda: datetime.now(timezone.utc)
+
 text = """
     Hi, It is Cortex Main Model. I am main Orchestrator for handling user queries and generating responses. I can understand and respond to a wide range of queries, providing concise and accurate answers.
 """
@@ -35,6 +39,7 @@ class CortexMainModel:
         self.logger = get_logger("CORTEX_MAIN")
         self.heavy_plan_model = HEAVY_PLANNER_MODEL
         self.heavy_response_model = HEAVY_RESPONSE_MODEL
+        self.main_orchestrator_model = MAIN_ORCHESTRATOR_MODEL
         # self.template_provider = TemplateProvider()
         # self.str_parser = StrOutputParser()
     
@@ -96,7 +101,7 @@ class CortexMainModel:
         formatted_prompt, parser = get_main_orchestrator_plan_prompt(
             type="main_orchestration",
         )
-        chain = formatted_prompt | self.heavy_plan_model | parser
+        chain = formatted_prompt | self.main_orchestrator_model | parser
         
         orchestration_plan = state.orchestration_state
         if orchestration_plan and orchestration_plan.user_knowledge_retrieval_keywords:
@@ -248,6 +253,12 @@ class CortexMainModel:
                 retrieved_messages += f"{msg.role}: {msg.content}\n"
         else:
             retrieved_messages = None
+        
+        timestamp = UTC_NOW()
+        if timestamp.tzinfo is not None and timestamp.tzinfo.utcoffset(timestamp) is not None:
+            local_timestamp = timestamp.astimezone()
+        else:
+            local_timestamp = timestamp
 
         res = chain.invoke({
             "available_tools": available_tools,
@@ -260,6 +271,7 @@ class CortexMainModel:
             "tool_selection_feedback": tool_selection_feedback,
             "retrieved_user_knowledge": retrieved_user_knowledge,
             "retrieved_messages": retrieved_messages,
+            "timestamp": local_timestamp,
         })
         return res
     
