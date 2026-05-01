@@ -31,7 +31,8 @@ from db import (
     TimeOfDay,
     Message,
     RoleType,
-    AIClientType
+    AIClientType,
+    Task,
 )
 from datetime import datetime, timezone
 UTC_NOW = lambda: datetime.now(timezone.utc)
@@ -583,6 +584,18 @@ class MemoryClient:
                 "message_history": None,
             }
 
+        task_id = state.task_id
+        user_message_created_at = None
+        if task_id:
+            with Session(self.engine) as session:
+                user_message_created_at = session.exec(
+                    select(Message.created_at)
+                    .join(Task, Task.message_id == Message.message_id)
+                    .where(Task.task_id == task_id)
+                    .where(Message.user_id == user_id)
+                    .where(Message.session_id == session_id)
+                ).first()
+
         keyword_embedding = self.embd_model.generate_embeddings(keywords)
         messages = []
         with Session(self.engine) as session:
@@ -607,9 +620,12 @@ class MemoryClient:
                     func.vector_dims(Message.embedding) == len(keyword_embedding),
                     similarity_expr >= MESSAGES_REJECTION_THRESHOLD,
                 )
-                .order_by(similarity_expr.desc())
-                .limit(MESSAGES_MAX_LIMIT)
             )
+
+            if user_message_created_at:
+                stmt = stmt.where(Message.created_at < user_message_created_at)
+
+            stmt = stmt.order_by(similarity_expr.desc()).limit(MESSAGES_MAX_LIMIT)
 
             res = session.exec(stmt).all()
             messages.extend(res)
@@ -629,6 +645,7 @@ class MemoryClient:
 
         message_history = MessageStateList(root=message_states) if message_states else None
 
+        self.logger.info(f"Fetched relevant message history: {message_history} for keywords: '{keywords}' with rejection threshold: {MESSAGES_REJECTION_THRESHOLD}")
         return {
             "message_history": message_history,
         }

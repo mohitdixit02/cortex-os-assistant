@@ -129,7 +129,7 @@ class CortexMainModel:
         if state.message_history and state.message_history.root:
             retrieved_messages = ""
             for msg in state.message_history.root:
-                retrieved_messages += f"{msg.role}: {msg.content}\n"
+                retrieved_messages += f"{msg.role.value}: {msg.content}\n"
         else:
             retrieved_messages = ""
         
@@ -250,7 +250,7 @@ class CortexMainModel:
         if state.message_history and state.message_history.root:
             retrieved_messages = ""
             for msg in state.message_history.root:
-                retrieved_messages += f"{msg.role}: {msg.content}\n"
+                retrieved_messages += f"{msg.role.value}: {msg.content}\n"
         else:
             retrieved_messages = None
         
@@ -316,7 +316,7 @@ class CortexMainModel:
         if state.message_history and state.message_history.root:
             retrieved_messages = ""
             for msg in state.message_history.root:
-                retrieved_messages += f"{msg.role}: {msg.content}\n"
+                retrieved_messages += f"{msg.role.value}: {msg.content}\n"
         else:
             retrieved_messages = None
         
@@ -373,7 +373,7 @@ class CortexMainModel:
         if state.message_history and state.message_history.root:
             retrieved_messages = ""
             for msg in state.message_history.root:
-                retrieved_messages += f"{msg.role}: {msg.content}\n"
+                retrieved_messages += f"{msg.role.value}: {msg.content}\n"
         else:
             retrieved_messages = None
                 
@@ -401,7 +401,7 @@ class CortexMainModel:
         if state.message_history and state.message_history.root:
             retrieved_messages = ""
             for msg in state.message_history.root:
-                retrieved_messages += f"{msg.role}: {msg.content}\n"
+                retrieved_messages += f"{msg.role.value}: {msg.content}\n"
         else:
             retrieved_messages = None
             
@@ -445,7 +445,7 @@ class CortexMainModel:
         if state.message_history and state.message_history.root:
             retrieved_messages = ""
             for msg in state.message_history.root:
-                retrieved_messages += f"{msg.role}: {msg.content}\n"
+                retrieved_messages += f"{msg.role.value}: {msg.content}\n"
         else:
             retrieved_messages = None
             
