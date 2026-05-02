@@ -224,7 +224,7 @@ export const useWebSocket = (
         socketRef.current = null;
     }, [closeAudioPlayer]);
 
-    const startAudioStreaming = useCallback(async () => {
+    const startAudioStreaming = useCallback(async (userId?: string, sessionId?: string) => {
         try {
             const ws = await configureWebSocket(socketRef.current, socketUrl, binaryType);
             socketRef.current = ws;
@@ -248,7 +248,12 @@ export const useWebSocket = (
             if (!ws || ws.readyState !== WebSocket.OPEN) {
                 throw new Error("WebSocket is not open for sending audio data");
             }
-            ws.send(JSON.stringify({ type: "start_conversation", mime: "audio/wav" }));
+            ws.send(JSON.stringify({ 
+                type: "start_conversation", 
+                mime: "audio/wav",
+                user_id: userId,
+                session_id: sessionId
+            }));
             isStreamingRef.current = true;
             setIsListening(true);
             setIsSpeaking(false);

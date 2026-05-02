@@ -93,7 +93,9 @@ class VoiceClient:
     async def listen_and_respond(
         self, 
         audio_bytes: bytes,
-        submit_task: bool = True
+        submit_task: bool = True,
+        user_id: str | None = None,
+        session_id: str | None = None
         ) -> AsyncGenerator[bytes, None]:
         """
         ### Listen and Reply with Audio Stream
@@ -141,8 +143,8 @@ class VoiceClient:
                             },
                             task_name=task_name,
                             task_description=task_description,
-                            user_id="11111111-1111-1111-1111-111111111111",
-                            session_id="22222222-2222-2222-2222-222222222222",
+                            user_id=user_id or "11111111-1111-1111-1111-111111111111",
+                            session_id=session_id or "22222222-2222-2222-2222-222222222222",
                             voice_client_response=fallback_response
                         )
                         await self._register_pending_task(task_item.task_id)

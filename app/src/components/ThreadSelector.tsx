@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useRef, useTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaPlus, FaChevronDown, FaCommentAlt } from 'react-icons/fa';
 import { useAppContext } from './AppContext';
@@ -29,6 +29,22 @@ export default function ThreadSelector() {
     setActiveThreadId(id);
     setIsOpen(false);
   };
+
+  useEffect(() => {
+    const setDefaultThread = async () => {
+      console.log("enetered");
+      console.log("activeThreadId:", activeThreadId);
+      if (activeThreadId) return;
+      if (!threads) return;
+      if (threads.length > 0) {
+        setActiveThreadId(threads[0].session_id);
+      } else {
+        console.log("No threads found, creating default thread");
+        await handleCreateThread();
+      }
+    };
+    setDefaultThread();
+  }, [threads]);
 
   return (
     <div style={{ position: 'relative' }}>
@@ -62,9 +78,9 @@ export default function ThreadSelector() {
       <AnimatePresence>
         {isOpen && (
           <>
-            <div 
-              style={{ position: 'fixed', inset: 0, zIndex: 998 }} 
-              onClick={() => setIsOpen(false)} 
+            <div
+              style={{ position: 'fixed', inset: 0, zIndex: 998 }}
+              onClick={() => setIsOpen(false)}
             />
             <motion.div
               initial={{ opacity: 0, y: 10 }}

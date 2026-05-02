@@ -53,6 +53,8 @@ async def ws_stream(websocket: WebSocket):
             if msg_type == "start_conversation":
                 print("Received start signal, initializing audio buffer")
                 streamEvent.resetAudioBuffer()
+                streamEvent.user_id = payload.get("user_id")
+                streamEvent.session_id = payload.get("session_id")
                 await streamEventResponse.send_response(response=ResponseKey.CONVERSATION_START)
 
             if msg_type == "playback_done":

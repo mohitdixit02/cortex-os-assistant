@@ -68,7 +68,9 @@ class StreamClient:
             # await self.voiceClient.listen_and_respond(audio_bytes=wav_bytes)
             await self.audioBridge.stream_audio_websocket(
                 audio_chunk_generator=self.voiceClient.listen_and_respond,
-                audio_bytes=wav_bytes
+                audio_bytes=wav_bytes,
+                user_id=self.streamEvent.user_id,
+                session_id=self.streamEvent.session_id
             )
         except asyncio.CancelledError:
             print("Response task cancelled")

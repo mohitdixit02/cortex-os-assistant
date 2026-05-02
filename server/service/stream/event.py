@@ -23,6 +23,8 @@ class StreamEvent:
     playback_done_event: asyncio.Event
     awaiting_playback_stream_id: int | None
     stream_seq: int
+    user_id: str | None
+    session_id: str | None
 
     def __init__(self):
         self.is_user_speaking = False
@@ -34,6 +36,8 @@ class StreamEvent:
         self.playback_done_event.set()
         self.awaiting_playback_stream_id = None
         self.stream_seq = 0
+        self.user_id = None
+        self.session_id = None
 
     # ***** Playback ACK Management ***** #
     def beginPlaybackTracking(self) -> int:

@@ -19,13 +19,7 @@ export default function Sidebar() {
   const { isSidebarCollapsed, setIsSidebarCollapsed, logout } = useAppContext();
 
   return (
-    <motion.div 
-      initial={{ x: -100 }}
-      animate={{ 
-        x: 0,
-        width: isSidebarCollapsed ? '80px' : '260px'
-      }}
-      transition={{ duration: 0.3, ease: "easeInOut" }}
+    <div
       style={{
         height: '100vh',
         background: 'var(--sidebar-bg)',
@@ -33,10 +27,7 @@ export default function Sidebar() {
         display: 'flex',
         flexDirection: 'column',
         padding: isSidebarCollapsed ? '30px 10px' : '30px 20px',
-        position: 'fixed',
-        left: 0,
-        top: 0,
-        zIndex: 100,
+        width: '100%', // Take full width of parent container
         overflow: 'hidden'
       }}
     >
@@ -52,7 +43,7 @@ export default function Sidebar() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             style={{ 
-              fontSize: '24px', 
+              fontSize: '22px', 
               fontWeight: 'bold', 
               background: 'var(--primary-gradient)', 
               WebkitBackgroundClip: 'text', 
@@ -60,7 +51,7 @@ export default function Sidebar() {
               whiteSpace: 'nowrap'
             }}
           >
-            Cortex Assistant
+            Cortex
           </motion.h2>
         )}
         <button 
@@ -72,7 +63,8 @@ export default function Sidebar() {
             background: 'rgba(255,255,255,0.03)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            cursor: 'pointer'
           }}
         >
           {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
@@ -96,10 +88,11 @@ export default function Sidebar() {
                 color: isActive ? 'white' : 'var(--text-muted)',
                 background: isActive ? 'rgba(255,255,255,0.05)' : 'transparent',
                 transition: 'all 0.2s',
-                fontSize: '16px',
+                fontSize: '15px',
                 fontWeight: isActive ? '600' : '400',
                 border: isActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
-                justifyContent: isSidebarCollapsed ? 'center' : 'flex-start'
+                justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+                cursor: 'pointer'
               }}
               onMouseEnter={(e) => {
                 if (!isActive) {
@@ -114,7 +107,7 @@ export default function Sidebar() {
                 }
               }}
             >
-              <span style={{ fontSize: '20px', minWidth: '24px', display: 'flex', justifyContent: 'center' }}>
+              <span style={{ fontSize: '18px', minWidth: '24px', display: 'flex', justifyContent: 'center' }}>
                 {item.icon}
               </span>
               {!isSidebarCollapsed && (
@@ -142,14 +135,15 @@ export default function Sidebar() {
           borderRadius: '12px',
           color: '#ff4b2b',
           transition: 'all 0.2s',
-          fontSize: '16px',
+          fontSize: '15px',
           marginTop: 'auto',
-          justifyContent: isSidebarCollapsed ? 'center' : 'flex-start'
+          justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
+          cursor: 'pointer'
         }}
         onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,75,43,0.05)'}
         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
       >
-        <FaSignOutAlt size={20} />
+        <FaSignOutAlt size={18} />
         {!isSidebarCollapsed && (
           <motion.span
             initial={{ opacity: 0, x: -10 }}
@@ -159,6 +153,6 @@ export default function Sidebar() {
           </motion.span>
         )}
       </button>
-    </motion.div>
+    </div>
   );
 }
