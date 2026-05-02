@@ -31,6 +31,7 @@ class User(SQLModel, table=True):
     full_name: str = Field(sa_column=Column(String(255), nullable=False))
     phone_number: Optional[str] = Field(default=None, sa_column=Column(String(32), nullable=True))
     profile_picture: Optional[str] = Field(default=None, sa_column=Column(String(1024), nullable=True))
+    google_refresh_token: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True)) # Store encrypted
     created_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
     deleted_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
@@ -40,6 +41,7 @@ class User(SQLModel, table=True):
     short_term_memories: List["UserShortTermMemory"] = Relationship(back_populates="user")
     emotional_profiles: List["UserEmotionalProfile"] = Relationship(back_populates="user")
     knowledge_traits: List["UserKnowledgeBase"] = Relationship(back_populates="user")
+    tool_subscriptions: List["UserToolSubscription"] = Relationship(back_populates="user")
 
 
 class ChatSession(SQLModel, table=True):
@@ -167,6 +169,22 @@ class UserKnowledgeBase(SQLModel, table=True):
 
     user: "User" = Relationship(back_populates="knowledge_traits")
 
+class UserToolSubscription(SQLModel, table=True):
+    __tablename__ = "user_tool_subscriptions"
+
+    user_id: UUID = Field(
+        sa_column=Column(PGUUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True, nullable=False)
+    )
+    tool_id: UUID = Field(
+        sa_column=Column(PGUUID(as_uuid=True), ForeignKey("tools.tool_id", ondelete="CASCADE"), primary_key=True, nullable=False)
+    )
+    is_subscribed: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, default=True))
+    created_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
+
+    user: "User" = Relationship(back_populates="tool_subscriptions")
+    tool: "Tool" = Relationship(back_populates="user_subscriptions")
+
 
 class Tool(SQLModel, table=True):
     __tablename__ = "tools"
@@ -183,6 +201,7 @@ class Tool(SQLModel, table=True):
     deleted_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
 
     tasks: List["Task"] = Relationship(back_populates="tool")
+    user_subscriptions: List["UserToolSubscription"] = Relationship(back_populates="tool")
 
 
 class Task(SQLModel, table=True):

@@ -17,6 +17,7 @@ from .models import (
     UserEmotionalProfile,
     UserKnowledgeBase,
     UserShortTermMemory,
+    UserToolSubscription,
 )
 
 engine = create_engine(env.DB_URL, echo=False)
@@ -35,5 +36,6 @@ __all__ = [
     "UserKnowledgeBase",
     "Tool",
     "Task",
+    "UserToolSubscription",
     "engine",
 ]

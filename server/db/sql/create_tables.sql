@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS users (
     full_name VARCHAR(255) NOT NULL,
     phone_number VARCHAR(32),
     profile_picture VARCHAR(1024),
+    google_refresh_token TEXT,
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
     deleted_at TIMESTAMPTZ
@@ -112,6 +113,15 @@ CREATE TABLE IF NOT EXISTS tools (
     created_at TIMESTAMPTZ NOT NULL,
     updated_at TIMESTAMPTZ NOT NULL,
     deleted_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS user_tool_subscriptions (
+    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    tool_id UUID NOT NULL REFERENCES tools(tool_id) ON DELETE CASCADE,
+    is_subscribed BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (user_id, tool_id)
 );
 
 CREATE TABLE IF NOT EXISTS tasks (
