@@ -67,7 +67,7 @@ export default function ThreadSelector() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <FaCommentAlt size={14} color="var(--accent-purple)" />
+          <FaCommentAlt size={14} color="var(--accent-primary)" />
           <span style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {activeThread?.summary || "New Conversation"}
           </span>

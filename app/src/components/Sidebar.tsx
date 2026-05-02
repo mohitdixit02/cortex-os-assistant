@@ -133,14 +133,14 @@ export default function Sidebar() {
           gap: '15px',
           padding: '12px',
           borderRadius: '12px',
-          color: '#ff4b2b',
+          color: 'var(--accent-primary)',
           transition: 'all 0.2s',
           fontSize: '15px',
           marginTop: 'auto',
           justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
           cursor: 'pointer'
         }}
-        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,75,43,0.05)'}
+        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(199,80,82,0.05)'}
         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
       >
         <FaSignOutAlt size={18} />

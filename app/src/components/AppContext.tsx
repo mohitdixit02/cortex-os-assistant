@@ -50,7 +50,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [isLoggedIn, setIsLoggedIn] = useState(!!token);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('activeThreadId');

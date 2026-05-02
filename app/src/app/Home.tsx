@@ -130,7 +130,7 @@ export default function Home() {
                 gap: '12px',
                 padding: '16px 36px',
                 borderRadius: '50px',
-                background: 'rgba(255, 255, 255, 0.1)',
+                background: 'rgba(255, 255, 255, 0.05)',
                 backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 color: 'white',
@@ -148,12 +148,11 @@ export default function Home() {
       {/* Right Area: Persistent History Window */}
       <div style={{
         width: '400px',
-        background: 'rgba(255, 255, 255, 0.02)',
+        background: 'rgba(255, 255, 255, 0.01)',
         borderLeft: '1px solid rgba(255, 255, 255, 0.05)',
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        boxShadow: '-4px 0 20px rgba(0,0,0,0.2)'
       }}>
         <div style={{
           padding: '25px 20px',
@@ -168,7 +167,7 @@ export default function Home() {
             disabled={messagesLoading}
             style={{ 
               color: 'white', 
-              background: 'rgba(255,255,255,0.05)', 
+              background: 'rgba(255,255,255,0.03)', 
               padding: '10px', 
               borderRadius: '10px',
               display: 'flex',
@@ -177,7 +176,7 @@ export default function Home() {
               transition: 'all 0.2s'
             }}
             onMouseEnter={(e) => !messagesLoading && (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
-            onMouseLeave={(e) => !messagesLoading && (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+            onMouseLeave={(e) => !messagesLoading && (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
           >
             <FaSync size={14} className={messagesLoading ? 'spin' : ''} />
           </button>

@@ -54,12 +54,11 @@ const ChatHistory = ({ messages }: ChatHistoryProps) => {
               padding: "12px 16px",
               borderRadius: msg.role === "USER" ? "18px 18px 2px 18px" : "18px 18px 18px 2px",
               background: msg.role === "USER" ? "var(--primary-gradient)" : "rgba(255,255,255,0.05)",
-              color: "white",
-              fontSize: "14px",
-              lineHeight: "1.5",
-              boxShadow: msg.role === "USER" ? "0 4px 15px rgba(0,0,0,0.2)" : "none"
-            }}>
-              {msg.content}
+              color: 'white',
+              fontSize: '14px',
+              lineHeight: '1.5',
+              boxShadow: msg.role === "USER" ? '0 4px 15px rgba(199,80,82,0.2)' : 'none'
+              }}>              {msg.content}
             </div>
           </motion.div>
         ))}

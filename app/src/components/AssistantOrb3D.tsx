@@ -79,20 +79,20 @@ function AssistantOrb3D({ isListening, isSpeaking }: AIOrbProps) {
         uniform float state;
 
         void main() {
-          vec3 purple = vec3(0.4, 0.0, 0.8);
-          vec3 blue   = vec3(0.0, 0.4, 1.0);
-          vec3 red    = vec3(1.0, 0.1, 0.3);
+          vec3 primaryRed = vec3(0.78, 0.31, 0.32); // #c75052
+          vec3 primaryPurple = vec3(0.47, 0.31, 0.78); // #7950c7
+          vec3 black = vec3(0.0, 0.0, 0.0);
 
           float pulse = 0.5 + 0.5 * sin(time * 2.0);
 
           vec3 color;
 
           if (state == 0.0) {
-            color = mix(purple, blue, vUv.y + pulse * 0.2);
+            color = mix(primaryPurple, primaryRed, vUv.y + pulse * 0.2);
           } else if (state == 1.0) {
-            color = mix(blue, red, vUv.y + pulse * 0.4);
+            color = mix(primaryRed, black, vUv.y + pulse * 0.4);
           } else {
-            color = mix(red, purple, vUv.y + pulse * 0.6);
+            color = mix(black, primaryPurple, vUv.y + pulse * 0.6);
           }
 
           // glow effect
