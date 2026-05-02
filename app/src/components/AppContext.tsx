@@ -16,6 +16,10 @@ interface AppContextType {
   setToken: (token: string | null) => void;
   activeThreadId: string | null;
   setActiveThreadId: (id: string | null) => void;
+  selectedMic: string | null;
+  setSelectedMic: (label: string | null) => void;
+  selectedSpeaker: string | null;
+  setSelectedSpeaker: (id: string | null) => void;
   logout: () => void;
 }
 
@@ -50,6 +54,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [activeThreadId, setActiveThreadId] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('activeThreadId');
+    }
+    return null;
+  });
+
+  const [selectedMic, setSelectedMicState] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('selectedMic');
+    }
+    return null;
+  });
+
+  const [selectedSpeaker, setSelectedSpeakerState] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('selectedSpeaker');
     }
     return null;
   });
@@ -89,6 +107,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const setSelectedMic = (label: string | null) => {
+    setSelectedMicState(label);
+    if (typeof window !== 'undefined') {
+      if (label) {
+        localStorage.setItem('selectedMic', label);
+      } else {
+        localStorage.removeItem('selectedMic');
+      }
+    }
+  };
+
+  const setSelectedSpeaker = (id: string | null) => {
+    setSelectedSpeakerState(id);
+    if (typeof window !== 'undefined') {
+      if (id) {
+        localStorage.setItem('selectedSpeaker', id);
+      } else {
+        localStorage.removeItem('selectedSpeaker');
+      }
+    }
+  };
+
   const updateOnboarded = (val: boolean) => {
     setIsOnboarded(val);
     if (typeof window !== 'undefined') {
@@ -123,6 +163,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setToken,
       activeThreadId,
       setActiveThreadId: updateActiveThreadId,
+      selectedMic,
+      setSelectedMic,
+      selectedSpeaker,
+      setSelectedSpeaker,
       logout
     }}>
       {children}

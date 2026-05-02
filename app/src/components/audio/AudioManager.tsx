@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { usePCMPlayer } from "./PCMPlayer";
+import { useAppContext } from "../AppContext";
 import {
     PcmCodec,
     RecorderStartResult,
@@ -30,6 +31,8 @@ const normalizeArrayBuffer = (chunk: unknown): ArrayBuffer | null => {
 };
 
 export const useAudioManager = () => {
+    const { selectedMic } = useAppContext();
+    
     // Is audio currently playing
     const playingRef = useRef(false);
 
@@ -127,7 +130,9 @@ export const useAudioManager = () => {
             });
 
             // Invoke main process to start mic recording
-            const result = await api.startMicRecording();
+            const result = await api.startMicRecording({
+                device: selectedMic || 'default'
+            });
 
             if (!result.ok) {
                 throw new Error(result.error || "Failed to start microphone recording");
@@ -139,7 +144,7 @@ export const useAudioManager = () => {
             stopRecording();
             throw error;
         }
-    }, [detachMicListeners, stopRecording, pauseAudio]);
+    }, [detachMicListeners, stopRecording, pauseAudio, selectedMic]);
 
     const playAudio = useCallback(async (audio: ArrayBuffer | Blob) => {
         if (!audio || (!(audio instanceof Blob) && !(audio instanceof ArrayBuffer))) return; 
