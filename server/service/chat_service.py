@@ -17,7 +17,8 @@ class ChatService:
 
     def get_messages(self, thread_id: str) -> List[Message]:
         with Session(engine) as session:
-            return crud.get_many(session, Message, session_id=UUID(thread_id))
+            statement = select(Message).where(Message.session_id == UUID(thread_id)).order_by(Message.created_at.asc())
+            return list(session.exec(statement).all())
 
     def delete_thread(self, thread_id: str) -> bool:
         with Session(engine) as session:
