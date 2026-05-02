@@ -1,5 +1,10 @@
 import jwt
+import os
 from datetime import datetime, timedelta, timezone
+
+# Allow scope changes (e.g. if 'phone' is not granted)
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+
 from typing import Optional, Dict, Any
 from google_auth_oauthlib.flow import Flow
 from google.oauth2 import id_token

@@ -15,7 +15,7 @@ export const usePCMPlayer = () => {
         channels: 1,
     });
 
-    const reInitializePlayer = async (audioConfig?: AudioConfig) => {
+    const reInitializePlayer = useCallback(async (audioConfig?: AudioConfig) => {
         console.log("Resetting PCM Player");
         if (playerRef.current) {
             playerRef.current.destroy();
@@ -27,7 +27,7 @@ export const usePCMPlayer = () => {
             audioConfigRef.current = audioConfig;
             console.log("Audio Config Ref:", audioConfigRef.current);
         }
-    };
+    }, []);
 
     const ensurePlayer = useCallback(() => {
         if (playerRef.current) {
@@ -41,7 +41,7 @@ export const usePCMPlayer = () => {
             flushTime: 120,
             fftSize: 2048,
         });
-    }, [audioConfigRef, playerRef]);
+    }, []);
 
     const feedPcm = useCallback(async (chunk: ArrayBuffer) => {
         ensurePlayer();
@@ -50,7 +50,7 @@ export const usePCMPlayer = () => {
         }
 
         playerRef.current.feed(chunk);
-    }, [ensurePlayer, playerRef]);
+    }, [ensurePlayer]);
 
     return {
         reInitializePlayer,

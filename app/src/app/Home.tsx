@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWebSocket } from "../components/socket/WebSocket";
-import { motion, AnimatePresence } from "framer-motion";
-import { FaStop, FaPlay, FaPaperPlane, FaUser, FaRobot } from "react-icons/fa";
+import { FaStop, FaPlay, FaPaperPlane } from "react-icons/fa";
 import AssistantOrb3D from "../components/AssistantOrb3D";
+import ChatHistory from "../components/ChatHistory";
 import { useAppContext } from "../components/AppContext";
 import { useMessages } from "../hooks/useApi";
 import { apiClient } from "../utility/apiClient";
@@ -14,9 +14,9 @@ export default function Home() {
   const { messages, mutate: mutateMessages } = useMessages(activeThreadId);
   const [textInput, setTextInput] = useState("");
   const [isSendingText, setIsSendingText] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const backendUrl = useMemo(() => process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000", []);
+  
   const {
     startAudioStreaming,
     stopAudioStreaming,
@@ -27,19 +27,23 @@ export default function Home() {
   } = useWebSocket(backendUrl.replace(/^http/, "ws") + "/ws/stream");
 
   useEffect(() => {
-    attachBackendListener({
-      metaDataKey: "audio_meta",
-      audioEndKey: "done"
-    });
+    let detachFn: (() => void) | undefined;
+    
+    const setup = async () => {
+      const detach = await attachBackendListener({
+        metaDataKey: "audio_meta",
+        audioEndKey: "done"
+      });
+      detachFn = detach;
+    };
+
+    setup();
+    
     return () => {
+      if (detachFn) detachFn();
       closeSocket();
     };
-  }, [backendUrl]);
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [attachBackendListener, closeSocket]);
 
   const handleSendText = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -61,9 +65,9 @@ export default function Home() {
       };
       mutateMessages([...(messages || []), optimisticMessage], false);
 
-      const response = await apiClient<{ response: string }>('/api/query/', {
+      await apiClient<{ response: string }>('/api/query/', {
         method: 'POST',
-        body: JSON.stringify({ query })
+        body: JSON.stringify({ query, session_id: activeThreadId })
       });
 
       // Refetch messages to get the real ones (including AI response)
@@ -176,54 +180,7 @@ export default function Home() {
           Conversation
         </div>
 
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: '20px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '15px'
-        }}>
-          <AnimatePresence initial={false}>
-            {messages?.map((msg) => (
-              <motion.div
-                key={msg.message_id}
-                initial={{ opacity: 0, x: msg.role === 'USER' ? 20 : -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                style={{
-                  alignSelf: msg.role === 'USER' ? 'flex-end' : 'flex-start',
-                  maxWidth: '85%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '5px',
-                  alignItems: msg.role === 'USER' ? 'flex-end' : 'flex-start'
-                }}
-              >
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '12px',
-                  color: 'var(--text-muted)'
-                }}>
-                  {msg.role === 'USER' ? <><FaUser size={10} /> You</> : <><FaRobot size={10} /> Cortex</>}
-                </div>
-                <div style={{
-                  padding: '12px 16px',
-                  borderRadius: msg.role === 'USER' ? '18px 18px 2px 18px' : '18px 18px 18px 2px',
-                  background: msg.role === 'USER' ? 'var(--primary-gradient)' : 'rgba(255,255,255,0.05)',
-                  color: 'white',
-                  fontSize: '14px',
-                  lineHeight: '1.5',
-                  boxShadow: msg.role === 'USER' ? '0 4px 15px rgba(0,0,0,0.2)' : 'none'
-                }}>
-                  {msg.content}
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-          <div ref={messagesEndRef} />
-        </div>
+        <ChatHistory messages={messages} />
 
         <form 
           onSubmit={handleSendText}

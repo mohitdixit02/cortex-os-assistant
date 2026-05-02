@@ -12,7 +12,6 @@ user_id: UUID (PK)
 google_id: String (Unique, Indexed) — From Google OAuth sub field
 email: String (Unique, Indexed)
 full_name: String
-phone_number: String (Nullable)
 profile_picture: String (URL)
 google_refresh_token: Text (Nullable) — Encrypted refresh token for OAuth (optional)
 created_at: Timestamp

@@ -38,7 +38,6 @@ CREATE TABLE IF NOT EXISTS users (
     google_id VARCHAR(255) NOT NULL UNIQUE,
     email VARCHAR(320) NOT NULL UNIQUE,
     full_name VARCHAR(255) NOT NULL,
-    phone_number VARCHAR(32),
     profile_picture VARCHAR(1024),
     google_refresh_token TEXT,
     created_at TIMESTAMPTZ NOT NULL,

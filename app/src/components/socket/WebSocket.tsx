@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useAudioManager } from "../audio/AudioManager";
 import { MicStreamRes } from "../audio/AudioInterface";
 
@@ -64,7 +64,8 @@ export const useWebSocket = (
     if (!socketUrl) {
         throw new Error("WebSocket URL is required");
     }
-    const socketRef = useRef<WebSocket | null>(initializeWebSocket(socketUrl, binaryType));
+    // Fix: initialize as null to avoid creating orphaned sockets on every render
+    const socketRef = useRef<WebSocket | null>(null);
     const isStreamingRef = useRef(false);
     const [isListening, setIsListening] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
@@ -86,7 +87,7 @@ export const useWebSocket = (
         closeAudioPlayer
     } = useAudioManager();
 
-    const attachBackendListener = async ({
+    const attachBackendListener = useCallback(async ({
         metaDataKey = "audio_meta",
         audioEndKey = "done"
     }: BackendListenerProps) => {
@@ -95,7 +96,14 @@ export const useWebSocket = (
             playbackDrainTimerRef.current = null;
         }
 
-        socketRef.current?.addEventListener("message", async (event) => {
+        // Lazy initialization if needed
+        if (!socketRef.current || socketRef.current.readyState === WebSocket.CLOSED) {
+            socketRef.current = initializeWebSocket(socketUrl, binaryType);
+        }
+
+        const socket = socketRef.current;
+
+        const handleMessage = async (event: MessageEvent) => {
             console.log("Received message from WebSocket:", event.data);
             if (!isStreamingRef.current) {
                 console.warn("Received message while not streaming, ignoring:", event.data);
@@ -184,32 +192,39 @@ export const useWebSocket = (
                 await playAudio(event.data);
                 return;
             }
-        });
-
-        socketRef.current?.addEventListener("error", (e) => {
-            console.error("WebSocket error:", e);
-        });
-
-    };
-
-    const closeSocket = (socketEndResponse: string = "close_connection") => {
-        return () => {
-            if (playbackDrainTimerRef.current) {
-                clearTimeout(playbackDrainTimerRef.current);
-                playbackDrainTimerRef.current = null;
-            }
-            closeAudioPlayer();
-            isStreamingRef.current = false;
-            setIsListening(false);
-            setIsSpeaking(false);
-            if (socketRef.current?.readyState === WebSocket.OPEN) {
-                socketRef.current.send(JSON.stringify({ type: socketEndResponse }));
-            }
-            socketRef.current.close();
         };
-    }
 
-    const startAudioStreaming = async () => {
+        const handleError = (e: Event) => {
+            console.error("WebSocket error:", e);
+        };
+
+        socket.addEventListener("message", handleMessage);
+        socket.addEventListener("error", handleError);
+
+        // Cleanup function for listeners
+        return () => {
+            socket.removeEventListener("message", handleMessage);
+            socket.removeEventListener("error", handleError);
+        };
+    }, [socketUrl, binaryType, configAudioSpec, playAudio]);
+
+    const closeSocket = useCallback((socketEndResponse: string = "close_connection") => {
+        if (playbackDrainTimerRef.current) {
+            clearTimeout(playbackDrainTimerRef.current);
+            playbackDrainTimerRef.current = null;
+        }
+        closeAudioPlayer();
+        isStreamingRef.current = false;
+        setIsListening(false);
+        setIsSpeaking(false);
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+            socketRef.current.send(JSON.stringify({ type: socketEndResponse }));
+        }
+        socketRef.current?.close();
+        socketRef.current = null;
+    }, [closeAudioPlayer]);
+
+    const startAudioStreaming = useCallback(async () => {
         try {
             const ws = await configureWebSocket(socketRef.current, socketUrl, binaryType);
             socketRef.current = ws;
@@ -248,9 +263,9 @@ export const useWebSocket = (
             console.error("Failed to start streaming:", error);
             await stopRecording();
         }
-    };
+    }, [socketUrl, binaryType, startRecording, stopRecording]);
 
-    const stopAudioStreaming = async () => {
+    const stopAudioStreaming = useCallback(async () => {
         const ws = socketRef.current;
         await closeAudioPlayer();
         isStreamingRef.current = false;
@@ -259,7 +274,7 @@ export const useWebSocket = (
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: "end_conversation" }));
         }
-    };
+    }, [closeAudioPlayer]);
 
     return {
         startAudioStreaming,

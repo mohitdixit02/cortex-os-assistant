@@ -44,7 +44,7 @@ export default function Login() {
             setToken(response.access_token);
             
             // Fetch real user info
-            const userData = await apiClient<{ user_id: string, full_name: string, email: string, profile_picture?: string }>(
+            const userData = await apiClient<{ user_id: string, full_name: string, email: string, profile_picture?: string, phone_number?: string }>(
               '/api/v1/auth/me'
             );
             setUser({ 

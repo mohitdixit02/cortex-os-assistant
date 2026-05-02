@@ -29,7 +29,6 @@ class User(SQLModel, table=True):
     google_id: str = Field(sa_column=Column(String(255), unique=True, index=True, nullable=False))
     email: str = Field(sa_column=Column(String(320), unique=True, index=True, nullable=False))
     full_name: str = Field(sa_column=Column(String(255), nullable=False))
-    phone_number: Optional[str] = Field(default=None, sa_column=Column(String(32), nullable=True))
     profile_picture: Optional[str] = Field(default=None, sa_column=Column(String(1024), nullable=True))
     google_refresh_token: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True)) # Store encrypted
     created_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))

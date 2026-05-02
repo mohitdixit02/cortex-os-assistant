@@ -385,6 +385,112 @@ class AvailableToolsType(str, Enum):
     CALENDAR_TOOL = "calendar_03"
     EMAIL_TOOL = "email_04"
 
+class CalendarInput(BaseModel):
+    """Input schema for calendar tool."""
+    action: Annotated[Literal["create", "list", "update", "delete", "status"], Field(description="Action to perform on the calendar (create, list, update, delete, or status)")]
+    event_summary: Optional[str] = Field(default=None, description="Short summary or title of the event.")
+    event_description: Optional[str] = Field(default=None, description="Detailed description of the event.")
+    start_time: Optional[str] = Field(default=None, description="Start time of the event in ISO format (e.g., 2023-10-27T10:00:00Z).")
+    end_time: Optional[str] = Field(default=None, description="End time of the event in ISO format (e.g., 2023-10-27T11:00:00Z).")
+    event_id: Optional[str] = Field(default=None, description="Unique identifier for an existing event (required for update, delete, or status).")
+    max_results: Optional[int] = Field(default=5, description="Maximum number of events to list.")
+
+class CalendarTool(BaseTool):
+    """
+    A tool to manage calendar events, appointments, and schedules. \n
+    Use this tool to create, update, delete, or retrieve calendar events based on user queries and instructions. \n
+    """
+    name: str = "CalendarTool"
+    description: str = __doc__
+    args_schema: Type[BaseModel] = CalendarInput
+
+    def _get_calendar_service(self):
+        """Initialize and return the Google Calendar API service."""
+        from google.oauth2 import service_account
+        from googleapiclient.discovery import build
+        import os
+        
+        creds_json = os.getenv("GOOGLE_CALENDAR_CREDENTIALS")
+        if not creds_json:
+            raise ValueError("GOOGLE_CALENDAR_CREDENTIALS environment variable is not set.")
+        
+        try:
+            # Try parsing as JSON string first
+            import json
+            info = json.loads(creds_json)
+            credentials = service_account.Credentials.from_service_account_info(
+                info, scopes=["https://www.googleapis.com/auth/calendar"]
+            )
+        except Exception:
+            # Fallback to file path
+            credentials = service_account.Credentials.from_service_account_file(
+                creds_json, scopes=["https://www.googleapis.com/auth/calendar"]
+            )
+            
+        return build("calendar", "v3", credentials=credentials)
+
+    def _run(self, **kwargs) -> str:
+        """Execute the calendar tool logic."""
+        try:
+            input_data = CalendarInput(**kwargs)
+            service = self._get_calendar_service()
+            calendar_id = "primary" # Or from env
+
+            if input_data.action == "create":
+                event = {
+                    'summary': input_data.event_summary,
+                    'description': input_data.event_description,
+                    'start': {'dateTime': input_data.start_time, 'timeZone': 'UTC'},
+                    'end': {'dateTime': input_data.end_time, 'timeZone': 'UTC'},
+                }
+                event = service.events().insert(calendarId=calendar_id, body=event).execute()
+                return f"Event created: {event.get('htmlLink')}"
+
+            elif input_data.action == "list":
+                now = datetime.utcnow().isoformat() + 'Z'
+                events_result = service.events().list(
+                    calendarId=calendar_id, timeMin=now,
+                    maxResults=input_data.max_results, singleEvents=True,
+                    orderBy='startTime'
+                ).execute()
+                events = events_result.get('items', [])
+                if not events:
+                    return "No upcoming events found."
+                return json.dumps(events)
+
+            elif input_data.action == "status" or (input_data.action == "list" and input_data.event_id):
+                if not input_data.event_id:
+                    return "Error: event_id is required for status check."
+                event = service.events().get(calendarId=calendar_id, eventId=input_data.event_id).execute()
+                return json.dumps(event)
+
+            elif input_data.action == "update":
+                if not input_data.event_id:
+                    return "Error: event_id is required for update."
+                event = service.events().get(calendarId=calendar_id, eventId=input_data.event_id).execute()
+                if input_data.event_summary: event['summary'] = input_data.event_summary
+                if input_data.event_description: event['description'] = input_data.event_description
+                if input_data.start_time: event['start']['dateTime'] = input_data.start_time
+                if input_data.end_time: event['end']['dateTime'] = input_data.end_time
+                updated_event = service.events().update(calendarId=calendar_id, eventId=input_data.event_id, body=event).execute()
+                return f"Event updated: {updated_event.get('htmlLink')}"
+
+            elif input_data.action == "delete":
+                if not input_data.event_id:
+                    return "Error: event_id is required for deletion."
+                service.events().delete(calendarId=calendar_id, eventId=input_data.event_id).execute()
+                return "Event deleted successfully."
+
+            else:
+                return f"Unsupported action: {input_data.action}"
+
+        except Exception as e:
+            return f"Error executing CalendarTool: {str(e)}"
+
+    async def _arun(self, **kwargs) -> str:
+        """Asynchronous execution (runs the sync version in a thread)."""
+        return await asyncio.to_thread(self._run, **kwargs)
+
 AVAILABLE_TOOLS = [
     {
         "tool_id": AvailableToolsType.WEB_SEARCH_TOOL.value,
@@ -396,6 +502,11 @@ AVAILABLE_TOOLS = [
         "tool_name": TaskRetrieverTool.__name__,
         "tool_description": TaskRetrieverTool.__doc__,
     },
+    {
+        "tool_id": AvailableToolsType.CALENDAR_TOOL.value,
+        "tool_name": CalendarTool.__name__,
+        "tool_description": CalendarTool.__doc__,
+    },
 ]
 
 __all__ = [
@@ -403,6 +514,7 @@ __all__ = [
     "AvailableToolsType",
     "WebSearchTool",
     "WebSearchInput",
-
+    "CalendarTool",
+    "CalendarInput",
 ]
     

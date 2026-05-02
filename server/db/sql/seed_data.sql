@@ -2,13 +2,12 @@
 -- Safe to run after create_tables.sql.
 
 INSERT INTO users (
-    user_id, google_id, email, full_name, phone_number, profile_picture, created_at, updated_at, deleted_at
+    user_id, google_id, email, full_name, profile_picture, created_at, updated_at, deleted_at
 ) VALUES (
     '11111111-1111-1111-1111-111111111111',
     'google-oauth-sub-001',
     'alice@example.com',
     'Alice Johnson',
-    '+15550001111',
     'https://cdn.example.com/profiles/alice.jpg',
     NOW(),
     NOW(),

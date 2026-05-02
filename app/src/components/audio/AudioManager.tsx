@@ -44,7 +44,7 @@ export const useAudioManager = () => {
     const isUserSpeaking = useRef(false);
 
     // Detach mic event listeners
-    const detachMicListeners = () => {
+    const detachMicListeners = useCallback(() => {
         console.log("Detaching mic listeners");
         if (detachMicChunkRef.current) {
             detachMicChunkRef.current();
@@ -54,13 +54,33 @@ export const useAudioManager = () => {
             detachMicErrorRef.current();
             detachMicErrorRef.current = null;
         }
-    };
+    }, []);
 
-    const configAudioSpec = async (
+    const configAudioSpec = useCallback(async (
         config: AudioConfig
-    ) => { await reInitializePlayer(config); }
+    ) => { await reInitializePlayer(config); }, [reInitializePlayer]);
 
-    const startRecording = async (
+    const stopRecording = useCallback(async () => {
+        const api = getAssistantApi();
+        detachMicListeners();
+        if (api) {
+            try {
+                await api.stopMicRecording();
+                console.log("Main process mic recording stopped successfully");
+            } catch (error) {
+                console.error("Failed to stop mic recorder:", error);
+            }
+        }
+        else {
+            console.error("assistantAPI bridge is not available in renderer");
+        }
+    }, [detachMicListeners]);
+
+    const pauseAudio = useCallback(async () => {
+        playingRef.current = false;
+    }, []);
+
+    const startRecording = useCallback(async (
         chunkHandler: (chunk: ArrayBuffer) => void,
         errHandler: (error: string) => void,
         interuptionHandler: (data: MicStreamRes) => void
@@ -101,7 +121,7 @@ export const useAudioManager = () => {
             });
 
             // Listener to mic recording errors from main process
-            detachMicErrorRef.current = api.onMicError((error) => {
+            detachMicErrorRef.current = api.onMicError((error: string) => {
                 console.error("Mic recorder error:", error);
                 errHandler(error);
             });
@@ -119,41 +139,22 @@ export const useAudioManager = () => {
             stopRecording();
             throw error;
         }
-    }
+    }, [detachMicListeners, stopRecording, pauseAudio]);
 
-    const stopRecording = async () => {
-        const api = getAssistantApi();
-        detachMicListeners();
-        if (api) {
-            try {
-                await api.stopMicRecording();
-                console.log("Main process mic recording stopped successfully");
-            } catch (error) {
-                console.error("Failed to stop mic recorder:", error);
-            }
-        }
-        else {
-            console.error("assistantAPI bridge is not available in renderer");
-        }
-    };
-
-    const playAudio = async (audio: ArrayBuffer | Blob) => {
-        if (!audio || (!(audio instanceof Blob) && !(audio instanceof ArrayBuffer))) return; const chunk = audio instanceof Blob ? await audio.arrayBuffer() : audio;
+    const playAudio = useCallback(async (audio: ArrayBuffer | Blob) => {
+        if (!audio || (!(audio instanceof Blob) && !(audio instanceof ArrayBuffer))) return; 
+        const chunk = audio instanceof Blob ? await audio.arrayBuffer() : audio;
         if (!isUserSpeaking.current) {
             playingRef.current = true;
             await feedPcm(chunk); // PCM Player will handle the chunk and play it
         }
-    }
-
-    const pauseAudio = async () => {
-        playingRef.current = false;
-    }
+    }, [feedPcm]);
     
-    const closeAudioPlayer = async () => {
+    const closeAudioPlayer = useCallback(async () => {
         await pauseAudio();
         await reInitializePlayer(); // reset PCM Player to clear any buffered audio
         await stopRecording(); // ensure mic recording is stopped
-    }
+    }, [pauseAudio, reInitializePlayer, stopRecording]);
 
     return {
         startRecording,

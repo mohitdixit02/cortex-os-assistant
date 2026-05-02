@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, memo } from "react";
 import * as THREE from "three";
 
 interface AIOrbProps {
@@ -8,7 +8,7 @@ interface AIOrbProps {
   isSpeaking: boolean;
 }
 
-export default function AssistantOrb3D({ isListening, isSpeaking }: AIOrbProps) {
+function AssistantOrb3D({ isListening, isSpeaking }: AIOrbProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null!);
   const stateRef = useRef(0);
@@ -175,3 +175,5 @@ export default function AssistantOrb3D({ isListening, isSpeaking }: AIOrbProps) 
     />
   );
 }
+
+export default memo(AssistantOrb3D);
