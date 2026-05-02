@@ -1,6 +1,6 @@
-const { app, BrowserWindow, shell } = require("electron");
-const path = require("path");
-const { registerIpcHandlers, audioManager } = require("./api");
+import { app, BrowserWindow, shell } from "electron";
+import * as path from "path";
+import { registerIpcHandlers, audioManager } from "./api";
 
 const isDev = !app.isPackaged;
 const startUrl = process.env.ELECTRON_START_URL || "http://localhost:3000";

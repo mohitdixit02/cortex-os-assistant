@@ -17,6 +17,7 @@ const rendererApi = {
   
   // Auth API
   openExternal: (url) => ipcRenderer.invoke("auth:open-external", url),
+  startAuthFlow: (url) => ipcRenderer.invoke("auth:start-flow", url),
   onAuthRedirect: (handler) => {
     const listener = (_event, url) => handler(url);
     ipcRenderer.on("auth:redirect", listener);

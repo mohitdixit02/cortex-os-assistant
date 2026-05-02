@@ -1,22 +1,68 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { signIn } from 'next-auth/react';
 import { FcGoogle } from 'react-icons/fc';
+import { useAppContext } from './AppContext';
+import { apiClient } from '../utility/apiClient';
+
+declare global {
+  interface Window {
+    assistantAPI: any;
+  }
+}
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { setToken, setUser } = useAppContext();
 
   const handleGoogleLogin = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      // next-auth signIn for google
-      await signIn('google');
+      
+      const { url: authUrl } = await apiClient<{ url: string }>('/api/v1/auth/google/authorize');
+      
+      if (window.assistantAPI?.startAuthFlow) {
+        const result = await window.assistantAPI.startAuthFlow(authUrl);
+        
+        if (result.error) {
+          throw new Error(result.error);
+        }
+
+        if (result.url) {
+          const urlObj = new URL(result.url);
+          const code = urlObj.searchParams.get('code');
+          const state = urlObj.searchParams.get('state');
+          if (code) {
+            const response = await apiClient<{ access_token: string; user_id: string }>(
+              `/api/v1/auth/google/callback?code=${code}${state ? `&state=${state}` : ''}`,
+              { method: 'POST' }
+            );
+            
+            setToken(response.access_token);
+            
+            // Fetch real user info
+            const userData = await apiClient<{ user_id: string, full_name: string, email: string, profile_picture?: string }>(
+              '/api/v1/auth/me'
+            );
+            setUser({ 
+              id: userData.user_id, 
+              name: userData.full_name, 
+              email: userData.email, 
+              image: userData.profile_picture 
+            }); 
+          }
+        }
+      } else {
+        // Fallback for browser testing if applicable
+        window.location.href = authUrl;
+      }
     } catch (err: any) {
-      setError("Failed to initiate Google login");
+      setError(err.message || "Failed to complete authentication");
+      setIsLoading(false);
+    } finally {
       setIsLoading(false);
     }
   };
