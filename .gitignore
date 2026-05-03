@@ -20,4 +20,3 @@ dist-electron/
 temp.md
 postgres_data/
 redis_data/
-docker-compose.yml
