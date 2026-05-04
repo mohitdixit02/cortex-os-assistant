@@ -303,4 +303,10 @@ class TaskQueue:
         if self._thread.is_alive():
             self._thread.join(timeout=2)
 
-MainTaskQueue = TaskQueue()
+import os
+
+if os.getenv("USE_REMOTE_QUEUE") == "true":
+    from .remote_client import RemoteTaskQueue
+    MainTaskQueue = RemoteTaskQueue()
+else:
+    MainTaskQueue = TaskQueue()

@@ -7,7 +7,7 @@ from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, Enum as SAEnu
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlmodel import Field, Relationship, SQLModel
 
-from db.enums import (
+from cortex_cm.pg.enums import (
     AIClientType,
     PreferenceLevel,
     RoleType,

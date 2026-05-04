@@ -1,0 +1,25 @@
+# Ignore git and local config
+.git
+.gitignore
+.vscode
+
+# Ignore frontend build and dependencies
+app/node_modules
+app/.next
+app/dist-electron
+app/out
+
+# Ignore local databases and cache
+postgres_data
+redis_data
+hf_cache
+__pycache__
+*.pyc
+
+# Ignore environment files
+.env
+requirements.yml
+
+# Ignore temporary files
+*.tmp
+*.log

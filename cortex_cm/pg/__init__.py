@@ -1,5 +1,5 @@
 from sqlmodel import create_engine, Session
-from utility.config import env
+from cortex_cm.utility.config import env
 
 from .enums import (
     AIClientType,

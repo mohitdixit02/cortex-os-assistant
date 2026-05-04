@@ -20,3 +20,52 @@ services:
       - "6379:6379"
     volumes:
       - ./redis_data:/data
+
+  cortex-queue:
+    build: .
+    container_name: cortex-queue
+    restart: always
+    ports:
+      - "8001:8001"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DB_URL=postgresql://postgres:cortex_postgres_db@db:5432/cortex-assistant-db
+    command: python cortex_queue/main.py
+    depends_on:
+      - redis
+      - db
+
+  cortex-server:
+    build: .
+    container_name: cortex-server
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DB_URL=postgresql://postgres:cortex_postgres_db@db:5432/cortex-assistant-db
+      - CORTEX_QUEUE_URL=http://cortex-queue:8001
+      - USE_REMOTE_QUEUE=true
+    command: python cortex_server/main.py
+    depends_on:
+      - redis
+      - db
+      - cortex-queue
+
+  cortex-core:
+    build: .
+    container_name: cortex-core
+    restart: always
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DB_URL=postgresql://postgres:cortex_postgres_db@db:5432/cortex-assistant-db
+      - CORTEX_QUEUE_URL=http://cortex-queue:8001
+      - USE_REMOTE_QUEUE=true
+    command: python cortex_core/worker.py
+    depends_on:
+      - redis
+      - db
+      - cortex-queue

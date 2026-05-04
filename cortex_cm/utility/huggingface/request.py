@@ -1,8 +1,8 @@
 import requests
 from typing import Literal
-from utility.huggingface.config import models
+from cortex_cm.utility.huggingface.config import models
 from huggingface_hub import InferenceClient
-from utility.config import env
+from cortex_cm.utility.config import env
 
 HUGGINGFACE_API_KEY = env.HF_TOKEN
 
