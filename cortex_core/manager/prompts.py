@@ -1,10 +1,10 @@
-from cortex.manager.tools import WebSearchInput
+from cortex_core.manager.tools import WebSearchInput
 from langchain_core.prompts import PromptTemplate
 from pydantic import BaseModel, Field
 from typing import Annotated, Literal, Any, Dict, Optional
 from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
-from cortex.graph.state import OrchestrationState, PlanEvaluationState, FinalResponseFeedbackState, FinalResponseGenerationState
-from cortex.manager.tools import AvailableToolsType
+from cortex_core.graph.state import OrchestrationState, PlanEvaluationState, FinalResponseFeedbackState, FinalResponseGenerationState
+from cortex_core.manager.tools import AvailableToolsType
 
 class WebQueryPlanResult(BaseModel):
     query: list[str] = Field(..., description="The list of strings where each string has relevant keywords to search for.")

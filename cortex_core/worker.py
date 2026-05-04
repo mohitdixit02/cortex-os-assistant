@@ -12,11 +12,10 @@ cortex_queue.MainTaskQueue = RemoteTaskQueue()
 from cortex_core.main import MainClient
 from cortex_queue import TaskItem, TaskStatus
 from cortex_cm.redis.redis_client import task_redis_client
+from cortex_core.req import submit_task
 
 async def main():
-    client = MainClient()
-    remote_queue = cortex_queue.MainTaskQueue
-    
+    client = MainClient()    
     print("Cortex Core Worker started. Listening to Redis DB 1...")
     
     while True:
@@ -37,7 +36,7 @@ async def main():
                 
                 updated_task = await client._handle_task_queue(task_item)
                 
-                await remote_queue.submit_task(
+                await submit_task(
                     task_id=updated_task.task_id,
                     status=updated_task.status,
                     status_message=updated_task.result if updated_task.status == TaskStatus.COMPLETED else updated_task.error
