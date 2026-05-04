@@ -8,6 +8,7 @@ from nltk.tokenize import sent_tokenize
 from typing import AsyncGenerator, Optional
 from cortex_cm.utility.logger import get_logger
 from cortex_queue import MainTaskQueue, TaskStatus, TaskItem
+from .req import add_task as submit_task_remote
 from fastapi import WebSocket
 from service.stream.event import StreamEvent
 from cortex_cm.utility.sensory.config import STT_CONFIG, TTS_CONFIG
@@ -136,18 +137,22 @@ class VoiceClient:
     
                 async def _submit_main_task() -> None:
                     try:
-                        task_item = await MainTaskQueue.add_task(
+                        resp = await submit_task_remote(
                             payload={
                                 "query": query,
-                                "emotion": emotion.get("label", "neutral")
+                                "emotion": emotion.get("label", "neutral"),
                             },
                             task_name=task_name,
                             task_description=task_description,
-                            user_id=user_id or "11111111-1111-1111-1111-111111111111",
-                            session_id=session_id or "22222222-2222-2222-2222-222222222222",
-                            voice_client_response=fallback_response
+                            metadata={
+                                "user_id": user_id or "11111111-1111-1111-1111-111111111111",
+                                "session_id": session_id or "22222222-2222-2222-2222-222222222222",
+                                "voice_client_response": fallback_response,
+                            },
                         )
-                        await self._register_pending_task(task_item.task_id)
+                        task_id = resp.get("task_id") or resp.get("taskId")
+                        if task_id:
+                            await self._register_pending_task(str(task_id))
                     except Exception as task_exc:
                         self.logger.exception("Failed to submit background main task: %s", task_exc)
 
