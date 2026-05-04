@@ -11,7 +11,7 @@ from cortex_cm.utility.logger import get_logger
 from cortex_cm.utility.huggingface.config import models
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 import json
-from cortex_cm.utility.models import PLANNER_MODEL
+from cortex_cm.utility.models import get_planner_model
 
 from datetime import datetime, timezone
 UTC_NOW = lambda: datetime.now(timezone.utc)
@@ -19,7 +19,7 @@ UTC_NOW = lambda: datetime.now(timezone.utc)
 class ManagerModel:
     def __init__(self):
         self.logger = get_logger("CORTEX_MANAGER")
-        self.model = PLANNER_MODEL
+        self.model = get_planner_model()
         # self.template_provider = TemplateProvider()
         # self.str_parser = StrOutputParser()
         

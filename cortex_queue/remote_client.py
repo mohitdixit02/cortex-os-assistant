@@ -43,7 +43,7 @@ class RemoteTaskQueue:
         status_message: Optional[str] = None,
     ) -> Dict[str, Any]:
         response = await self.client.post("/submit_task", json={
-            "task_id": task_id,
+            "task_id": str(task_id),
             "status": status.value,
             "status_message": status_message
         })

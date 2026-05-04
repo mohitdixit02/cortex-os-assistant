@@ -2,7 +2,7 @@ from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor
 from cortex_cm.utility.logger import get_logger
 from cortex_cm.utility.huggingface.config import models
 from cortex_cm.utility.sensory.config import STT_CONFIG
-from cortex_cm.utility.models import STT_MODEL, STT_PROCESSOR
+from cortex_cm.utility.models import get_stt_model
 import io
 import soundfile as sf
 import numpy as np
@@ -12,6 +12,7 @@ from typing import List
 
 # For Self Reference
 # https://huggingface.co/docs/transformers/model_doc/whisper?usage=AutoModel
+from cortex_cm.utility.models import get_stt_model
 
 class STTModel:
     """
@@ -25,9 +26,8 @@ class STTModel:
         self.logger = get_logger("SENSORY")
         self.model_cfg = models.get("stt", {})
         self.np_dtype = np.dtype(self.model_cfg.get("model_np_dtype", "float32"))
-        self.processor = STT_PROCESSOR
+        self.model, self.processor = get_stt_model()
         self.sample_rate = STT_CONFIG.get("sample_rate")
-        self.model = STT_MODEL
         self.max_source_positions = int(self.model_cfg.get("max_source_positions"))
 
     def _normalize_input_features(self, input_features: torch.Tensor) -> torch.Tensor:

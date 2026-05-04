@@ -28,6 +28,10 @@ class SubmitTaskRequest(BaseModel):
     status: TaskStatus
     status_message: Optional[str] = None
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
 @app.post("/add_task")
 async def add_task(request: AddTaskRequest):
     user_id = request.metadata.get("user_id")
@@ -77,15 +81,16 @@ async def add_task(request: AddTaskRequest):
         task_description=request.task_description,
         status=TaskStatus.QUEUED
     )
-    
+    # Push to Redis DB 1
     task_redis_client.lpush("pending_tasks", json.dumps({
-        "task_id": item.task_id,
+        "task_id": str(item.task_id),
         "payload": item.payload,
         "metadata": item.metadata,
         "task_name": item.task_name,
         "task_description": item.task_description,
         "status": item.status.value
     }))
+
     
     return {"task_id": item.task_id, "status": item.status}
 

@@ -11,35 +11,15 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, Syst
 from cortex_cm.utility.huggingface.request import HuggingFaceRequest
 from cortex.voice.prompts import VoiceClientRouteQuery, get_voice_client_prompts
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
-from cortex_cm.utility.models import MAIN_MODEL, PLANNER_MODEL, VOICE_EMOTION_PIPELINE
+from cortex_cm.utility.models import get_main_model, get_planner_model, get_voice_emotion_pipeline
 
-# class QueryTypeStructModel(BaseModel):
-#     type: Annotated[Literal["casual", "query"], Field(description="Type of the user query")]
+# ... (keep other imports)
 
-# class CasualResponseStructModel(BaseModel):
-#     response: Annotated[str, Field(description="Response to the casual user query")]
-    
-# class QueryResponseStructModel(BaseModel):
-#     answer: Annotated[Dict[str, Any],  Field(description="Answer to the user query based on the provided context in form of key-value pairs")]
-    
-# class WikiKeywordResponseModel(BaseModel):
-#     keywords: Annotated[list, Field(description="List of relevant keywords extracted from the user query")]
-
-text = """
-    Hi, It is Voice Model. I can speak in many langugages, in different tones and styles. I can also express emotions through my voice.
-"""
-
-def demo_response(chunk_size: int = 24):
-    """Yield small text chunks to simulate token streaming in tests."""
-    cleaned = " ".join(text.split())
-    for i in range(0, len(cleaned), chunk_size):
-        yield cleaned[i:i + chunk_size]
-    
 class VoiceMainModel:
     def __init__(self):
         self.logger = get_logger("CORTEX_VOICE")
-        self.model = MAIN_MODEL
-        self.plan_model = PLANNER_MODEL
+        self.model = get_main_model()
+        self.plan_model = get_planner_model()
         
     def get_model(self):
         return self.model
@@ -100,13 +80,14 @@ class EmotionDetectionModel:
     """
     ## Emotion Detection Model
     Model for detecting emotion from input text using LLM
-    
+
     **Functions**:
     - `get_emotion(text: str) -> Dict[str, Any]` : Detects emotion from the input text.
     """
     def __init__(self):
         self.logger = get_logger("CORTEX_VOICE")
-        self.model_pipeline = VOICE_EMOTION_PIPELINE
+        self.model_pipeline = get_voice_emotion_pipeline()
+
         
     def get_model(self):
         return self.model

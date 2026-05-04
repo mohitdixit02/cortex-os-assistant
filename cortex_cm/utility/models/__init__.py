@@ -7,94 +7,103 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipe
 
 logger = get_logger("MODELS_LOADER")
 
-# ************** STT Model *******************
-logger.info("Initializing STTModel...")
-stt_model_cfg = models.get("stt", {})
-STT_PROCESSOR = AutoProcessor.from_pretrained(stt_model_cfg.get("name"))
-STT_MODEL = AutoModelForSpeechSeq2Seq.from_pretrained(
-    stt_model_cfg.get("name"),
-    torch_dtype=stt_model_cfg.get("dtype"),
-    low_cpu_mem_usage=True,
-    use_safetensors=True,
-).to(stt_model_cfg.get("device"))
-logger.info("STT model loaded..")
+_STT_MODEL = None
+_STT_PROCESSOR = None
+def get_stt_model():
+    global _STT_MODEL, _STT_PROCESSOR
+    if _STT_MODEL is None:
+        logger.info("Initializing STTModel...")
+        stt_model_cfg = models.get("stt", {})
+        _STT_PROCESSOR = AutoProcessor.from_pretrained(stt_model_cfg.get("name"))
+        _STT_MODEL = AutoModelForSpeechSeq2Seq.from_pretrained(
+            stt_model_cfg.get("name"),
+            torch_dtype=stt_model_cfg.get("dtype"),
+            low_cpu_mem_usage=True,
+            use_safetensors=True,
+        ).to(stt_model_cfg.get("device"))
+        logger.info("STT model loaded..")
+    return _STT_MODEL, _STT_PROCESSOR
 
-# ************** TTS Model *******************
-logger.info("Initializing TTS Pipeline...")
-TTS_PIPELINE = KPipeline(lang_code="a")
-logger.info("TTS Pipeline loaded..")
+_TTS_PIPELINE = None
+def get_tts_pipeline():
+    global _TTS_PIPELINE
+    if _TTS_PIPELINE is None:
+        logger.info("Initializing TTS Pipeline...")
+        _TTS_PIPELINE = KPipeline(lang_code="a")
+        logger.info("TTS Pipeline loaded..")
+    return _TTS_PIPELINE
 
-# *************** Main Model *******************
-logger.info("Initializing Main Model...")
-main_model_config = models.get("main", {})
-MAIN_MODEL = ChatHuggingFace(llm=HuggingFaceEndpoint(
-    repo_id=main_model_config.get("name"),
-    task=main_model_config.get("task", "conversational"),
-    max_new_tokens=main_model_config.get("max_new_tokens", 200),
-    temperature=main_model_config.get("temperature", 0.2)
-))
-logger.info("Main model loaded..")
+def _load_chat_hf_model(config_key, display_name):
+    config = models.get(config_key, {})
+    logger.info(f"Initializing {display_name}...")
+    model = ChatHuggingFace(llm=HuggingFaceEndpoint(
+        repo_id=config.get("name"),
+        task=config.get("task", "conversational"),
+        max_new_tokens=config.get("max_new_tokens", 200),
+        temperature=config.get("temperature", 0.2)
+    ))
+    logger.info(f"{display_name} loaded..")
+    return model
 
-# *************** Planner Model *******************
-logger.info("Initializing Planner Model...")
-planner_model_config = models.get("planner", {})
-PLANNER_MODEL = ChatHuggingFace(llm=HuggingFaceEndpoint(
-    repo_id=planner_model_config.get("name"),
-    task=planner_model_config.get("task", "conversational"),
-    max_new_tokens=planner_model_config.get("max_new_tokens", 200),
-    temperature=planner_model_config.get("temperature", 0.2)
-))
-logger.info("Planner model loaded..")
+_MAIN_MODEL = None
+def get_main_model():
+    global _MAIN_MODEL
+    if _MAIN_MODEL is None:
+        _MAIN_MODEL = _load_chat_hf_model("main", "Main Model")
+    return _MAIN_MODEL
 
-# *************** Main Orchestrator Model *******************
-logger.info("Initializing Main Orchestrator Model...")
-main_orchestrator_model_config = models.get("main_orchestrator", {})
-MAIN_ORCHESTRATOR_MODEL = ChatHuggingFace(llm=HuggingFaceEndpoint(
-    repo_id=main_orchestrator_model_config.get("name"),
-    task=main_orchestrator_model_config.get("task", "conversational"),
-    max_new_tokens=main_orchestrator_model_config.get("max_new_tokens", 200),
-    temperature=main_orchestrator_model_config.get("temperature", 0.2)
-))
-logger.info("Main Orchestrator model loaded..")
+_PLANNER_MODEL = None
+def get_planner_model():
+    global _PLANNER_MODEL
+    if _PLANNER_MODEL is None:
+        _PLANNER_MODEL = _load_chat_hf_model("planner", "Planner Model")
+    return _PLANNER_MODEL
 
-# *************** Heavy Planner Model *******************
-logger.info("Initializing Heavy Planner Model...")
-heavy_planner_model_config = models.get("heavy_planner", {})
-HEAVY_PLANNER_MODEL = ChatHuggingFace(llm=HuggingFaceEndpoint(
-    repo_id=heavy_planner_model_config.get("name"),
-    task=heavy_planner_model_config.get("task", "conversational"),
-    max_new_tokens=heavy_planner_model_config.get("max_new_tokens", 200),
-    temperature=heavy_planner_model_config.get("temperature", 0.2)
-))
-logger.info("Heavy Planner model loaded..")
+_MAIN_ORCHESTRATOR_MODEL = None
+def get_main_orchestrator_model():
+    global _MAIN_ORCHESTRATOR_MODEL
+    if _MAIN_ORCHESTRATOR_MODEL is None:
+        _MAIN_ORCHESTRATOR_MODEL = _load_chat_hf_model("main_orchestrator", "Main Orchestrator Model")
+    return _MAIN_ORCHESTRATOR_MODEL
 
-# *************** Heavy Response Model *******************
-logger.info("Initializing Heavy Response Model...")
-heavy_response_model_config = models.get("heavy_response_model", {})
-HEAVY_RESPONSE_MODEL = ChatHuggingFace(llm=HuggingFaceEndpoint(
-    repo_id=heavy_response_model_config.get("name"),
-    task=heavy_response_model_config.get("task", "conversational"),
-    max_new_tokens=heavy_response_model_config.get("max_new_tokens", 200),
-    temperature=heavy_response_model_config.get("temperature", 0.2)
-))
-logger.info("Heavy Response model loaded..")
+_HEAVY_PLANNER_MODEL = None
+def get_heavy_planner_model():
+    global _HEAVY_PLANNER_MODEL
+    if _HEAVY_PLANNER_MODEL is None:
+        _HEAVY_PLANNER_MODEL = _load_chat_hf_model("heavy_planner", "Heavy Planner Model")
+    return _HEAVY_PLANNER_MODEL
 
-# *************** Voice Emotion Model *******************
-logger.info("Initializing Voice Emotion Model...")
-emotion_model_config = models.get("voice_emotion", {})
-emotion_model_name = emotion_model_config.get("name")
-emotion_model = AutoModelForSequenceClassification.from_pretrained(emotion_model_name)
-emotion_tokenizer = AutoTokenizer.from_pretrained(emotion_model_name)
-VOICE_EMOTION_PIPELINE = pipeline(
-    emotion_model_config.get("task"), 
-    model=emotion_model, 
-    tokenizer=emotion_tokenizer
-)
-logger.info("Voice Emotion model loaded..")
+_HEAVY_RESPONSE_MODEL = None
+def get_heavy_response_model():
+    global _HEAVY_RESPONSE_MODEL
+    if _HEAVY_RESPONSE_MODEL is None:
+        _HEAVY_RESPONSE_MODEL = _load_chat_hf_model("heavy_response_model", "Heavy Response Model")
+    return _HEAVY_RESPONSE_MODEL
 
-# ****************** Embeddings Model *******************
-logger.info("Initializing Embeddings Model...")
-EMBEDDING_MODEL = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
-logger.info("Embeddings model loaded..")
+_VOICE_EMOTION_PIPELINE = None
+def get_voice_emotion_pipeline():
+    global _VOICE_EMOTION_PIPELINE
+    if _VOICE_EMOTION_PIPELINE is None:
+        logger.info("Initializing Voice Emotion Model...")
+        emotion_model_config = models.get("voice_emotion", {})
+        emotion_model_name = emotion_model_config.get("name")
+        emotion_model = AutoModelForSequenceClassification.from_pretrained(emotion_model_name)
+        emotion_tokenizer = AutoTokenizer.from_pretrained(emotion_model_name)
+        _VOICE_EMOTION_PIPELINE = pipeline(
+            emotion_model_config.get("task"), 
+            model=emotion_model, 
+            tokenizer=emotion_tokenizer
+        )
+        logger.info("Voice Emotion model loaded..")
+    return _VOICE_EMOTION_PIPELINE
+
+_EMBEDDING_MODEL = None
+def get_embedding_model():
+    global _EMBEDDING_MODEL
+    if _EMBEDDING_MODEL is None:
+        logger.info("Initializing Embeddings Model...")
+        _EMBEDDING_MODEL = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2"
+        )
+        logger.info("Embeddings model loaded..")
+    return _EMBEDDING_MODEL

@@ -5,12 +5,12 @@ from cortex_cm.utility.config import env
 from cortex_core.graph.state import ConversationState, UserSTM, MemoryEmotionalProfile, MemoryState, MemoryUserKnowledgeList
 import json
 import re
-from cortex_cm.utility.models import MAIN_MODEL, HEAVY_PLANNER_MODEL
+from cortex_cm.utility.models import get_main_model, get_heavy_planner_model
 
 class MemoryModel:
     def __init__(self):
-        self.model = MAIN_MODEL
-        self.heavy_plan_model = HEAVY_PLANNER_MODEL
+        self.model = get_main_model()
+        self.heavy_plan_model = get_heavy_planner_model()
     
     def build_stm(self, state: MemoryState):
         """

@@ -7,7 +7,7 @@ from cortex_cm.utility.logger import get_logger
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from cortex_core.manager.tools import AVAILABLE_TOOLS
 import json
-from cortex_cm.utility.models import HEAVY_PLANNER_MODEL, HEAVY_RESPONSE_MODEL, MAIN_ORCHESTRATOR_MODEL
+from cortex_cm.utility.models import get_heavy_planner_model, get_heavy_response_model, get_main_orchestrator_model
 from cortex_core.main.prompts import get_main_orchestrator_evaluate_prompt, get_main_orchestrator_plan_prompt, get_main_orchestrator_res_prompt
 from cortex_core.main.prompts.main_evaluator import (
     InternalFeedbackKnowledge,
@@ -37,9 +37,9 @@ def demo_response(chunk_size: int = 24):
 class CortexMainModel:
     def __init__(self):
         self.logger = get_logger("CORTEX_MAIN")
-        self.heavy_plan_model = HEAVY_PLANNER_MODEL
-        self.heavy_response_model = HEAVY_RESPONSE_MODEL
-        self.main_orchestrator_model = MAIN_ORCHESTRATOR_MODEL
+        self.heavy_plan_model = get_heavy_planner_model()
+        self.heavy_response_model = get_heavy_response_model()
+        self.main_orchestrator_model = get_main_orchestrator_model()
         # self.template_provider = TemplateProvider()
         # self.str_parser = StrOutputParser()
     

@@ -1,7 +1,7 @@
 services:
-  db:
+  pg:
     image: pgvector/pgvector:pg17
-    container_name: cortex-assistant-db-server
+    container_name: cortex-pg-db
     restart: always
     environment:
       POSTGRES_USER: postgres
@@ -11,10 +11,11 @@ services:
       - "5460:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
+      - ./cortex_cm/pg/sql/create_tables.sql:/docker-entrypoint-initdb.d/10-create_tables.sql
 
   redis:
     image: redis:latest
-    container_name: cortex-assistant-redis-server
+    container_name: cortex-redis-db
     restart: always
     ports:
       - "6379:6379"
@@ -30,11 +31,11 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - DB_URL=postgresql://postgres:cortex_postgres_db@db:5432/cortex-assistant-db
+      - DB_URL=postgresql://postgres:cortex_postgres_db@pg:5432/cortex-assistant-db
     command: python cortex_queue/main.py
     depends_on:
       - redis
-      - db
+      - pg
 
   cortex-server:
     build: .
@@ -45,13 +46,13 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - DB_URL=postgresql://postgres:cortex_postgres_db@db:5432/cortex-assistant-db
+      - DB_URL=postgresql://postgres:cortex_postgres_db@pg:5432/cortex-assistant-db
       - CORTEX_QUEUE_URL=http://cortex-queue:8001
       - USE_REMOTE_QUEUE=true
     command: python cortex_server/main.py
     depends_on:
       - redis
-      - db
+      - pg
       - cortex-queue
 
   cortex-core:
@@ -61,11 +62,11 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - DB_URL=postgresql://postgres:cortex_postgres_db@db:5432/cortex-assistant-db
+      - DB_URL=postgresql://postgres:cortex_postgres_db@pg:5432/cortex-assistant-db
       - CORTEX_QUEUE_URL=http://cortex-queue:8001
       - USE_REMOTE_QUEUE=true
     command: python cortex_core/worker.py
     depends_on:
       - redis
-      - db
+      - pg
       - cortex-queue
