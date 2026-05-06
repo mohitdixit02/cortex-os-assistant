@@ -6,6 +6,8 @@ AIClientType: VOICE_CLIENT, CORE_MAIN_CLIENT
 PreferenceLevel: MUST, SHOULD, CAN, CANNOT
 TimeOfDay: MORNING, AFTERNOON, EVENING, NIGHT
 MoodTrend: STABLE, INCREASING, DECREASING
+TaskOwner: VOICE_CLIENT, EVENT_TOOL, OTHER
+EventStatus: CREATED, QUEUED, DONE, FAILED, CANCELLED
 
 ### Users Table (Google OAuth)
 user_id: UUID (PK)
@@ -93,10 +95,24 @@ tool_id: UUID (FK -> Tools.tool_id, Nullable)
 task_name: String
 task_description: Text (Nullable) — Canonical description used for embedding generation and retrieval.
 status: Enum(INITIALIZED, QUEUED, PROCESSING, COMPLETED, FAILED)
+task_owner: Enum(TaskOwner) (Default: OTHER)
 payload: JSON — The input arguments (e.g., {"number": "123", "text": "Hi"}).
 status_response: JSON/Text — The output or error message from the tool.
-metadata: JSON — Extra info like 'retry_count' or 'execution_time_ms'.
+task_metadata: JSON — Extra info like 'retry_count' or 'execution_time_ms'.
 embedding: Vector (Nullable) — Vector embedding of task_description for semantic search.
+created_at: Timestamp
+updated_at: Timestamp
+
+### UserEvents Table (The Scheduler)
+id: UUID (PK)
+user_id: UUID (FK -> Users.user_id)
+session_id: UUID (FK -> ChatSessions.session_id)
+name: String
+event_info: Text (Nullable)
+event_description: Text (Nullable)
+embedding: Vector (Nullable)
+trigger_time: Timestamp (Indexed)
+status: Enum(EventStatus) (Default: CREATED)
 created_at: Timestamp
 updated_at: Timestamp
 

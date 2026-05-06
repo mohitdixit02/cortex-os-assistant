@@ -7,6 +7,8 @@ from .enums import (
     RoleType,
     TaskStatus,
     TimeOfDay,
+    TaskOwner,
+    EventStatus
 )
 from .models import (
     ChatSession,
@@ -18,6 +20,7 @@ from .models import (
     UserKnowledgeBase,
     UserShortTermMemory,
     UserToolSubscription,
+    UserEvent
 )
 
 engine = create_engine(env.DB_URL, echo=False)
@@ -38,4 +41,7 @@ __all__ = [
     "Task",
     "UserToolSubscription",
     "engine",
+    "TaskOwner",
+    "EventStatus",
+    "UserEvent"
 ]

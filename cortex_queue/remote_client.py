@@ -8,7 +8,7 @@ from cortex_cm.utility.config import env
 
 class RemoteTaskQueue:
     def __init__(self, base_url: str = None):
-        self.base_url = base_url or os.getenv("CORTEX_QUEUE_URL", "http://cortex-queue:8001")
+        self.base_url = base_url or env.CORTEX_QUEUE_URL
         self.client = httpx.AsyncClient(base_url=self.base_url, timeout=30.0)
 
     async def add_task(

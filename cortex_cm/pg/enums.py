@@ -26,3 +26,15 @@ class TaskStatus(str, Enum):
     PROCESSING = "PROCESSING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+
+class EventStatus(str, Enum):
+    CREATED = "CREATED"
+    QUEUED = "QUEUED"
+    DONE = "DONE"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+
+class TaskOwner(str, Enum):
+    VOICE_CLIENT = "VOICE_CLIENT"
+    EVENT_TOOL = "EVENT_TOOL"
+    OTHER = "OTHER"

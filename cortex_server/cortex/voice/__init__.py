@@ -1,8 +1,8 @@
 import asyncio
-from sensory.STT import STTClient
-from sensory.TTS import TTSClient
-from cortex.voice.model import VoiceMainModel, EmotionDetectionModel
-from service.stream.audio_bridge import AudioStreamBridge
+from cortex_server.cortex.sensory.STT import STTClient
+from cortex_server.cortex.sensory.TTS import TTSClient
+from cortex_server.cortex.voice.model import VoiceMainModel, EmotionDetectionModel
+from cortex_server.service.stream.audio_bridge import AudioStreamBridge
 from cortex_cm.utility.main import iterate_tokens_async
 from nltk.tokenize import sent_tokenize
 from typing import AsyncGenerator, Optional

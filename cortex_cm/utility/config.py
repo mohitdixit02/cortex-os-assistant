@@ -33,6 +33,10 @@ class EnvProvider:
     REDIS_PORT: int = int(os.getenv("REDIS_PORT", 6379))
     REDIS_DB: int = int(os.getenv("REDIS_DB", 0))
     
+    # Service URLs
+    CORTEX_QUEUE_URL: str = os.getenv("CORTEX_QUEUE_URL", "http://localhost:8001")
+    EVENT_TOOL_URL: str = os.getenv("EVENT_TOOL_URL", "http://localhost:8002")
+
     # JWT
     JWT_SECRET: str = os.getenv("JWT_SECRET", "your-secret-key")
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")

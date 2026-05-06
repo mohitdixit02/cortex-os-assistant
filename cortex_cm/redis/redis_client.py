@@ -52,3 +52,5 @@ token_redis_client = RedisClient(db=0)
 task_redis_client = RedisClient(db=1)
 # DB:2 - Submitting results which will be listened by cortex_server
 result_redis_client = RedisClient(db=2)
+# DB:4 - Saving events which will be listened by cortex_event_tool
+event_redis_client = RedisClient(db=4)

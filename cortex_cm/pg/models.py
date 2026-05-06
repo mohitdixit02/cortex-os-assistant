@@ -13,6 +13,8 @@ from cortex_cm.pg.enums import (
     RoleType,
     TaskStatus,
     TimeOfDay,
+    EventStatus,
+    TaskOwner,
 )
 
 
@@ -220,6 +222,10 @@ class Task(SQLModel, table=True):
     task_name: str = Field(sa_column=Column(String(255), nullable=False))
     task_description: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
     status: TaskStatus = Field(sa_column=Column(SAEnum(TaskStatus, name="task_status"), nullable=False, index=True))
+    task_owner: TaskOwner = Field(
+        default=TaskOwner.OTHER,
+        sa_column=Column(SAEnum(TaskOwner, name="task_owner"), nullable=False, index=True),
+    )
     payload: dict[str, Any] = Field(sa_column=Column(JSONB, nullable=False))
     status_response: Optional[dict[str, Any]] = Field(default=None, sa_column=Column(JSONB, nullable=True))
     task_metadata: Optional[dict[str, Any]] = Field(default=None, sa_column=Column(JSONB, nullable=True))
@@ -231,5 +237,32 @@ class Task(SQLModel, table=True):
     tool: Optional["Tool"] = Relationship(back_populates="tasks")
 
 
+class UserEvent(SQLModel, table=True):
+    __tablename__ = "user_events"
+
+    id: UUID = Field(
+        default_factory=uuid4,
+        sa_column=Column(PGUUID(as_uuid=True), primary_key=True, nullable=False),
+    )
+    user_id: UUID = Field(
+        sa_column=Column(PGUUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True)
+    )
+    session_id: UUID = Field(
+        sa_column=Column(PGUUID(as_uuid=True), ForeignKey("chat_sessions.session_id", ondelete="CASCADE"), nullable=False, index=True)
+    )
+    name: str = Field(sa_column=Column(String(255), nullable=False))
+    event_info: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
+    event_description: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
+    embedding: Optional[list[float]] = Field(default=None, sa_column=Column(Vector(), nullable=True))
+    trigger_time: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, index=True))
+    status: EventStatus = Field(
+        default=EventStatus.CREATED,
+        sa_column=Column(SAEnum(EventStatus, name="event_status"), nullable=False, default=EventStatus.CREATED, index=True),
+    )
+    created_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
+    updated_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
+
+
 Index("ix_messages_session_created", Message.__table__.c.session_id, Message.__table__.c.created_at)
 Index("ix_tasks_status_updated", Task.__table__.c.status, Task.__table__.c.updated_at)
+Index("idx_events_trigger_time", UserEvent.__table__.c.trigger_time, postgresql_where=(UserEvent.__table__.c.status == 'CREATED'))

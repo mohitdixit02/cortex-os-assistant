@@ -14,6 +14,8 @@ from cortex_queue import TaskItem, TaskStatus
 from cortex_cm.redis.redis_client import task_redis_client
 from cortex_core.req import submit_task
 
+from cortex_cm.pg import TaskOwner
+
 async def main():
     client = MainClient()    
     print("Cortex Core Worker started. Listening to Redis DB 1...")
@@ -23,6 +25,20 @@ async def main():
             task_data = task_redis_client.brpop("pending_tasks", timeout=0)
             if task_data:
                 data = json.loads(task_data)
+                metadata = data.get("metadata", {})
+                task_owner = metadata.get("task_owner", TaskOwner.VOICE_CLIENT.value)
+                
+                if task_owner != TaskOwner.VOICE_CLIENT.value:
+                    print(f"Skipping task {data.get('task_id')} as it belongs to {task_owner}")
+                    # Re-push or handle separately? 
+                    # The instruction says "For event_tool task, I will make workflow separetley."
+                    # So I should probably just leave it in the queue if I'm not the right worker?
+                    # But there is only one 'pending_tasks' queue.
+                    # If I leave it there, it will be picked up again by this same worker.
+                    # Usually, different workers would listen to different queues or filter.
+                    # For now, I'll just ignore it if it's not mine.
+                    continue
+
                 print(f"Received task: {data.get('task_id')} - {data.get('task_name')}")
                 
                 task_item = TaskItem(

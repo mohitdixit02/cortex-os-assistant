@@ -86,7 +86,8 @@ class MemorySaver:
         payload: dict,
         status_response: Optional[dict[str, Any]] = None,
         task_metadata: Optional[dict[str, Any]] = None,
-        embedding: Optional[list[float]] = None
+        embedding: Optional[list[float]] = None,
+        task_owner: Optional[Any] = None
     ) -> Task:
         """
         ### Add a new task to the database. \n
@@ -100,12 +101,15 @@ class MemorySaver:
         - `status_response`: (Optional) The response data associated with the task status, if applicable. \n
         - `task_metadata`: (Optional) Additional metadata for the task, if applicable. \n
         - `embedding`: (Optional) The embedding for the task, if applicable. \n
+        - `task_owner`: (Optional) The owner of the task (e.g., VOICE_CLIENT, EVENT_TOOL). \n
         **Output**: The created task object
         """
         self.logger.info("Adding new task for message_id: %s, task_name: %s", message_id, task_name)
         try:
             if status is Enum:
                 status = status.value
+            if task_owner and task_owner is Enum:
+                task_owner = task_owner.value
             with Session(self.engine) as session:
                 task_state = Task(
                     message_id=message_id,
@@ -116,7 +120,8 @@ class MemorySaver:
                     payload=payload,
                     status_response=status_response,
                     task_metadata=task_metadata,
-                    embedding=embedding
+                    embedding=embedding,
+                    task_owner=task_owner
                 )
                 task_obj = create_one(
                     session=session,

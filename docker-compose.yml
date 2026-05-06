@@ -32,6 +32,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - DB_URL=postgresql://postgres:cortex_postgres_db@pg:5432/cortex-assistant-db
+      - EVENT_TOOL_URL=http://cortex-event-tool:8002
     command: python cortex_queue/main.py
     depends_on:
       - redis
@@ -48,6 +49,7 @@ services:
       - REDIS_PORT=6379
       - DB_URL=postgresql://postgres:cortex_postgres_db@pg:5432/cortex-assistant-db
       - CORTEX_QUEUE_URL=http://cortex-queue:8001
+      - EVENT_TOOL_URL=http://cortex-event-tool:8002
       - USE_REMOTE_QUEUE=true
     command: python cortex_server/main.py
     depends_on:
@@ -64,9 +66,43 @@ services:
       - REDIS_PORT=6379
       - DB_URL=postgresql://postgres:cortex_postgres_db@pg:5432/cortex-assistant-db
       - CORTEX_QUEUE_URL=http://cortex-queue:8001
+      - EVENT_TOOL_URL=http://cortex-event-tool:8002
       - USE_REMOTE_QUEUE=true
     command: python cortex_core/worker.py
     depends_on:
       - redis
       - pg
       - cortex-queue
+
+  cortex-event-tool:
+    build: .
+    container_name: cortex-event-tool
+    restart: always
+    ports:
+      - "8002:8002"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DB_URL=postgresql://postgres:cortex_postgres_db@pg:5432/cortex-assistant-db
+      - CORTEX_QUEUE_URL=http://cortex-queue:8001
+    command: python cortex_event_tool/req.py
+    depends_on:
+      - redis
+      - pg
+      - cortex-queue
+
+  cortex-event-worker:
+    build: .
+    container_name: cortex-event-worker
+    restart: always
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - DB_URL=postgresql://postgres:cortex_postgres_db@pg:5432/cortex-assistant-db
+      - CORTEX_QUEUE_URL=http://cortex-queue:8001
+    command: python cortex_event_tool/worker.py
+    depends_on:
+      - redis
+      - pg
+      - cortex-queue
+      - cortex-event-tool

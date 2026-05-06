@@ -1,4 +1,4 @@
-from sensory.STT.model import STTModel
+from cortex_server.cortex.sensory.STT.model import STTModel
 from cortex_cm.utility.sensory.config import STT_CONFIG
 from cortex_cm.utility.logger import get_logger
 import numpy as np
