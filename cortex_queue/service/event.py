@@ -8,6 +8,9 @@ from cortex_core.memory.embedding import EmbeddingModel
 from sqlmodel import UUID, Session
 from datetime import datetime, timezone
 
+from cortex_cm.utility.logger import get_logger
+logger = get_logger("TASK_QUEUE")
+
 model = EmbeddingModel()
 memory_saver = MemorySaver(engine=engine, model=model)
 
@@ -45,9 +48,11 @@ async def add_event_tool_task_to_queue(request: AddTaskRequest) -> TaskItem:
     if event_id:
         updated_event = _update_event_status(UUID(event_id), EventStatus.QUEUED)
         if not updated_event:
-            print(f"Warning: Event with ID {event_id} not found for status update.")
+            logger.warning(f"Warning: Event with ID {event_id} not found for status update.")
         else:
-            print(f"Event {event_id} status updated to QUEUED in PG.")
+            logger.info(f"Event {event_id} status updated to QUEUED in PG.")
+    else:
+        logger.warning("Warning: Task is queued without event_id in payload")
     
     return task_obj
 
@@ -55,4 +60,6 @@ async def update_submit_event_task_status(request: TaskItem):
     event_id = request.payload.get("event_id")
     if event_id:
         new_status = EventStatus.DONE if request.status == TaskStatus.COMPLETED else EventStatus.FAILED
-        await _update_event_status(event_id, new_status)
+        _update_event_status(event_id, new_status)
+    else:
+        logger.warning("Warning: No event_id found in task payload for status update")

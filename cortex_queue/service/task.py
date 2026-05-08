@@ -9,6 +9,9 @@ from cortex_core.memory.saver import MemorySaver
 from cortex_core.memory.embedding import EmbeddingModel
 from cortex_cm.pg import RoleType, AIClientType
 
+from cortex_cm.utility.logger import get_logger
+logger = get_logger("TASK_QUEUE")
+
 # Initialize shared components
 model = EmbeddingModel()
 memory_saver = MemorySaver(engine=engine, model=model)
@@ -53,8 +56,8 @@ async def _add_vc_task_to_queue(request: AddTaskRequest) -> TaskItem:
     return task_obj
 
 async def add_task_to_queue(request: AddTaskRequest):
-    task_type = request.metadata.get("task_type", "query")
-
+    task_type = request.metadata.get("task_type")
+    logger.info(f"Task type: {task_type}, Task name: {request.task_name}, User ID: {request.metadata.get('user_id')}, Session ID: {request.metadata.get('session_id')}")
     if task_type == "tool_execution":
         task_obj = await add_event_tool_task_to_queue(request)
     elif task_type == "query":

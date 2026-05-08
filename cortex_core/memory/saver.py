@@ -49,9 +49,9 @@ class MemorySaver:
         self.logger.info("Saving message for session_id: %s, user_id: %s, role: %s", session_id, user_id, role)
         embedding = self.model.generate_embeddings(content)
         try:
-            if role is Enum:
+            if isinstance(role, Enum):
                 role = role.value
-            if ai_client and ai_client is Enum:
+            if ai_client and isinstance(ai_client, Enum):
                 ai_client = ai_client.value
             with Session(self.engine) as session:
                 state = Message(
@@ -106,9 +106,9 @@ class MemorySaver:
         """
         self.logger.info("Adding new task for message_id: %s, task_name: %s", message_id, task_name)
         try:
-            if status is Enum:
+            if isinstance(status, Enum):
                 status = status.value
-            if task_owner and task_owner is Enum:
+            if task_owner and isinstance(task_owner, Enum):
                 task_owner = task_owner.value
             with Session(self.engine) as session:
                 task_state = Task(
@@ -152,7 +152,7 @@ class MemorySaver:
         """
         self.logger.info("Updating task with task_id: %s", task_id)
         try:
-            if status is Enum:
+            if isinstance(status, Enum):
                 status = status.value
             with Session(self.engine) as session:
                 task_obj = get_one(

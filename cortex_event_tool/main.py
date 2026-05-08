@@ -87,8 +87,15 @@ def get_due_events(time_window_minutes: int = 5) -> List[Dict[str, Any]]:
     """
     return get_due_events_from_redis(time_window_seconds=time_window_minutes * 60)
 
-def remove_event_from_redis(event_id: str):
+def remove_event(event_id: str):
     """
     Removes an event from Redis after processing to prevent re-processing.
     """
     delete_event_from_redis(event_id)
+
+__all__ = [
+    "create_event",
+    "get_user_events",
+    "get_due_events",
+    "remove_event"
+]

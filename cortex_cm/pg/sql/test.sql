@@ -10,3 +10,4 @@ select * from messages;
 
 select * from tasks;
 
+select * from user_events;

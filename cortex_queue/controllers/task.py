@@ -25,13 +25,13 @@ async def add_task(request: AddTaskRequest):
     session_id = request.metadata.get("session_id")
     if not user_id or not session_id:
         raise HTTPException(status_code=400, detail="Missing User ID or Session ID in task metadata")
-    return add_task_to_queue(request)
+    return await add_task_to_queue(request)
 
 @task_router.post("/submit_task")
 async def submit_task(request: TaskItem):
     if request.status not in [TaskStatus.COMPLETED, TaskStatus.FAILED]:
         raise HTTPException(status_code=400, detail="Status must be either 'completed' or 'failed'")
-    return submit_task_to_queue(request)
+    return await submit_task_to_queue(request)
 
 @task_router.get("/get_task")
 async def get_task(timeout: int = 0):
