@@ -78,7 +78,7 @@ class MemorySaver:
         
     def add_new_task(
         self,
-        message_id: str,
+        message_id: Optional[str],
         tool_id: Optional[str],
         task_name: str,
         task_description: str,
@@ -92,7 +92,7 @@ class MemorySaver:
         """
         ### Add a new task to the database. \n
         **Input**: \n
-        - `message_id`: The ID of the message associated with the task. \n
+        - `message_id`: (Optional) The ID of the message associated with the task. \n
         - `tool_id`: (Optional) The ID of the tool associated with the task, if applicable. \n
         - `task_name`: The name of the task. \n
         - `task_description`: A description of the task. \n
