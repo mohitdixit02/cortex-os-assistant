@@ -1,0 +1,58 @@
+from typing import Optional
+
+from cortex_queue.dto import AddTaskRequest, TaskItem
+from cortex_cm.pg import TaskStatus, engine, TaskOwner, EventStatus, UserEvent
+from cortex_cm.pg.req import crud
+from cortex_core.memory.saver import MemorySaver
+from cortex_core.memory.embedding import EmbeddingModel
+from sqlmodel import UUID, Session
+from datetime import datetime, timezone
+
+model = EmbeddingModel()
+memory_saver = MemorySaver(engine=engine, model=model)
+
+def _update_event_status(event_id: UUID, status: EventStatus) -> Optional[UserEvent]:
+    """
+    Updates the status of an event in PostgreSQL
+    """
+    with Session(engine) as session:
+        db_event = crud.get_by_id(session, UserEvent, event_id)
+        if not db_event:
+            return None
+        
+        db_event.status = status
+        db_event.updated_at = datetime.now(timezone.utc)
+        
+        updated_event = crud.update_one(session, db_event, db_event)
+        return updated_event
+
+async def add_event_tool_task_to_queue(request: AddTaskRequest) -> TaskItem:
+    task_obj = memory_saver.add_new_task(
+        message_id=None,
+        tool_id=None,
+        task_name=request.task_name,
+        task_description=request.task_description,
+        status=TaskStatus.QUEUED,
+        payload=request.payload,
+        status_response=None,
+        task_metadata=dict(request.metadata),
+        embedding=model.generate_embeddings(request.task_description),
+        task_owner=TaskOwner.EVENT_TOOL.value
+    )
+    
+    # Update event status to QUEUED in PostgreSQL
+    event_id = request.payload.get("event_id")
+    if event_id:
+        updated_event = _update_event_status(UUID(event_id), EventStatus.QUEUED)
+        if not updated_event:
+            print(f"Warning: Event with ID {event_id} not found for status update.")
+        else:
+            print(f"Event {event_id} status updated to QUEUED in PG.")
+    
+    return task_obj
+
+async def update_submit_event_task_status(request: TaskItem):
+    event_id = request.payload.get("event_id")
+    if event_id:
+        new_status = EventStatus.DONE if request.status == TaskStatus.COMPLETED else EventStatus.FAILED
+        await _update_event_status(event_id, new_status)

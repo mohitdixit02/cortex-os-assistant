@@ -52,11 +52,7 @@ async def main():
                 
                 updated_task = await client._handle_task_queue(task_item)
                 
-                await submit_task(
-                    task_id=updated_task.task_id,
-                    status=updated_task.status,
-                    status_message=updated_task.result if updated_task.status == TaskStatus.COMPLETED else updated_task.error
-                )
+                await submit_task(task_item=task_item)
                 print(f"Completed and submitted result for task: {updated_task.task_id}")
         except Exception as e:
             print(f"Error in worker loop: {e}")

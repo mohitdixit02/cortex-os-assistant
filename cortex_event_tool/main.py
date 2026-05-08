@@ -1,11 +1,15 @@
-from datetime import datetime, timezone, timedelta
-from typing import List, Optional, Dict, Any, Tuple
+from datetime import datetime
+from typing import List, Optional, Dict, Any
 from uuid import UUID
 
-from sqlmodel import Session, select
+from sqlmodel import Session
 from cortex_cm.pg import engine, UserEvent, EventStatus
 from cortex_cm.pg.req import crud
-from cortex_cm.redis.event_tool import save_event_to_redis, delete_event_from_redis
+from cortex_cm.redis.event_tool import (
+    save_event_to_redis,
+    get_due_events_from_redis,
+    delete_event_from_redis
+)
 
 def create_event(
     user_id: UUID,
@@ -17,19 +21,7 @@ def create_event(
     embedding: Optional[List[float]] = None
 ) -> UserEvent:
     """
-    Creates a new event in PostgreSQL and persists it in Redis for worker tracking.
-    
-    Args:
-        user_id (UUID): The ID of the user creating the event.
-        session_id (UUID): The current session ID.
-        name (str): Name of the event.
-        trigger_time (datetime): When the event should be triggered.
-        event_info (Optional[str]): Additional info for the event.
-        event_description (Optional[str]): Description of the event.
-        embedding (Optional[List[float]]): Vector embedding of the event description.
-        
-    Returns:
-        UserEvent: The created UserEvent object.
+    Creates a new event in PostgreSQL and persists it in Redis for fast retrieval and worker tracking.
     """
     with Session(engine) as session:
         event = UserEvent(
@@ -44,16 +36,19 @@ def create_event(
         )
         db_event = crud.create_one(session, event)
         
-        # Save to Redis for worker to track
+        # Save to Redis for fast retrieval and worker to track
         redis_data = {
-            "event_id": str(db_event.id),
+            "id": str(db_event.id),
             "user_id": str(db_event.user_id),
             "session_id": str(db_event.session_id),
             "name": db_event.name,
+            "event_info": db_event.event_info,
+            "event_description": db_event.event_description,
             "trigger_time": db_event.trigger_time.isoformat(),
-            "status": db_event.status.value
+            "status": db_event.status.value,
+            "created_at": db_event.created_at.isoformat()
         }
-        save_event_to_redis(str(db_event.id), db_event.trigger_time.isoformat(), redis_data)
+        save_event_to_redis(str(db_event.user_id), str(db_event.id), db_event.trigger_time, redis_data)
         
         return db_event
 
@@ -62,18 +57,19 @@ def get_user_events(
     session_id: Optional[UUID] = None,
     status: Optional[EventStatus] = None,
     limit: int = 100
-) -> List[UserEvent]:
+) -> List[Dict[str, Any]]:
     """
-    Fetches events for a specific user and optionally a session and status.
+    Fetches events for a specific user primarily from Redis for speed.
+    Falls back to PG if needed or if complex filtering is required.
     
     Args:
         user_id (UUID): The user ID.
-        session_id (Optional[UUID]): The session ID.
-        status (Optional[EventStatus]): The status of events to fetch.
+        session_id (Optional[UUID]): Optional session ID filter.
+        status (Optional[EventStatus]): Optional status filter.
         limit (int): Maximum number of events to return.
         
     Returns:
-        List[UserEvent]: A list of matching UserEvent objects.
+        List[Dict[str, Any]]: A list of matching event data.
     """
     with Session(engine) as session:
         filters = {"user_id": user_id}
@@ -82,80 +78,17 @@ def get_user_events(
         if status:
             filters["status"] = status
         
-        return crud.get_many(session, UserEvent, limit=limit, **filters)
+        db_events = crud.get_many(session, UserEvent, limit=limit, **filters)
+        return [e.model_dump() for e in db_events]
 
-def update_event_status(event_id: UUID, status: EventStatus) -> Optional[UserEvent]:
+def get_due_events(time_window_minutes: int = 5) -> List[Dict[str, Any]]:
     """
-    Updates the status of an event in both PostgreSQL and Redis.
-    
-    Args:
-        event_id (UUID): The event ID.
-        status (EventStatus): The new status.
-        
-    Returns:
-        Optional[UserEvent]: The updated UserEvent object if found, else None.
+    Checks for due events using Redis global ZSET.
     """
-    with Session(engine) as session:
-        db_event = crud.get_by_id(session, UserEvent, event_id)
-        if not db_event:
-            return None
-        
-        old_trigger_time = db_event.trigger_time.isoformat()
-        db_event.status = status
-        db_event.updated_at = datetime.now(timezone.utc)
-        
-        updated_event = crud.update_one(session, db_event, db_event)
-        
-        # Sync with Redis
-        if status in [EventStatus.DONE, EventStatus.FAILED, EventStatus.CANCELLED]:
-            delete_event_from_redis(str(event_id), old_trigger_time)
-        else:
-            redis_data = {
-                "event_id": str(updated_event.id),
-                "user_id": str(updated_event.user_id),
-                "session_id": str(updated_event.session_id),
-                "name": updated_event.name,
-                "trigger_time": updated_event.trigger_time.isoformat(),
-                "status": updated_event.status.value
-            }
-            save_event_to_redis(str(updated_event.id), updated_event.trigger_time.isoformat(), redis_data)
-            
-        return updated_event
+    return get_due_events_from_redis(time_window_seconds=time_window_minutes * 60)
 
-def get_due_events_pg(time_window_minutes: int = 5) -> List[UserEvent]:
+def remove_event_from_redis(event_id: str):
     """
-    Checks for events in PostgreSQL that are due within a given time window.
-    
-    Args:
-        time_window_minutes (int): The window in minutes from now.
-        
-    Returns:
-        List[UserEvent]: A list of due UserEvent objects.
+    Removes an event from Redis after processing to prevent re-processing.
     """
-    now = datetime.now(timezone.utc)
-    future_limit = now + timedelta(minutes=time_window_minutes)
-    
-    with Session(engine) as session:
-        statement = select(UserEvent).where(
-            UserEvent.status == EventStatus.CREATED,
-            UserEvent.trigger_time <= future_limit
-        )
-        return list(session.exec(statement).all())
-
-def get_similar_events(
-    user_id: UUID,
-    query_embedding: List[float],
-    limit: int = 5,
-    threshold: float = 0.55
-) -> List[Tuple[UserEvent, float]]:
-    """
-    Performs semantic search for events based on embedding.
-    """
-    with Session(engine) as session:
-        return crud.get_similar(
-            session=session,
-            model=UserEvent,
-            query_embedding=query_embedding,
-            top_k=limit,
-            user_id=user_id
-        )
+    delete_event_from_redis(event_id)
