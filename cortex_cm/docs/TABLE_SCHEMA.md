@@ -90,7 +90,7 @@ updated_at: Timestamp
 
 ### Tasks Table (The Queue)
 task_id: UUID (PK)
-message_id: UUID (FK -> Messages.message_id) — Links the task to the specific user request.
+message_id: UUID (FK -> Messages.message_id, Nullable) — Links the task to the specific user request.
 tool_id: UUID (FK -> Tools.tool_id, Nullable)
 task_name: String
 task_description: Text (Nullable) — Canonical description used for embedding generation and retrieval.

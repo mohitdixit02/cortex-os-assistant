@@ -137,7 +137,7 @@ CREATE TABLE IF NOT EXISTS user_tool_subscriptions (
 
 CREATE TABLE IF NOT EXISTS tasks (
     task_id UUID PRIMARY KEY,
-    message_id UUID NOT NULL REFERENCES messages(message_id) ON DELETE CASCADE,
+    message_id UUID REFERENCES messages(message_id) ON DELETE CASCADE,
     tool_id UUID REFERENCES tools(tool_id) ON DELETE RESTRICT,
     task_name VARCHAR(255) NOT NULL,
     task_description TEXT,

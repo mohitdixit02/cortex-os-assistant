@@ -72,31 +72,10 @@ async def add_task(request: AddTaskRequest):
 
     if task_type == "tool_execution":
         # Skip message saving for tool executions (e.g. from event tool)
-        # We still need a dummy message_id or handle it in add_new_task
-        # For now, let's assume we need a message_id. 
-        # Actually, events are linked to sessions, so we might need a dummy message or allow null message_id in Task table?
-        # Checking create_tables.sql: message_id UUID NOT NULL REFERENCES messages(message_id)
-        # So we MUST have a message_id. I'll create a system message if missing.
-        
-        with Session(engine) as session:
-            # Try to find a recent message in this session to link to, or create a dummy
-            from sqlalchemy import select
-            from cortex_cm.pg import Message
-            stmt = select(Message.message_id).where(Message.session_id == session_id).limit(1)
-            msg_id = session.exec(stmt).first()
-            
-            if not msg_id:
-                system_msg = memory_saver.save_message(
-                    session_id=session_id,
-                    user_id=user_id,
-                    content=f"System: Task Execution - {request.task_name}",
-                    role=RoleType.AI,
-                    ai_client=AIClientType.CORTEX_MAIN_CLIENT
-                )
-                msg_id = system_msg.message_id
+        # message_id is now optional in Task table.
         
         task_obj = memory_saver.add_new_task(
-            message_id=msg_id,
+            message_id=None,
             tool_id=None,
             task_name=request.task_name,
             task_description=request.task_description,

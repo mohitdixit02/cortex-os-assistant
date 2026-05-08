@@ -212,8 +212,9 @@ class Task(SQLModel, table=True):
         default_factory=uuid4,
         sa_column=Column(PGUUID(as_uuid=True), primary_key=True, nullable=False),
     )
-    message_id: UUID = Field(
-        sa_column=Column(PGUUID(as_uuid=True), ForeignKey("messages.message_id", ondelete="CASCADE"), nullable=False, index=True)
+    message_id: Optional[UUID] = Field(
+        default=None,
+        sa_column=Column(PGUUID(as_uuid=True), ForeignKey("messages.message_id", ondelete="CASCADE"), nullable=True, index=True)
     )
     tool_id: Optional[UUID] = Field(
         default=None,
