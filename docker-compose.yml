@@ -4,11 +4,11 @@ services:
     container_name: cortex-pg-db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: cortex_postgres_db
-      POSTGRES_DB: cortex-assistant-db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5460:5432"
+      - "${POSTGRES_PORT:-5460}:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
       - ./cortex_cm/pg/sql/create_tables.sql:/docker-entrypoint-initdb.d/10-create_tables.sql
@@ -18,7 +18,7 @@ services:
     container_name: cortex-redis-db
     restart: always
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - ./redis_data:/data
 
@@ -27,11 +27,12 @@ services:
     container_name: cortex-queue
     restart: always
     ports:
-      - "8001:8001"
+      - "${CORTEX_QUEUE_PORT:-8001}:8001"
     environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - DB_URL=postgresql://postgres:cortex_postgres_db@pg:5432/cortex-assistant-db
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pg:${POSTGRES_PORT:-5432}/${POSTGRES_DB}
+      - CORTEX_QUEUE_URL=http://cortex-queue:${CORTEX_QUEUE_PORT:-8001}
     command: python cortex_queue/main.py
     depends_on:
       - redis
@@ -42,13 +43,12 @@ services:
     container_name: cortex-server
     restart: always
     ports:
-      - "8000:8000"
+      - "${CORTEX_SERVER_PORT:-8000}:8000"
     environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - DB_URL=postgresql://postgres:cortex_postgres_db@pg:5432/cortex-assistant-db
-      - CORTEX_QUEUE_URL=http://cortex-queue:8001
-      - USE_REMOTE_QUEUE=true
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pg:${POSTGRES_PORT:-5432}/${POSTGRES_DB}
+      - CORTEX_QUEUE_URL=http://cortex-queue:${CORTEX_QUEUE_PORT:-8001}
     command: python cortex_server/main.py
     depends_on:
       - redis
@@ -60,11 +60,10 @@ services:
     container_name: cortex-core
     restart: always
     environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - DB_URL=postgresql://postgres:cortex_postgres_db@pg:5432/cortex-assistant-db
-      - CORTEX_QUEUE_URL=http://cortex-queue:8001
-      - USE_REMOTE_QUEUE=true
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pg:${POSTGRES_PORT:-5432}/${POSTGRES_DB}
+      - CORTEX_QUEUE_URL=http://cortex-queue:${CORTEX_QUEUE_PORT:-8001}
     command: python cortex_core/worker.py
     depends_on:
       - redis
@@ -76,10 +75,11 @@ services:
     container_name: cortex-event-worker
     restart: always
     environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - DB_URL=postgresql://postgres:cortex_postgres_db@pg:5432/cortex-assistant-db
-      - CORTEX_QUEUE_URL=http://cortex-queue:8001
+      - TZ=${TZ}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pg:${POSTGRES_PORT:-5432}/${POSTGRES_DB}
+      - CORTEX_QUEUE_URL=http://cortex-queue:${CORTEX_QUEUE_PORT:-8001}
     command: python cortex_event_tool/worker.py
     depends_on:
       - redis
