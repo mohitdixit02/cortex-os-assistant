@@ -1,9 +1,11 @@
 import json
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-from cortex_cm.redis.redis_client import event_redis_client
+from cortex_cm.redis.redis_client import RedisClient, RedisModeType
 
-def save_event_to_redis(user_id: str, event_id: str, trigger_time: datetime, event_data: Dict[str, Any]):
+event_redis_client = RedisClient.get_client(RedisModeType.EVENT)
+
+def save_event_to_redis(user_id: str, event_id: str, trigger_time: datetime, event_data: Dict[str, Any], is_test: bool = False):
     """
     Saves an event to Redis using ZSET for sorting and HASH for data storage.
     
@@ -12,13 +14,20 @@ def save_event_to_redis(user_id: str, event_id: str, trigger_time: datetime, eve
         event_id (str): The unique ID of the event.
         trigger_time (datetime): The trigger time of the event.
         event_data (Dict[str, Any]): The full event data.
+        is_test (bool): Whether the event is a test event. Test events can be used for testing worker functionality using `req.test.py`.
     """
     timestamp = trigger_time.timestamp()
     
+    redis_client = None
+    if is_test:
+        redis_client = RedisClient.get_client(RedisModeType.EVENT, is_docker_enabled=False)
+    else:
+        redis_client = event_redis_client
+    
     # 1. Global ZSET (for worker)
-    event_redis_client.client.zadd("events:all", {event_id: timestamp})
+    redis_client.client.zadd("events:all", {event_id: timestamp})
     # 2. Full Data - Hash
-    event_redis_client.client.hset("events:data", event_id, json.dumps(event_data))
+    redis_client.client.hset("events:data", event_id, json.dumps(event_data))
 
 def delete_event_from_redis(event_id: str):
     """

@@ -18,7 +18,8 @@ def create_event(
     trigger_time: datetime,
     event_info: Optional[str] = None,
     event_description: Optional[str] = None,
-    embedding: Optional[List[float]] = None
+    embedding: Optional[List[float]] = None,
+    is_test: Optional[bool] = False
 ) -> UserEvent:
     """
     Creates a new event in PostgreSQL and persists it in Redis for fast retrieval and worker tracking.
@@ -48,7 +49,7 @@ def create_event(
             "status": db_event.status.value,
             "created_at": db_event.created_at.isoformat()
         }
-        save_event_to_redis(str(db_event.user_id), str(db_event.id), db_event.trigger_time, redis_data)
+        save_event_to_redis(str(db_event.user_id), str(db_event.id), db_event.trigger_time, redis_data, is_test=is_test)
         
         return db_event
 

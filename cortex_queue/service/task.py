@@ -4,7 +4,7 @@ import time
 from cortex_queue.dto import AddTaskRequest, TaskItem
 from cortex_queue.service.event import add_event_tool_task_to_queue, update_submit_event_task_status
 from cortex_cm.pg import TaskStatus, engine, TaskOwner
-from cortex_cm.redis.redis_client import task_redis_client, result_redis_client
+from cortex_cm.redis.redis_client import RedisClient, RedisModeType
 from cortex_core.memory.saver import MemorySaver
 from cortex_core.memory.embedding import EmbeddingModel
 from cortex_cm.pg import RoleType, AIClientType
@@ -15,6 +15,10 @@ logger = get_logger("TASK_QUEUE")
 # Initialize shared components
 model = EmbeddingModel()
 memory_saver = MemorySaver(engine=engine, model=model)
+
+# Redis Clients
+task_redis_client = RedisClient.get_client(RedisModeType.TASK)
+result_redis_client = RedisClient.get_client(RedisModeType.RESULT)
 
 async def _add_vc_task_to_queue(request: AddTaskRequest) -> TaskItem:
     user_id = request.metadata.get("user_id")

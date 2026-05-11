@@ -4,7 +4,7 @@ import time
 
 from cortex_queue.dto import TaskItem, AddTaskRequest
 from cortex_cm.pg import TaskStatus, engine
-from cortex_cm.redis.redis_client import task_redis_client, result_redis_client
+from cortex_cm.redis.redis_client import RedisClient, RedisModeType
 from cortex_core.memory.saver import MemorySaver
 from cortex_core.memory.embedding import EmbeddingModel
 from fastapi import APIRouter
@@ -18,6 +18,10 @@ task_router = APIRouter()
 # Initialize shared components
 model = EmbeddingModel()
 memory_saver = MemorySaver(engine=engine, model=model)
+
+# Redis Clients
+task_redis_client = RedisClient.get_client(RedisModeType.TASK)
+result_redis_client = RedisClient.get_client(RedisModeType.RESULT)
 
 @task_router.post("/add_task")
 async def add_task(request: AddTaskRequest):

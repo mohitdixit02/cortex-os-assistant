@@ -43,6 +43,8 @@ This file can be used only to test worker functionality.
     event_description:"Demo event description",
     embedding:null
 }
+
+Mark is_test=True when creating events through this endpoint to ensure redis is connected locally outside of Docker.
 """
 app = FastAPI(title="Cortex Event Tool Service")
 
@@ -65,7 +67,8 @@ async def create_event_endpoint(request: EventCreateRequest):
             trigger_time=request.trigger_time,
             event_info=request.event_info,
             event_description=request.event_description,
-            embedding=request.embedding
+            embedding=request.embedding,
+            is_test=True  # Mark this event as a test event
         )
         return event
     except Exception as e:

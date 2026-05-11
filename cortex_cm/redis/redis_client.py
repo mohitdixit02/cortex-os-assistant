@@ -1,12 +1,17 @@
 import redis
-import json
 from cortex_cm.utility.config import env
+from enum import Enum
 
-class RedisClient:
-    def __init__(self, db: int = None):
+class RedisClientService:
+    def __init__(
+        self, 
+        db: int,
+        HOST: str,
+        PORT: int
+    ):
         self.client = redis.Redis(
-            host=env.REDIS_HOST,
-            port=env.REDIS_PORT,
+            host=HOST,
+            port=PORT,
             db=db if db is not None else env.REDIS_DB,
             decode_responses=True
         )
@@ -42,15 +47,51 @@ class RedisClient:
         result = self.client.brpop(key, timeout)
         return result[1] if result else None
 
-# Default client
-redis_client = RedisClient()
+class RedisModeType(str, Enum):
+    """
+    #### TOKEN
+    For Google tokens and verifier related service
+    #### TASK
+    For submitting tasks which will be listened by cortex_core
+    #### RESULT
+    For submitting results which will be listened by cortex_server
+    #### EVENT
+    For saving events which will be listened by cortex_event_worker
+    """
+    TOKEN = 0
+    TASK = 1
+    RESULT = 2
+    EVENT = 3
 
-# Specialized clients as per instructions
-# DB:0 - Google tokens and verifier related service
-token_redis_client = RedisClient(db=0)
-# DB:1 - Submitting tasks which will be listened by cortex_core
-task_redis_client = RedisClient(db=1)
-# DB:2 - Submitting results which will be listened by cortex_server
-result_redis_client = RedisClient(db=2)
-# DB:3 - Saving events which will be listened by cortex_event_tool
-event_redis_client = RedisClient(db=3)
+class RedisClient:
+    _mode_cache = {}
+
+    @staticmethod
+    def get_client(
+        mode: RedisModeType,
+        is_docker_enabled: bool = True
+    ):
+        cache_key = (mode.value, bool(is_docker_enabled))
+        if cache_key in RedisClient._mode_cache:
+            return RedisClient._mode_cache[cache_key]
+
+        if is_docker_enabled:
+            host = env.REDIS_HOST
+            port = env.REDIS_PORT
+        else:
+            host = "localhost"
+            port = env.REDIS_PORT
+
+        if mode == RedisModeType.TOKEN:
+            client = RedisClientService(db=0, HOST=host, PORT=port)
+        elif mode == RedisModeType.TASK:
+            client = RedisClientService(db=1, HOST=host, PORT=port)
+        elif mode == RedisModeType.RESULT:
+            client = RedisClientService(db=2, HOST=host, PORT=port)
+        elif mode == RedisModeType.EVENT:
+            client = RedisClientService(db=3, HOST=host, PORT=port)
+        else:
+            raise ValueError("Invalid Redis Mode: {}. Valid options are TOKEN, TASK, RESULT, EVENT.".format(mode))
+
+        RedisClient._mode_cache[cache_key] = client
+        return client

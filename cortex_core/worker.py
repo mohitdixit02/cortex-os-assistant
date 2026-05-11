@@ -11,7 +11,7 @@ cortex_queue.MainTaskQueue = RemoteTaskQueue()
 
 from cortex_core.main import MainClient
 from cortex_queue import TaskItem, TaskStatus
-from cortex_cm.redis.redis_client import task_redis_client
+from cortex_cm.redis.redis_client import RedisClient, RedisModeType
 from cortex_core.req import submit_task
 
 from cortex_cm.pg import TaskOwner
@@ -19,10 +19,11 @@ from cortex_cm.pg import TaskOwner
 async def main():
     client = MainClient()    
     print("Cortex Core Worker started. Listening to Redis DB 1...")
+    redis_client = RedisClient.get_client(RedisModeType.TASK)
     
     while True:
         try:
-            task_data = task_redis_client.brpop("pending_tasks", timeout=0)
+            task_data = redis_client.brpop("pending_tasks", timeout=0)
             if task_data:
                 data = json.loads(task_data)
                 metadata = data.get("metadata", {})
