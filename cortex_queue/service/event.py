@@ -1,11 +1,12 @@
 from typing import Optional
+from uuid import UUID as UUIDType
 
 from cortex_queue.dto import AddTaskRequest, TaskItem
 from cortex_cm.pg import TaskStatus, engine, TaskOwner, EventStatus, UserEvent
 from cortex_cm.pg.req import crud
 from cortex_core.memory.saver import MemorySaver
 from cortex_core.memory.embedding import EmbeddingModel
-from sqlmodel import UUID, Session
+from sqlmodel import Session
 from datetime import datetime, timezone
 
 from cortex_cm.utility.logger import get_logger
@@ -14,12 +15,13 @@ logger = get_logger("TASK_QUEUE")
 model = EmbeddingModel()
 memory_saver = MemorySaver(engine=engine, model=model)
 
-def _update_event_status(event_id: UUID, status: EventStatus) -> Optional[UserEvent]:
+def _update_event_status(event_id: UUIDType | str, status: EventStatus) -> Optional[UserEvent]:
     """
     Updates the status of an event in PostgreSQL
     """
     with Session(engine) as session:
-        db_event = crud.get_by_id(session, UserEvent, event_id)
+        normalized_event_id = event_id if isinstance(event_id, UUIDType) else UUIDType(str(event_id))
+        db_event = crud.get_by_id(session, UserEvent, normalized_event_id)
         if not db_event:
             return None
         
@@ -46,7 +48,7 @@ async def add_event_tool_task_to_queue(request: AddTaskRequest) -> TaskItem:
     # Update event status to QUEUED in PostgreSQL
     event_id = request.payload.get("event_id")
     if event_id:
-        updated_event = _update_event_status(UUID(event_id), EventStatus.QUEUED)
+        updated_event = _update_event_status(event_id, EventStatus.QUEUED)
         if not updated_event:
             logger.warning(f"Warning: Event with ID {event_id} not found for status update.")
         else:

@@ -56,14 +56,14 @@ async def _add_vc_task_to_queue(request: AddTaskRequest) -> TaskItem:
     return task_obj
 
 async def add_task_to_queue(request: AddTaskRequest):
-    task_type = request.metadata.get("task_type")
-    logger.info(f"Task type: {task_type}, Task name: {request.task_name}, User ID: {request.metadata.get('user_id')}, Session ID: {request.metadata.get('session_id')}")
-    if task_type == "tool_execution":
+    task_owner = request.metadata.get("task_owner")
+    logger.info(f"Task owner: {task_owner}, Task name: {request.task_name}, User ID: {request.metadata.get('user_id')}, Session ID: {request.metadata.get('session_id')}")
+    if task_owner == TaskOwner.EVENT_TOOL.value:
         task_obj = await add_event_tool_task_to_queue(request)
-    elif task_type == "query":
+    elif task_owner == TaskOwner.VOICE_CLIENT.value:
         task_obj = await _add_vc_task_to_queue(request)
     else:
-        raise HTTPException(status_code=400, detail="Invalid task type")
+        raise HTTPException(status_code=400, detail="Invalid task owner specified in metadata")
 
     item = TaskItem(
         task_id=task_obj.task_id,
@@ -103,8 +103,8 @@ async def submit_task_to_queue(request: TaskItem):
         "finished_at": time.time()
     }), ttl=3600)
     
-    task_type = request.metadata.get("task_type")
-    if task_type == "tool_execution":
+    task_owner = request.metadata.get("task_owner")
+    if task_owner == TaskOwner.EVENT_TOOL.value:
         await update_submit_event_task_status(request)
     
     return {"status": "success"}

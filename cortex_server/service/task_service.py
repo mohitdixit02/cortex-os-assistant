@@ -1,3 +1,4 @@
+from cortex_cm.pg.enums import TaskOwner
 from cortex_cm.pg.models import Task
 from cortex_cm.pg.req import crud
 from sqlmodel import Session
@@ -10,8 +11,15 @@ class TaskService:
             # Note: models.py doesn't have task_type, but it has task_name.
             # Assuming task_type refers to task_name or a similar filter.
             filters = {}
-            if task_type:
-                filters['task_name'] = task_type
+            task_owner = None
+            if task_type == "tool_execution":
+                task_owner = TaskOwner.EVENT_TOOL.value
+            elif task_type == "query":
+                task_owner = TaskOwner.VOICE_CLIENT.value
+
+            if task_owner:
+                filters['task_owner'] = task_owner
+
             return crud.get_many(session, Task, offset=offset, limit=limit, **filters)
 
 task_service = TaskService()
