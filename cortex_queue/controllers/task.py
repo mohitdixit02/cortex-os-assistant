@@ -25,11 +25,10 @@ result_redis_client = RedisClient.get_client(RedisModeType.RESULT)
 
 @task_router.post("/add_task")
 async def add_task(request: AddTaskRequest):
-    user_id = request.metadata.get("user_id")
-    session_id = request.metadata.get("session_id")
-    if not user_id or not session_id:
-        raise HTTPException(status_code=400, detail="Missing User ID or Session ID in task metadata")
-    return await add_task_to_queue(request)
+    try:
+        return await add_task_to_queue(request)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @task_router.post("/submit_task")
 async def submit_task(request: TaskItem):

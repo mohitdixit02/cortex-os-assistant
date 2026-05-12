@@ -35,11 +35,9 @@ This file can be used only to test worker functionality.
 
 ### Example Request Body for Create Event Endpoint
 {
-    user_id:"11111111-1111-1111-1111-111111111111",
-    session_id:"22222222-2222-2222-2222-222222222222",
+    message_id:"11111111-1111-1111-1111-111111111111",
     name:"Demo Event",
     trigger_time:"2023-10-01T10:00:00Z",
-    event_info:"This is a reminder to check the event tool worker functionality.",
     event_description:"Demo event description",
     embedding:null
 }
@@ -49,25 +47,19 @@ Mark is_test=True when creating events through this endpoint to ensure redis is 
 app = FastAPI(title="Cortex Event Tool Service")
 
 class EventCreateRequest(BaseModel):
-    user_id: UUID
-    session_id: UUID
+    message_id: UUID
     name: str
     trigger_time: datetime
-    event_info: Optional[str] = None
     event_description: Optional[str] = None
-    embedding: Optional[List[float]] = None
 
 @app.post("/create_event")
 async def create_event_endpoint(request: EventCreateRequest):
     try:
         event = create_event(
-            user_id=request.user_id,
-            session_id=request.session_id,
+            message_id=request.message_id,
             name=request.name,
             trigger_time=request.trigger_time,
-            event_info=request.event_info,
             event_description=request.event_description,
-            embedding=request.embedding,
             is_test=True  # Mark this event as a test event
         )
         return event

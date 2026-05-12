@@ -25,6 +25,9 @@ async def _add_vc_task_to_queue(request: AddTaskRequest) -> TaskItem:
     session_id = request.metadata.get("session_id")
     voice_client_response = request.metadata.get("voice_client_response")
     
+    if not user_id or not session_id:
+        raise HTTPException(status_code=400, detail="Missing User ID or Session ID in task metadata")
+    
     user_msg = memory_saver.save_message(
         session_id=session_id,
         user_id=user_id,

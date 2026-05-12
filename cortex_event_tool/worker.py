@@ -48,14 +48,12 @@ async def check_and_process_events(client: httpx.AsyncClient):
             payload = {
                 "event_id": event['id'],
                 "name": event['name'],
-                "event_info": event.get('event_info'),
                 "event_description": event.get('event_description'),
                 "trigger_time": event['trigger_time']
             }
             
             metadata = {
-                "user_id": event['user_id'],
-                "session_id": event['session_id'],
+                "message_id": str(event['message_id']),
                 "task_owner": TaskOwner.EVENT_TOOL.value
             }
             

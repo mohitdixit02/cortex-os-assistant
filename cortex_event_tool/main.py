@@ -12,13 +12,10 @@ from cortex_cm.redis.event_tool import (
 )
 
 def create_event(
-    user_id: UUID,
-    session_id: UUID,
+    message_id: UUID,
     name: str,
     trigger_time: datetime,
-    event_info: Optional[str] = None,
     event_description: Optional[str] = None,
-    embedding: Optional[List[float]] = None,
     is_test: Optional[bool] = False
 ) -> UserEvent:
     """
@@ -26,13 +23,10 @@ def create_event(
     """
     with Session(engine) as session:
         event = UserEvent(
-            user_id=user_id,
-            session_id=session_id,
+            message_id=message_id,
             name=name,
             trigger_time=trigger_time,
-            event_info=event_info,
             event_description=event_description,
-            embedding=embedding,
             status=EventStatus.CREATED
         )
         db_event = crud.create_one(session, event)
@@ -40,16 +34,14 @@ def create_event(
         # Save to Redis for fast retrieval and worker to track
         redis_data = {
             "id": str(db_event.id),
-            "user_id": str(db_event.user_id),
-            "session_id": str(db_event.session_id),
+            "message_id": str(db_event.message_id),
             "name": db_event.name,
-            "event_info": db_event.event_info,
             "event_description": db_event.event_description,
             "trigger_time": db_event.trigger_time.isoformat(),
             "status": db_event.status.value,
             "created_at": db_event.created_at.isoformat()
         }
-        save_event_to_redis(str(db_event.user_id), str(db_event.id), db_event.trigger_time, redis_data, is_test=is_test)
+        save_event_to_redis(str(db_event.id), db_event.trigger_time, redis_data, is_test=is_test)
         
         return db_event
 

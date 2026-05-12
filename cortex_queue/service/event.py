@@ -1,3 +1,4 @@
+from http.client import HTTPException
 from typing import Optional
 from uuid import UUID as UUIDType
 
@@ -32,16 +33,18 @@ def _update_event_status(event_id: UUIDType | str, status: EventStatus) -> Optio
         return updated_event
 
 async def add_event_tool_task_to_queue(request: AddTaskRequest) -> TaskItem:
+    message_id = request.metadata.get("message_id")
+    if not message_id:
+        raise HTTPException(status_code=400, detail="Missing message_id in task metadata for event tool task")
+    
     task_obj = memory_saver.add_new_task(
-        message_id=None,
+        message_id=message_id,
         tool_id=None,
         task_name=request.task_name,
         task_description=request.task_description,
         status=TaskStatus.QUEUED,
         payload=request.payload,
-        status_response=None,
         task_metadata=dict(request.metadata),
-        embedding=model.generate_embeddings(request.task_description),
         task_owner=TaskOwner.EVENT_TOOL.value
     )
     

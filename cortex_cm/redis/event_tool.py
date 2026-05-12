@@ -5,12 +5,11 @@ from cortex_cm.redis.redis_client import RedisClient, RedisModeType
 
 event_redis_client = RedisClient.get_client(RedisModeType.EVENT)
 
-def save_event_to_redis(user_id: str, event_id: str, trigger_time: datetime, event_data: Dict[str, Any], is_test: bool = False):
+def save_event_to_redis(event_id: str, trigger_time: datetime, event_data: Dict[str, Any], is_test: bool = False):
     """
     Saves an event to Redis using ZSET for sorting and HASH for data storage.
     
     Args:
-        user_id (str): The ID of the user.
         event_id (str): The unique ID of the event.
         trigger_time (datetime): The trigger time of the event.
         event_data (Dict[str, Any]): The full event data.
@@ -34,7 +33,6 @@ def delete_event_from_redis(event_id: str):
     Removes an event from Redis.
     
     Args:
-        user_id (str): The ID of the user.
         event_id (str): The unique ID of the event.
     """
     event_redis_client.client.zrem("events:all", event_id)
