@@ -93,6 +93,7 @@ class Message(SQLModel, table=True):
     session: "ChatSession" = Relationship(back_populates="messages")
     user: "User" = Relationship(back_populates="messages")
     tasks: List["Task"] = Relationship(back_populates="message")
+    events: List["UserEvent"] = Relationship(back_populates="message")
 
 
 class UserShortTermMemory(SQLModel, table=True):
@@ -212,9 +213,8 @@ class Task(SQLModel, table=True):
         default_factory=uuid4,
         sa_column=Column(PGUUID(as_uuid=True), primary_key=True, nullable=False),
     )
-    message_id: Optional[UUID] = Field(
-        default=None,
-        sa_column=Column(PGUUID(as_uuid=True), ForeignKey("messages.message_id", ondelete="CASCADE"), nullable=True, index=True)
+    message_id: UUID = Field(
+        sa_column=Column(PGUUID(as_uuid=True), ForeignKey("messages.message_id", ondelete="CASCADE"), nullable=False, index=True)
     )
     tool_id: Optional[UUID] = Field(
         default=None,
@@ -245,16 +245,11 @@ class UserEvent(SQLModel, table=True):
         default_factory=uuid4,
         sa_column=Column(PGUUID(as_uuid=True), primary_key=True, nullable=False),
     )
-    user_id: UUID = Field(
-        sa_column=Column(PGUUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True)
-    )
-    session_id: UUID = Field(
-        sa_column=Column(PGUUID(as_uuid=True), ForeignKey("chat_sessions.session_id", ondelete="CASCADE"), nullable=False, index=True)
+    message_id: UUID = Field(
+        sa_column=Column(PGUUID(as_uuid=True), ForeignKey("messages.message_id", ondelete="CASCADE"), nullable=False, index=True)
     )
     name: str = Field(sa_column=Column(String(255), nullable=False))
-    event_info: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
     event_description: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
-    embedding: Optional[list[float]] = Field(default=None, sa_column=Column(Vector(), nullable=True))
     trigger_time: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False, index=True))
     status: EventStatus = Field(
         default=EventStatus.CREATED,
@@ -262,6 +257,8 @@ class UserEvent(SQLModel, table=True):
     )
     created_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
     updated_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
+
+    message: "Message" = Relationship(back_populates="events")
 
 
 Index("ix_messages_session_created", Message.__table__.c.session_id, Message.__table__.c.created_at)

@@ -90,7 +90,7 @@ updated_at: Timestamp
 
 ### Tasks Table (The Queue)
 task_id: UUID (PK)
-message_id: UUID (FK -> Messages.message_id, Nullable) — Links the task to the specific user request.
+message_id: UUID (FK -> Messages.message_id) — Links the task to the specific user request.
 tool_id: UUID (FK -> Tools.tool_id, Nullable)
 task_name: String
 task_description: Text (Nullable) — Canonical description used for embedding generation and retrieval.
@@ -105,12 +105,9 @@ updated_at: Timestamp
 
 ### UserEvents Table (The Scheduler)
 id: UUID (PK)
-user_id: UUID (FK -> Users.user_id)
-session_id: UUID (FK -> ChatSessions.session_id)
+message_id: UUID (FK -> Messages.message_id)
 name: String
-event_info: Text (Nullable)
 event_description: Text (Nullable)
-embedding: Vector (Nullable)
 trigger_time: Timestamp (Indexed)
 status: Enum(EventStatus) (Default: CREATED)
 created_at: Timestamp

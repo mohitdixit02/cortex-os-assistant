@@ -137,7 +137,7 @@ CREATE TABLE IF NOT EXISTS user_tool_subscriptions (
 
 CREATE TABLE IF NOT EXISTS tasks (
     task_id UUID PRIMARY KEY,
-    message_id UUID REFERENCES messages(message_id) ON DELETE CASCADE,
+    message_id UUID NOT NULL REFERENCES messages(message_id) ON DELETE CASCADE,
     tool_id UUID REFERENCES tools(tool_id) ON DELETE RESTRICT,
     task_name VARCHAR(255) NOT NULL,
     task_description TEXT,
@@ -153,12 +153,9 @@ CREATE TABLE IF NOT EXISTS tasks (
 
 CREATE TABLE IF NOT EXISTS user_events (
     id UUID PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    session_id UUID NOT NULL REFERENCES chat_sessions(session_id) ON DELETE CASCADE,
+    message_id UUID NOT NULL REFERENCES messages(message_id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
-    event_info TEXT,
     event_description TEXT,
-    embedding VECTOR,
     trigger_time TIMESTAMPTZ NOT NULL,
     status event_status NOT NULL DEFAULT 'CREATED',
     created_at TIMESTAMPTZ NOT NULL,
