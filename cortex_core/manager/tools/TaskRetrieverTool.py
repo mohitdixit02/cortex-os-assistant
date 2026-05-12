@@ -152,7 +152,7 @@ class TaskRetrieverTool(BaseTool):
         self,
         input: TaskRetrieverInput,
         model: EmbeddingModel,
-    ) -> list[dict]:
+    ) -> list[TaskRetrieverResult]:
         """Execute a synchronous task retrieval."""
         with Session(engine) as session:
             if input.fetch_mode == "description":

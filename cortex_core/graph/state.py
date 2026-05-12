@@ -247,3 +247,15 @@ class ConversationState(BaseModel):
     plan_feedback: Annotated[Optional[PlanEvaluationState], merge_plan_feedback] = None
     final_response: Optional[FinalResponseGenerationState] = None
     final_response_feedback: Optional[FinalResponseFeedbackState] = None
+
+"""
+    Event Tool State Models
+"""
+class EventToolState(BaseModel):
+    message_id: str
+    event_name: str
+    event_description: str
+    trigger_time: datetime
+    user_name: Optional[str] = None
+    time_of_query: Optional[str] = None
+    final_reminder: Optional[str] = None

@@ -1,6 +1,6 @@
 from enum import Enum
 from .WebSearchTool import WebSearchTool, WebSearchInput
-from .TaskRetrieverTool import TaskRetrieverTool
+from .TaskRetrieverTool import TaskRetrieverTool, TaskRetrieverInput, TaskRetrieverResult
 from .EventTool import EventTool, EventToolInput
 
 class AvailableToolsType(str, Enum):
@@ -35,4 +35,7 @@ __all__ = [
     "WebSearchInput",
     "EventTool",
     "EventToolInput",
+    "TaskRetrieverTool",
+    "TaskRetrieverInput",
+    "TaskRetrieverResult",
 ]

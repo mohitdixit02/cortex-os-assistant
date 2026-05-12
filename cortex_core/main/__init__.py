@@ -1,5 +1,7 @@
+from cortex_cm.pg.enums import TaskOwner
 from cortex_core.graph.state import (
-    ConversationState, 
+    ConversationState,
+    EventToolState, 
     MemoryState, 
     MemoryEmotionalProfile, 
     EmotionalProfile, 
@@ -17,11 +19,11 @@ from cortex_core.graph.workflow import (
     # test_workflow_2
 )
 from cortex_core.graph.memory import build_memory_workflow
-from cortex_queue import MainTaskQueue, TaskStatus, TaskItem
+from cortex_core.graph.event import event_tool_workflow
+from cortex_queue.dto import TaskStatus, TaskItem
 from cortex_cm.utility.logger import get_logger
 from cortex_cm.pg import TimeOfDay
 import asyncio
-# keep listening and processing until the program is terminated
 
 class MainClient:
     """
@@ -134,34 +136,30 @@ class MainClient:
         
         self.logger.info("Initialized memory state: %s", memory_state)
         return memory_state
+    
+    def initialize_event_tool_state(self, taskItem: TaskItem) -> EventToolState:
+        message_id = taskItem.metadata.get("message_id")
+        if not message_id:
+            self.logger.error("Missing message_id in task metadata. Cannot initialize event tool state.")
+            raise ValueError("Missing message_id in task metadata.")
         
-    async def listen_task_queue(self):
-        """
-        ## Task Queue Listener \n
-        Listens for incoming tasks from the TaskQueue and process them accordingly. \n
-        This function will continuously run in the background on main thread, awaiting new tasks and dispatching them to the appropriate handlers based on their type or content. \n
+        event_name = taskItem.payload.get("name")
+        event_description = taskItem.payload.get("event_description")
+        trigger_time = taskItem.payload.get("trigger_time")
         
-        **Initialize it using asyncio.create_task()** in the respective entry point
-        """
+        if not event_description or not trigger_time:
+            self.logger.error("Missing event_description or trigger_time in task metadata. Cannot initialize event tool state.")
+            raise ValueError("Missing event_description or trigger_time in task metadata.")
         
-        while True:        
-            self.logger.info("Waiting for tasks in the MainTaskQueue...")
-            task = await MainTaskQueue.pick_task()
-            self.logger.info("Received task: %s with id: %s", task.task_name, task.task_id)
-            updated_task = await self._handle_task_queue(task)
-            
-            if updated_task.status not in [TaskStatus.COMPLETED, TaskStatus.FAILED]:
-                self.logger.warning("Task %s is still in progress. Current status: %s", task.task_id, updated_task.status)
-                continue  # Skip updating the task status until it's completed or failed
-                
-            await MainTaskQueue.submit_task(
-                task_id=task.task_id,
-                status=TaskStatus.COMPLETED if updated_task.result else TaskStatus.FAILED,
-                status_message=updated_task.result if updated_task.result else updated_task.error
-            )
-            self.logger.info("Completed Task with id: %s and name: %s", task.task_id, task.task_name)
-            self.logger.info("Task Status: %s", updated_task.status)
-            
+        event_state = EventToolState(
+            message_id=message_id,
+            event_name=event_name,
+            event_description=event_description,
+            trigger_time=trigger_time
+        )
+        self.logger.info("Initialized event tool state: %s", event_state)
+        return event_state
+
     async def _build_memory_workflow(self, state: ConversationState):
         """
         ## Memory Workflow Builder \n
@@ -172,12 +170,12 @@ class MainClient:
             await build_memory_workflow.ainvoke(memory_state)
         except Exception as memory_exc:
             self.logger.exception("Memory workflow failed after response generation: %s", memory_exc)
-                
-    async def _handle_task_queue(self, taskItem: TaskItem) -> TaskItem:
+            
+    async def _handle_voice_client_task(self, taskItem: TaskItem) -> TaskItem:
         """
-        ### Task Handler \n
-        **Handles tasks retrieved from the `TaskQueue`.**
-        It processes the task item received from the Task Queue based on the paramaters (like paylaod or taskname) and responsds with the updated task item object. \n
+        ### Voice Client Task Handler \n
+        **Handles tasks specific to voice client interactions.**
+        It processes the task item received from the Task Queue that are related to voice client interactions and generates appropriate responses or actions based on the payload and metadata of the task item. \n
         **Input**: \n
         - `TaskItem`: The task item to be processed (received from the Task Queue) \n
         
@@ -259,4 +257,50 @@ class MainClient:
             taskItem.status = TaskStatus.FAILED
             taskItem.error = str(e)
             return taskItem
-   
+    
+    async def _handle_event_tool_task(self, taskItem: TaskItem) -> TaskItem:
+        event_state = self.initialize_event_tool_state(taskItem)
+        try:
+            res = event_tool_workflow.invoke(event_state)
+            final_response = res.get("final_reminder") if isinstance(res, dict) else getattr(res, "final_reminder", None)
+            self.logger.info("Event tool workflow result: %s", res)
+            taskItem.result = {
+                "response_type": "text_stream",
+                "response": final_response
+            }
+            taskItem.status = TaskStatus.COMPLETED
+            return taskItem
+        except Exception as e:
+            self.logger.exception("Error processing event tool task: %s", e)
+            taskItem.status = TaskStatus.FAILED
+            taskItem.error = str(e)
+
+    async def _handle_task_queue(self, taskItem: TaskItem) -> TaskItem:
+        """
+        ### Task Handler \n
+        **Handles tasks retrieved from the `TaskQueue`.**
+        It processes the task item received from the Task Queue based on the paramaters (like paylaod or taskname) and responsds with the updated task item object. \n
+        **Input**: \n
+        - `TaskItem`: The task item to be processed (received from the Task Queue) \n
+        
+        **Returns**: \n
+        - `TaskItem`: The updated task item object after processing.
+        """
+        try:
+            metadata = taskItem.metadata or {}
+            task_owner = metadata.get("task_owner")
+            self.logger.info("Handling task with owner: %s", task_owner)
+            if task_owner == TaskOwner.VOICE_CLIENT.value:
+                return await self._handle_voice_client_task(taskItem)
+            elif task_owner == TaskOwner.EVENT_TOOL.value:
+                return await self._handle_event_tool_task(taskItem)
+            else:
+                self.logger.warning("No handler implemented for task owner: %s. Marking task as failed.", task_owner)
+                taskItem.status = TaskStatus.FAILED
+                taskItem.error = f"No handler implemented for task owner: {task_owner}"
+                return taskItem
+        except Exception as e:
+            self.logger.exception("Error handling task: %s", e)
+            taskItem.status = TaskStatus.FAILED
+            taskItem.error = str(e)
+            return taskItem
