@@ -23,6 +23,7 @@ async def health_check():
 async def query_endpoint(request: QueryRequest):
     """Process user query and stream response tokens."""
     logger.info("Processing query: %s", request.query)
+    stream_client.start_background_tasks()
     
     response = ""
     async for token in stream_client.read_flow(request.query):

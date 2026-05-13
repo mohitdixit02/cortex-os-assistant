@@ -23,6 +23,7 @@ async def ws_stream(websocket: WebSocket):
         websocket=websocket,
         streamEvent=streamEvent
     )
+    streamClient.start_background_tasks()
 
     try:
         while True:

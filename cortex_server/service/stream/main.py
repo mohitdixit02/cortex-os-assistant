@@ -5,7 +5,6 @@ import threading
 
 from fastapi import WebSocket
 from cortex.voice import VoiceClient
-from cortex_core.main import MainClient
 from cortex_cm.utility.sensory.config import STT_CONFIG, TTS_CONFIG
 from service.stream.event import StreamEvent
 from service.stream.audio_bridge import AudioStreamBridge
@@ -25,39 +24,17 @@ class StreamClient:
         - The current `Websocket object` on which StreamClient will send responses back to the client.
         - The corresponding `StreamEvent object` for handling streaming events.
     """
-    
-    _main_listener_thread: threading.Thread | None = None
-    _main_client: MainClient | None = None
-
-    @classmethod
-    def _ensure_main_listener_thread(cls) -> None:
-        """Start the MainClient queue listener in an isolated daemon thread."""
-        if cls._main_listener_thread and cls._main_listener_thread.is_alive():
-            return
-
-        cls._main_client = MainClient()
-
-        def _runner() -> None:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(cls._main_client.listen_task_queue())
-
-        cls._main_listener_thread = threading.Thread(
-            target=_runner,
-            name="cortex-main-listener",
-            daemon=True,
-        )
-        cls._main_listener_thread.start()
-        cls._main_client.logger.info("Started Cortex MainClient listener thread")
 
     def __init__(self, websocket: WebSocket, streamEvent: StreamEvent):
         self.streamEvent = streamEvent
         self.audioBridge = AudioStreamBridge(websocket=websocket, streamEvent=streamEvent)
         self.voiceClient = VoiceClient(audioBridge=self.audioBridge, streamEvent=streamEvent)
-        self._auto_stream_task = asyncio.create_task(self.voiceClient.run_auto_task_stream())
+        self._auto_stream_task = None
 
-        # Global consumer worker should run only once for the process.
-        StreamClient._ensure_main_listener_thread()
+    def start_background_tasks(self):
+        """Start background polling for task results."""
+        if self._auto_stream_task is None or self._auto_stream_task.done():
+            self._auto_stream_task = asyncio.create_task(self.voiceClient.run_auto_task_stream())
         
     async def stream_response(self, audio_bytes: bytes):
         """

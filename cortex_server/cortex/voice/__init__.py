@@ -7,17 +7,55 @@ from cortex_cm.utility.main import iterate_tokens_async
 from nltk.tokenize import sent_tokenize
 from typing import AsyncGenerator, Optional
 from cortex_cm.utility.logger import get_logger
-from cortex_queue import MainTaskQueue, TaskStatus, TaskItem
-from .req import add_task as submit_task_remote
+from cortex_queue.dto import TaskStatus, TaskItem
+from .req import add_task as add_task_remote, get_task_result as get_task_result_remote
+from cortex_cm.pg import TaskOwner
 from fastapi import WebSocket
 from service.stream.event import StreamEvent
 from cortex_cm.utility.sensory.config import STT_CONFIG, TTS_CONFIG
 import re
 from contextlib import nullcontext
 from langsmith.run_helpers import tracing_context
-# keep listening and processing until the program is terminated
 
-# /pending/ - voice client not routing properly + fallback response starts at end + knowledge base saving fix
+class MainTaskQueue:
+    @staticmethod
+    async def add_task(
+        payload: any,
+        task_name: str,
+        task_description: str = "",
+        user_id: str = "11111111-1111-1111-1111-111111111111",
+        session_id: str = "22222222-2222-2222-2222-222222222222",
+        voice_client_response: str = ""
+    ):
+        resp = await add_task_remote(
+            payload=payload,
+            task_name=task_name,
+            task_description=task_description,
+            metadata={
+                "user_id": user_id,
+                "session_id": session_id,
+                "voice_client_response": voice_client_response,
+                "task_owner": TaskOwner.VOICE_CLIENT.value
+            }
+        )
+        class TaskWrapper:
+            def __init__(self, data):
+                self.task_id = str(data.get("task_id"))
+                self.status = data.get("status")
+        return TaskWrapper(resp)
+
+    @staticmethod
+    async def get_task_snapshot(task_id: str):
+        data = await get_task_result_remote(task_id)
+        if data:
+            class TaskSnapshot:
+                def __init__(self, d):
+                    self.task_id = d.get("task_id")
+                    self.status = TaskStatus(d.get("status"))
+                    self.result = d.get("result")
+                    self.error = d.get("error")
+            return TaskSnapshot(data)
+        return None
 
 class VoiceClient:
     """
@@ -137,22 +175,19 @@ class VoiceClient:
     
                 async def _submit_main_task() -> None:
                     try:
-                        resp = await submit_task_remote(
+                        resp = await MainTaskQueue.add_task(
                             payload={
                                 "query": query,
                                 "emotion": emotion.get("label", "neutral"),
                             },
                             task_name=task_name,
                             task_description=task_description,
-                            metadata={
-                                "user_id": user_id or "11111111-1111-1111-1111-111111111111",
-                                "session_id": session_id or "22222222-2222-2222-2222-222222222222",
-                                "voice_client_response": fallback_response,
-                            },
+                            user_id=user_id or "11111111-1111-1111-1111-111111111111",
+                            session_id=session_id or "22222222-2222-2222-2222-222222222222",
+                            voice_client_response=fallback_response,
                         )
-                        task_id = resp.get("task_id") or resp.get("taskId")
-                        if task_id:
-                            await self._register_pending_task(str(task_id))
+                        if resp.task_id:
+                            await self._register_pending_task(resp.task_id)
                     except Exception as task_exc:
                         self.logger.exception("Failed to submit background main task: %s", task_exc)
 
@@ -385,13 +420,4 @@ class VoiceClient:
         except Exception as e:
             self.logger.exception("Error handling task %s: %s", taskItem.task_id, e)
 
-    async def process_tasks(self):
-        """
-        ### Background Task Processor \n
-        Continuously runs in the background on main thread to process tasks from the `TaskQueue`. \n
-        This function can be started as an independent asyncio task when the server starts, allowing it to handle any tasks that are added to the queue. \n
-        """
-        self.logger.info("VoiceClient.process_tasks is disabled in request-scoped mode.")
-        while True:
-            await asyncio.sleep(3600)
          

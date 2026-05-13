@@ -41,7 +41,7 @@ services:
   cortex-server:
     build: .
     container_name: cortex-server
-    restart: always
+    restart: "no"
     ports:
       - "${CORTEX_SERVER_PORT:-8000}:8000"
     environment:
@@ -49,7 +49,8 @@ services:
       - REDIS_PORT=6379
       - DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pg:5432/${POSTGRES_DB}
       - CORTEX_QUEUE_URL=http://cortex-queue:8001
-    command: python cortex_server/main.py
+      - HF_TOKEN=${HF_TOKEN}
+    command: python cortex_server/server.py
     depends_on:
       - redis
       - pg

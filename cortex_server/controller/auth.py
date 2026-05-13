@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from service.auth.auth_service import auth_service
 from service.auth.auth_dependency import get_current_user_id
-from cortex_cm.redis.redis_client import redis_client
+from cortex_cm.redis.redis_client import RedisClient, RedisModeType
 from controller.requestModels import TokenResponse
 from cortex_cm.pg import engine, User
 from cortex_cm.pg.req import crud
@@ -38,5 +38,6 @@ async def callback(code: str = Query(...), state: str = Query(None)):
 @router.post("/logout")
 async def logout(user_id: str = Depends(get_current_user_id)):
     """Clear the user session."""
+    redis_client = RedisClient(mode=RedisModeType.TOKEN)
     redis_client.delete_access_token(user_id)
     return {"message": "Logged out successfully"}

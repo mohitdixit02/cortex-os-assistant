@@ -1,4 +1,3 @@
-import asyncio
 import cortex_cm.utility.config
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from cortex_server.controller.websocket import router as ws_router
@@ -8,6 +7,7 @@ from cortex_server.controller.chat_controller import router as chat_router
 from cortex_server.controller.task_controller import router as task_router
 from cortex_server.controller.user_controller import router as user_router
 from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
 
 app = FastAPI()
 
@@ -27,3 +27,6 @@ app.include_router(chat_router, prefix="/api")
 app.include_router(task_router, prefix="/api")
 app.include_router(user_router, prefix="/api")
 
+if __name__ == "__main__":
+    print("Starting Cortex Server...")
+    uvicorn.run(app, host="0.0.0.0", port=8000)
