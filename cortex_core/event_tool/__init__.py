@@ -2,6 +2,9 @@ from cortex_core.graph.state import EventToolState
 from cortex_core.event_tool.model import EventToolModel
 from cortex_cm.utility.logger import get_logger
 from cortex_cm.pg.enums import TimeOfDay
+from cortex_cm.pg import engine, Session
+from cortex_cm.pg.models import Message, User
+from cortex_cm.pg.req import get_by_id
 
 from datetime import datetime, timezone
 UTC_NOW = lambda: datetime.now(timezone.utc)
@@ -39,8 +42,13 @@ class EventToolClient():
     def build_pre_reminder_info(self, state: EventToolState):
         try:
             message_id = state.message_id
-            # Code for fetching user name using crud operation
-            user_name = "User"
+            user_name = ""
+            with Session(engine) as session:
+                message = get_by_id(session, Message, message_id)
+                if message:
+                    user = get_by_id(session, User, message.user_id)
+                    if user:
+                        user_name = user.full_name
             
             # Time of Query - Local Time stamp in User Config - Pending Implementation
             time_of_query = self._get_time_behavior(UTC_NOW())
