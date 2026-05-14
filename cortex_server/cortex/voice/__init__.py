@@ -57,6 +57,8 @@ class MainTaskQueue:
             return TaskSnapshot(data)
         return None
 
+from cortex_server.service.stream.state_manager import voice_state_manager
+
 class VoiceClient:
     """
         ### Cortex Voice Client \n
@@ -71,9 +73,15 @@ class VoiceClient:
         - Interacts with the `VoiceMainModel` and `CortexMainModel` to generate context-aware responses.
     """
     
-    def __init__(self, audioBridge: AudioStreamBridge | None = None, streamEvent: StreamEvent | None = None):
+    def __init__(
+        self, 
+        audioBridge: AudioStreamBridge | None = None, 
+        streamEvent: StreamEvent | None = None,
+        user_id: str | None = None
+    ):
         self.audioBridge = audioBridge
         self.streamEvent = streamEvent
+        self.user_id = user_id
         self.stt_client = STTClient()
         self.tts_client = TTSClient()
         self.model = VoiceMainModel()
@@ -82,6 +90,12 @@ class VoiceClient:
         self._pending_task_ids: set[str] = set()
         self._pending_task_ids_lock = asyncio.Lock()
         self.logger = get_logger("CORTEX_VOICE")
+
+    @property
+    def user_state(self):
+        if not self.user_id:
+            return None
+        return voice_state_manager.get_state(self.user_id)
 
     def _no_trace_context(self):
         """Disable LangSmith tracing for this request path."""
@@ -332,9 +346,30 @@ class VoiceClient:
                     continue
 
                 if task_item.status in (TaskStatus.COMPLETED, TaskStatus.FAILED):
-                    await self._wait_for_client_playback_completion()
-                    await self._handle_task_queue(task_item)
-                    await self._unregister_pending_task(task_id)
+                    state = self.user_state
+                    if state:
+                        # Wait for user and AI to stop speaking (AIStopSpeakingEvent from previous task)
+                        while state.is_user_speaking or state.is_ai_speaking:
+                            await asyncio.sleep(0.1)
+                        
+                        async with state.stream_lock:
+                            # Start streaming this task
+                            state.is_ai_speaking = True # Optimistic lock, UI will confirm with AIStartSpeakingEvent
+                            try:
+                                await self._wait_for_client_playback_completion()
+                                await self._handle_task_queue(task_item)
+                                # Note: state.is_ai_speaking remains True here.
+                                # It will be set to False by ws_event when AIStopSpeakingEvent is received.
+                            except Exception as e:
+                                self.logger.error("Error streaming task result: %s", e)
+                                state.is_ai_speaking = False # Reset on error
+                            finally:
+                                await self._unregister_pending_task(task_id)
+                    else:
+                        # Fallback for when state manager is not available
+                        await self._wait_for_client_playback_completion()
+                        await self._handle_task_queue(task_item)
+                        await self._unregister_pending_task(task_id)
 
             await asyncio.sleep(poll_interval_s)
         

@@ -3,6 +3,8 @@ from fastapi import WebSocket
 from enum import Enum
 from typing import Awaitable, Callable
 
+from .state_manager import voice_state_manager
+
 class StreamEvent:
     """
         ***This Class manages the state and data of an ongoing conversation stream between a User and an AI Application.***\n 
@@ -15,7 +17,6 @@ class StreamEvent:
         - response_task: An asyncio.Task for managing the asynchronous response task.
         - response_cancel_event: An asyncio.Event for signaling cancellation of the response task.
     """
-    is_user_speaking: bool
     audio_buffer: bytearray
     send_lock: asyncio.Lock
     response_task: asyncio.Task | None
@@ -26,8 +27,7 @@ class StreamEvent:
     user_id: str | None
     session_id: str | None
 
-    def __init__(self):
-        self.is_user_speaking = False
+    def __init__(self, user_id: str | None = None):
         self.audio_buffer = bytearray()
         self.send_lock = asyncio.Lock()
         self.response_task = None
@@ -36,8 +36,14 @@ class StreamEvent:
         self.playback_done_event.set()
         self.awaiting_playback_stream_id = None
         self.stream_seq = 0
-        self.user_id = None
+        self.user_id = user_id
         self.session_id = None
+
+    @property
+    def user_state(self):
+        if not self.user_id:
+            return None
+        return voice_state_manager.get_state(self.user_id)
 
     # ***** Playback ACK Management ***** #
     def beginPlaybackTracking(self) -> int:
@@ -138,11 +144,14 @@ class StreamEvent:
     # ***** User Speaking State Management ***** #
     def isUserSpeaking(self) -> bool:
         """Check if the user is currently speaking, used to manage conversation flow and interruptions."""
-        return self.is_user_speaking
+        state = self.user_state
+        return state.is_user_speaking if state else False
 
     def setUserSpeaking(self, speaking: bool):
         """Set the user's speaking status"""
-        self.is_user_speaking = speaking
+        state = self.user_state
+        if state:
+            state.is_user_speaking = speaking
     
     # ***** Response Task Management ***** #
     def startStreamResponse(self, streamResponse: Callable[..., Awaitable[None]], *args, **kwargs):

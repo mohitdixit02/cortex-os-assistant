@@ -58,14 +58,14 @@ type BackendListenerProps = {
 }
 
 export const useWebSocket = (
-    socketUrl?: string,
+    baseUrl?: string,
     binaryType: "arraybuffer" | "blob" = "arraybuffer"
 ) => {
-    if (!socketUrl) {
-        throw new Error("WebSocket URL is required");
+    if (!baseUrl) {
+        throw new Error("WebSocket base URL is required");
     }
-    // Fix: initialize as null to avoid creating orphaned sockets on every render
-    const socketRef = useRef<WebSocket | null>(null);
+    const eventSocketRef = useRef<WebSocket | null>(null);
+    const audioSocketRef = useRef<WebSocket | null>(null);
     const isStreamingRef = useRef(false);
     const [isListening, setIsListening] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
@@ -96,89 +96,85 @@ export const useWebSocket = (
             playbackDrainTimerRef.current = null;
         }
 
-        // Lazy initialization if needed
-        if (!socketRef.current || socketRef.current.readyState === WebSocket.CLOSED) {
-            socketRef.current = initializeWebSocket(socketUrl, binaryType);
-        }
+        const handleEventMessage = async (event: MessageEvent) => {
+            if (typeof event.data !== "string") return;
+            console.log("Received event message:", event.data);
+            
+            const data = JSON.parse(event.data) as {
+                type?: string;
+                streamId?: number;
+                sampleRate?: number;
+                channels?: number;
+                format?: string;
+            };
 
-        const socket = socketRef.current;
-
-        const handleMessage = async (event: MessageEvent) => {
-            console.log("Received message from WebSocket:", event.data);
-            if (!isStreamingRef.current) {
-                console.warn("Received message while not streaming, ignoring:", event.data);
-                return;
-            }
-            if (typeof event.data === "string") {
-                const data = JSON.parse(event.data) as {
-                    type?: string;
-                    streamId?: number;
-                    sampleRate?: number;
-                    channels?: number;
-                    format?: string;
-                };
-                if (data.type === metaDataKey) {
-                    setIsSpeaking(true);
-                    setIsListening(false);
-                    const isInt16 = (data.format || "f32le").toLowerCase().includes("16");
-                    configAudioSpec({
-                        codec: isInt16
-                            ? "Int16"
-                            : "Float32",
-                        sampleRate: Number(data.sampleRate) || 24000,
-                        channels: Number(data.channels) || 1,
-                    });
-
-                    if (playbackDrainTimerRef.current) {
-                        clearTimeout(playbackDrainTimerRef.current);
-                        playbackDrainTimerRef.current = null;
-                    }
-
-                    streamPlaybackRef.current = {
-                        streamId: typeof data.streamId === "number" ? data.streamId : null,
-                        sampleRate: Number(data.sampleRate) || 24000,
-                        channels: Number(data.channels) || 1,
-                        bytesPerSample: isInt16 ? 2 : 4,
-                        firstChunkAtMs: 0,
-                        totalSamples: 0,
-                    };
+            if (data.type === metaDataKey) {
+                setIsSpeaking(true);
+                setIsListening(false);
+                // Report to backend
+                if (eventSocketRef.current?.readyState === WebSocket.OPEN) {
+                    eventSocketRef.current.send(JSON.stringify({ type: "AIStartSpeakingEvent" }));
                 }
-                if (data.type === audioEndKey) {
-                    console.log("Received audio end signal from backend");
+                const isInt16 = (data.format || "f32le").toLowerCase().includes("16");
+                configAudioSpec({
+                    codec: isInt16 ? "Int16" : "Float32",
+                    sampleRate: Number(data.sampleRate) || 24000,
+                    channels: Number(data.channels) || 1,
+                });
+
+                if (playbackDrainTimerRef.current) {
+                    clearTimeout(playbackDrainTimerRef.current);
+                    playbackDrainTimerRef.current = null;
+                }
+
+                streamPlaybackRef.current = {
+                    streamId: typeof data.streamId === "number" ? data.streamId : null,
+                    sampleRate: Number(data.sampleRate) || 24000,
+                    channels: Number(data.channels) || 1,
+                    bytesPerSample: isInt16 ? 2 : 4,
+                    firstChunkAtMs: 0,
+                    totalSamples: 0,
+                };
+            }
+
+            if (data.type === audioEndKey) {
+                console.log("Received audio end signal from backend");
+                const now = Date.now();
+                const playbackState = streamPlaybackRef.current;
+                const totalDurationMs = playbackState.sampleRate > 0
+                    ? (playbackState.totalSamples / playbackState.sampleRate) * 1000
+                    : 0;
+                const elapsedMs = playbackState.firstChunkAtMs > 0
+                    ? now - playbackState.firstChunkAtMs
+                    : 0;
+                const remainingMs = Math.max(0, totalDurationMs - elapsedMs);
+                const drainSafetyMs = 180;
+                const ackAfterMs = Math.max(40, Math.ceil(remainingMs + drainSafetyMs));
+                const doneStreamId = typeof data.streamId === "number"
+                    ? data.streamId
+                    : playbackState.streamId;
+
+                if (playbackDrainTimerRef.current) {
+                    clearTimeout(playbackDrainTimerRef.current);
+                }
+
+                playbackDrainTimerRef.current = setTimeout(() => {
                     setIsSpeaking(false);
                     setIsListening(isStreamingRef.current);
-                    const now = Date.now();
-                    const playbackState = streamPlaybackRef.current;
-                    const totalDurationMs = playbackState.sampleRate > 0
-                        ? (playbackState.totalSamples / playbackState.sampleRate) * 1000
-                        : 0;
-                    const elapsedMs = playbackState.firstChunkAtMs > 0
-                        ? now - playbackState.firstChunkAtMs
-                        : 0;
-                    const remainingMs = Math.max(0, totalDurationMs - elapsedMs);
-                    const drainSafetyMs = 180;
-                    const ackAfterMs = Math.max(40, Math.ceil(remainingMs + drainSafetyMs));
-                    const doneStreamId = typeof data.streamId === "number"
-                        ? data.streamId
-                        : playbackState.streamId;
-
-                    if (playbackDrainTimerRef.current) {
-                        clearTimeout(playbackDrainTimerRef.current);
+                    if (eventSocketRef.current?.readyState === WebSocket.OPEN) {
+                        eventSocketRef.current.send(JSON.stringify({
+                            type: "playback_done",
+                            streamId: doneStreamId,
+                        }));
+                        // Report AI finished speaking
+                        eventSocketRef.current.send(JSON.stringify({ type: "AIStopSpeakingEvent" }));
                     }
-
-                    playbackDrainTimerRef.current = setTimeout(() => {
-                        const ws = socketRef.current;
-                        if (ws && ws.readyState === WebSocket.OPEN) {
-                            ws.send(JSON.stringify({
-                                type: "playback_done",
-                                streamId: doneStreamId,
-                            }));
-                        }
-                    }, ackAfterMs);
-                }
-                return;
+                }, ackAfterMs);
             }
 
+        };
+
+        const handleAudioMessage = async (event: MessageEvent) => {
             if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
                 const playbackState = streamPlaybackRef.current;
                 const chunkByteLength = event.data instanceof Blob ? event.data.size : event.data.byteLength;
@@ -190,25 +186,26 @@ export const useWebSocket = (
                 playbackState.totalSamples += chunkSamples;
 
                 await playAudio(event.data);
-                return;
             }
         };
 
-        const handleError = (e: Event) => {
-            console.error("WebSocket error:", e);
-        };
+        const eventSocket = eventSocketRef.current;
+        const audioSocket = audioSocketRef.current;
 
-        socket.addEventListener("message", handleMessage);
-        socket.addEventListener("error", handleError);
+        if (eventSocket) {
+            eventSocket.addEventListener("message", handleEventMessage);
+        }
+        if (audioSocket) {
+            audioSocket.addEventListener("message", handleAudioMessage);
+        }
 
-        // Cleanup function for listeners
         return () => {
-            socket.removeEventListener("message", handleMessage);
-            socket.removeEventListener("error", handleError);
+            eventSocket?.removeEventListener("message", handleEventMessage);
+            audioSocket?.removeEventListener("message", handleAudioMessage);
         };
-    }, [socketUrl, binaryType, configAudioSpec, playAudio]);
+    }, [configAudioSpec, playAudio]);
 
-    const closeSocket = useCallback((socketEndResponse: string = "close_connection") => {
+    const closeSocket = useCallback(() => {
         if (playbackDrainTimerRef.current) {
             clearTimeout(playbackDrainTimerRef.current);
             playbackDrainTimerRef.current = null;
@@ -217,67 +214,64 @@ export const useWebSocket = (
         isStreamingRef.current = false;
         setIsListening(false);
         setIsSpeaking(false);
-        if (socketRef.current?.readyState === WebSocket.OPEN) {
-            socketRef.current.send(JSON.stringify({ type: socketEndResponse }));
-        }
-        socketRef.current?.close();
-        socketRef.current = null;
+
+        eventSocketRef.current?.close();
+        eventSocketRef.current = null;
+        audioSocketRef.current?.close();
+        audioSocketRef.current = null;
     }, [closeAudioPlayer]);
 
     const startAudioStreaming = useCallback(async (userId?: string, sessionId?: string) => {
         try {
-            const ws = await configureWebSocket(socketRef.current, socketUrl, binaryType);
-            socketRef.current = ws;
-            console.log("WebSocket configuration result:", ws.readyState);
+            const eventUrl = `${baseUrl}/event?user_id=${userId}`;
+            const audioUrl = `${baseUrl}/audio?user_id=${userId}`;
+
+            if (!eventSocketRef.current || eventSocketRef.current.readyState !== WebSocket.OPEN) {
+                eventSocketRef.current = await configureWebSocket(null, eventUrl, "blob");
+            }
+            
+            const audioWs = await configureWebSocket(audioSocketRef.current, audioUrl, binaryType);
+            audioSocketRef.current = audioWs;
+
             const chunkHandler = (chunk: ArrayBuffer) => {
-                if (ws.readyState === WebSocket.OPEN) {
-                    console.log("Sending audio chunk of size:", chunk.byteLength);
-                    ws.send(chunk);
+                if (audioWs.readyState === WebSocket.OPEN) {
+                    audioWs.send(chunk);
                 }
             };
-            const errHandler = (error: string) => {
-                console.error("Mic recorder error:", error);
-            }
-            const interruptionHandler = (res: MicStreamRes) => {
-                if (ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ type: "interruption", event: res.event }));
-                }
-            }
 
-            // trigger audio start
-            if (!ws || ws.readyState !== WebSocket.OPEN) {
-                throw new Error("WebSocket is not open for sending audio data");
-            }
-            ws.send(JSON.stringify({ 
+            const interruptionHandler = (res: MicStreamRes) => {
+                if (eventSocketRef.current?.readyState === WebSocket.OPEN) {
+                    const eventType = res.event === "speech-start" ? "UserSpeechStartEvent" : "UserSpeechEndEvent";
+                    eventSocketRef.current.send(JSON.stringify({ type: eventType }));
+                }
+            };
+
+            audioWs.send(JSON.stringify({ 
                 type: "start_conversation", 
                 mime: "audio/wav",
                 user_id: userId,
                 session_id: sessionId
             }));
+            
             isStreamingRef.current = true;
             setIsListening(true);
             setIsSpeaking(false);
 
-            // Audio manager will handle chunks as per handlers provided
-            startRecording(
-                chunkHandler,
-                errHandler,
-                interruptionHandler
-            );
+            startRecording(chunkHandler, (err) => console.error(err), interruptionHandler);
         } catch (error) {
             console.error("Failed to start streaming:", error);
             await stopRecording();
         }
-    }, [socketUrl, binaryType, startRecording, stopRecording]);
+    }, [baseUrl, binaryType, startRecording, stopRecording]);
 
     const stopAudioStreaming = useCallback(async () => {
-        const ws = socketRef.current;
+        const audioWs = audioSocketRef.current;
         await closeAudioPlayer();
         isStreamingRef.current = false;
         setIsListening(false);
         setIsSpeaking(false);
-        if (ws && ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify({ type: "end_conversation" }));
+        if (audioWs && audioWs.readyState === WebSocket.OPEN) {
+            audioWs.send(JSON.stringify({ type: "end_conversation" }));
         }
     }, [closeAudioPlayer]);
 

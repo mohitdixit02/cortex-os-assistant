@@ -22,7 +22,7 @@ export default function Home() {
     closeSocket,
     isListening,
     isSpeaking
-  } = useWebSocket(backendUrl.replace(/^http/, "ws") + "/ws/stream");
+  } = useWebSocket(backendUrl.replace(/^http/, "ws") + "/ws");
 
   // Refresh messages when speech ends
   const wasSpeaking = useRef(false);

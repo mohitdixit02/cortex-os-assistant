@@ -7,6 +7,8 @@ from fastapi import WebSocket
 from typing import AsyncGenerator
 from logger import logger
 
+from .state_manager import voice_state_manager
+
 class AudioStreamBridge:
     """
     ### Audio Stream Bridge \n
@@ -21,17 +23,30 @@ class AudioStreamBridge:
         self.websocket = websocket
         self.streamEvent = streamEvent
         self._stream_lock = asyncio.Lock()
+
+    @property
+    def user_state(self):
+        if not self.streamEvent or not self.streamEvent.user_id:
+            return None
+        return voice_state_manager.get_state(self.streamEvent.user_id)
     
     async def send_json(self, payload: dict):
-        """Helper function to send JSON responses through the WebSocket connection in a thread-safe manner."""
-        async with self.streamEvent.getLock():
-            # logger.info("[JSON RES TEST] Sending JSON response through WebSocket: %s", payload)
-            await self.websocket.send_json(payload)
+        """Helper function to send JSON responses through the Event WebSocket connection."""
+        state = self.user_state
+        if state and state.event_socket:
+            async with self.streamEvent.getLock():
+                await state.event_socket.send_json(payload)
             
     async def send_bytes(self, payload: bytes):
-        """Helper function to send binary audio data over the websocket with proper locking."""
-        async with self.streamEvent.getLock():
-            await self.websocket.send_bytes(payload)
+        """Helper function to send binary audio data over the Audio websocket with proper locking."""
+        state = self.user_state
+        if state and state.audio_socket:
+            async with self.streamEvent.getLock():
+                await state.audio_socket.send_bytes(payload)
+        else:
+            # Fallback to the websocket passed in constructor if state manager is not ready
+            async with self.streamEvent.getLock():
+                await self.websocket.send_bytes(payload)
     
     def pcm16le_to_wav_bytes(self, pcm_bytes: bytes) -> bytes:
         """

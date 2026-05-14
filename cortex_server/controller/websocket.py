@@ -1,120 +1,126 @@
 from fastapi.routing import APIRouter
-from fastapi import WebSocket, WebSocketDisconnect
+from fastapi import WebSocket, WebSocketDisconnect, Query
 from cortex_server.service.stream.event import StreamEvent, ResponseKey, StreamEventResponse
 from cortex_server.service.stream.main import StreamClient
+from cortex_server.service.stream.state_manager import voice_state_manager
 import json
+import asyncio
 
 router = APIRouter()
 
-@router.websocket("/stream")
-async def ws_stream(websocket: WebSocket):
+@router.websocket("/event")
+async def ws_event(websocket: WebSocket, user_id: str = Query(...)):
     """
-    ***WebSocket endpoint for handling real-time audio streaming and conversation management between User and AI Application.***\n
-    **Input**: Binary Audio | JSON | Control Messages \n
-    **Output**: JSON Responses indicating conversation state and processing results.
+    ***Event Stream Socket***
+    Handles real-time events (JSON) and state management.
     """
     await websocket.accept()
-    streamEvent = StreamEvent()
+    state = voice_state_manager.get_state(user_id)
+    state.event_socket = websocket
+    
+    streamEvent = StreamEvent(user_id=user_id)
+    state.stream_event = streamEvent # Link to state
+    
     streamEventResponse = StreamEventResponse(
         websocket=websocket,
         streamEvent=streamEvent
     )
     streamClient = StreamClient(
         websocket=websocket,
-        streamEvent=streamEvent
+        streamEvent=streamEvent,
+        user_id=user_id
     )
     streamClient.start_background_tasks()
 
     try:
         while True:
-            res = await websocket.receive()
-            if res.get("bytes") is not None:
-                if streamEvent.isUserSpeaking():
-                    print("Adding chunk of audio data to buffer, size:", len(res.get("bytes")))
-                    streamEvent.appendAudioBuffer(res.get("bytes"))
-                continue
-
-            text_payload = res.get("text")
-            if text_payload is None:
-                continue
-
-            if text_payload == "close_connection":
-                print("Received close connection signal, closing websocket")
-                await streamEvent.cancel("client requested close")
-                await websocket.close()
-                break
-
+            text_payload = await websocket.receive_text()
             try:
                 payload = json.loads(text_payload)
             except json.JSONDecodeError:
-                print("Received non-JSON text payload, ignoring:", text_payload)
                 continue
 
             msg_type = payload.get("type")
-            if msg_type == "start_conversation":
-                print("Received start signal, initializing audio buffer")
-                streamEvent.resetAudioBuffer()
-                streamEvent.user_id = payload.get("user_id")
-                streamEvent.session_id = payload.get("session_id")
-                await streamEventResponse.send_response(response=ResponseKey.CONVERSATION_START)
-
-            if msg_type == "playback_done":
+            
+            if msg_type == "UserSpeechStartEvent":
+                state.is_user_speaking = True
+                if state.stream_event:
+                    await state.stream_event.cancel("User started speaking")
+                await streamEventResponse.send_response(response=ResponseKey.START_LISTENING)
+            
+            elif msg_type == "UserSpeechEndEvent":
+                state.is_user_speaking = False
+                await streamEventResponse.send_response(response=ResponseKey.FINISH_LISTENING)
+            
+            elif msg_type == "AIStartSpeakingEvent":
+                state.is_ai_speaking = True
+            
+            elif msg_type == "AIStopSpeakingEvent":
+                state.is_ai_speaking = False
+            
+            elif msg_type == "playback_done":
                 stream_id = payload.get("streamId")
-                try:
-                    stream_id = int(stream_id) if stream_id is not None else None
-                except (TypeError, ValueError):
-                    stream_id = None
-                accepted = streamEvent.markPlaybackDone(stream_id=stream_id)
-                if not accepted:
-                    print(f"Ignoring playback_done for stale streamId={stream_id}")
+                streamEvent.markPlaybackDone(stream_id=stream_id)
+
+    except WebSocketDisconnect:
+        state.event_socket = None
+    finally:
+        await streamClient.shutdown()
+
+@router.websocket("/audio")
+async def ws_audio(websocket: WebSocket, user_id: str = Query(...)):
+    """
+    ***Audio Stream Socket***
+    Handles raw binary PCM data.
+    """
+    await websocket.accept()
+    state = voice_state_manager.get_state(user_id)
+    state.audio_socket = websocket
+    
+    # Use the existing stream_event from state if available
+    streamEvent = state.stream_event or StreamEvent(user_id=user_id)
+    state.stream_event = streamEvent
+    
+    # The event socket is where we send control messages
+    event_socket = state.event_socket
+    
+    streamEventResponse = StreamEventResponse(
+        websocket=event_socket,
+        streamEvent=streamEvent
+    )
+    
+    streamClient = StreamClient(
+        websocket=websocket,
+        streamEvent=streamEvent,
+        user_id=user_id
+    )
+
+    try:
+        while True:
+            res = await websocket.receive()
+            if res.get("bytes") is not None:
+                streamEvent.appendAudioBuffer(res.get("bytes"))
                 continue
             
-            if msg_type == "interruption":
-                event = payload.get("event")
-                print(f"Received interruption event: {event}")
-                if event == "speech-start":
-                    print("User started speaking, clearing audio buffer for new input")
-                    await streamEvent.cancel("barge-in speech-start")
+            text_payload = res.get("text")
+            if text_payload:
+                payload = json.loads(text_payload)
+                msg_type = payload.get("type")
+                
+                if msg_type == "start_conversation":
                     streamEvent.resetAudioBuffer()
-                    streamEvent.setUserSpeaking(True)
-                    await streamEventResponse.send_response(response=ResponseKey.START_LISTENING)
-                elif event == "speech-end":
-                    print("User stopped speaking, ready to process audio buffer of size:", streamEvent.getAudioBufferSize())
-                    streamEvent.setUserSpeaking(False)
-                    await streamEventResponse.send_response(response=ResponseKey.FINISH_LISTENING)
-
-                    if not streamEvent.isAudioBuffer():
-                        print("No audio data received during interruption, sending error response")
-                        await streamEventResponse.send_response(response=ResponseKey.NO_AUDIO)
-                    else:
-                        audio_snapshot = streamEvent.getAudioBufferBytes()
-                        streamEvent.resetAudioBuffer()
-                        await streamEvent.cancel("new speech-end request")
-                        streamEvent.startStreamResponse(
-                            streamResponse=streamClient.stream_response,
-                            audio_bytes=audio_snapshot,
-                        )
-
-            if msg_type == "end_conversation":
-                print("Received stop signal, processing complete audio data of size:", streamEvent.getAudioBufferSize())
-                await streamEvent.cancel("end_conversation")
-                streamEvent.resetAudioBuffer()
-                await streamEventResponse.send_response(response=ResponseKey.CONVERSATION_END)
-
-            if msg_type == "close_connection":
-                print("Received close connection signal, closing websocket")
-                await streamEvent.cancel("close_connection message")
-                await websocket.close()
-                break
+                    streamEvent.session_id = payload.get("session_id")
+                    if event_socket:
+                        await streamEventResponse.send_response(response=ResponseKey.CONVERSATION_START)
+                
+                elif msg_type == "end_conversation":
+                    audio_snapshot = streamEvent.getAudioBufferBytes()
+                    streamEvent.resetAudioBuffer()
+                    # Trigger processing
+                    streamEvent.startStreamResponse(
+                        streamResponse=streamClient.stream_response,
+                        audio_bytes=audio_snapshot,
+                    )
+                    
     except WebSocketDisconnect:
-        print("WebSocket disconnected")
-    except Exception as e:
-        print("WebSocket endpoint error:", e)
-        try:
-            if websocket.client_state.name != "DISCONNECTED":
-                await websocket.close()
-        except Exception:
-            pass
-    finally:
-        await streamEvent.cancel("websocket endpoint finalized")
-        await streamClient.shutdown()
+        state.audio_socket = None

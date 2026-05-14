@@ -25,10 +25,14 @@ class StreamClient:
         - The corresponding `StreamEvent object` for handling streaming events.
     """
 
-    def __init__(self, websocket: WebSocket, streamEvent: StreamEvent):
+    def __init__(self, websocket: WebSocket, streamEvent: StreamEvent, user_id: str | None = None):
         self.streamEvent = streamEvent
         self.audioBridge = AudioStreamBridge(websocket=websocket, streamEvent=streamEvent)
-        self.voiceClient = VoiceClient(audioBridge=self.audioBridge, streamEvent=streamEvent)
+        self.voiceClient = VoiceClient(
+            audioBridge=self.audioBridge, 
+            streamEvent=streamEvent,
+            user_id=user_id
+        )
         self._auto_stream_task = None
 
     def start_background_tasks(self):
