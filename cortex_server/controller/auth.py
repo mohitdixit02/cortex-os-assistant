@@ -38,6 +38,6 @@ async def callback(code: str = Query(...), state: str = Query(None)):
 @router.post("/logout")
 async def logout(user_id: str = Depends(get_current_user_id)):
     """Clear the user session."""
-    redis_client = RedisClient(mode=RedisModeType.TOKEN)
+    redis_client = RedisClient.get_client(mode=RedisModeType.TOKEN)
     redis_client.delete_access_token(user_id)
     return {"message": "Logged out successfully"}

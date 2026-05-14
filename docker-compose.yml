@@ -50,6 +50,10 @@ services:
       - DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pg:5432/${POSTGRES_DB}
       - CORTEX_QUEUE_URL=http://cortex-queue:8001
       - HF_TOKEN=${HF_TOKEN}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
+      - GOOGLE_AUTH_URI=${GOOGLE_AUTH_URI}
     command: python cortex_server/server.py
     depends_on:
       - redis
