@@ -3,12 +3,13 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, usePathname } from 'next/navigation';
-import { FaHome, FaHistory, FaCog, FaUser, FaSignOutAlt, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaHome, FaHistory, FaCog, FaUser, FaSignOutAlt, FaChevronLeft, FaChevronRight, FaTasks } from 'react-icons/fa';
 import { useAppContext } from './AppContext';
 
 const navItems = [
   { name: 'Home', icon: <FaHome />, path: '/' },
-  { name: 'History', icon: <FaHistory />, path: '/history' },
+  { name: 'Conversations', icon: <FaHistory />, path: '/history' },
+  { name: 'Tasks', icon: <FaTasks />, path: '/tasks' },
   { name: 'Settings', icon: <FaCog />, path: '/settings' },
   { name: 'Profile', icon: <FaUser />, path: '/profile' },
 ];
