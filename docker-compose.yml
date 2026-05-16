@@ -55,7 +55,7 @@ services:
       - HF_DATASETS_CACHE=${HF_CACHE_DIR:-/root/.cache/huggingface}
       - TRANSFORMERS_CACHE=${HF_CACHE_DIR:-/root/.cache/huggingface}
       - SENTENCE_TRANSFORMERS_HOME=${HF_CACHE_DIR:-/root/.cache/huggingface}
-      - HF_HUB_OFFLINE=${HF_OFFLINE:-1}
+      - TRANSFORMERS_CHECK_LOCAL_CACHE=${TRANSFORMERS_CHECK_LOCAL_CACHE:-1}
       - HF_TOKEN=${HF_TOKEN}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
@@ -82,7 +82,7 @@ services:
       - HF_DATASETS_CACHE=${HF_CACHE_DIR:-/root/.cache/huggingface}
       - TRANSFORMERS_CACHE=${HF_CACHE_DIR:-/root/.cache/huggingface}
       - SENTENCE_TRANSFORMERS_HOME=${HF_CACHE_DIR:-/root/.cache/huggingface}
-      - HF_HUB_OFFLINE=${HF_OFFLINE:-1}
+      - TRANSFORMERS_CHECK_LOCAL_CACHE=${TRANSFORMERS_CHECK_LOCAL_CACHE:-1}
       - HF_TOKEN=${HF_TOKEN}
     command: python cortex_core/worker.py
     depends_on:

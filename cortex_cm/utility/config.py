@@ -10,11 +10,19 @@ from enum import Enum
 print("Loading configuration for server...")
 load_dotenv()
 print(f"Configuration loaded. Cache Home set to: {os.getenv('HF_HOME')}")
+print(
+    "Configuration loaded. Transformers local cache check set to: "
+    f"{os.getenv('TRANSFORMERS_CHECK_LOCAL_CACHE', '1')}"
+)
+
+def _env_bool(name: str, default: str = "0") -> bool:
+    return str(os.getenv(name, default)).lower() in ("1", "true", "yes", "on")
 
 @dataclass(frozen=True)
 class EnvProvider:
     HF_TOKEN: str = os.getenv("HF_TOKEN")
     DB_URL: str = os.getenv("DB_URL")
+    TRANSFORMERS_CHECK_LOCAL_CACHE: bool = _env_bool("TRANSFORMERS_CHECK_LOCAL_CACHE", "1")
     
     # Google OAuth
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID")

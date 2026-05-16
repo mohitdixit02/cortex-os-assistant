@@ -8,6 +8,10 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+# Keep NLTK data in a persistent image path
+ENV NLTK_DATA=/usr/local/share/nltk_data
+RUN mkdir -p /usr/local/share/nltk_data
+
 # Install PyTorch and CUDA dependencies FIRST
 # These are the heaviest and least likely to change.
 # By putting them above the COPY requirements.txt, we ensure they stay cached
@@ -23,7 +27,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Download NLTK data and spaCy model
-RUN python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger')" \
+RUN python -c "import nltk; nltk.download('punkt', download_dir='/usr/local/share/nltk_data'); nltk.download('punkt_tab', download_dir='/usr/local/share/nltk_data'); nltk.download('averaged_perceptron_tagger', download_dir='/usr/local/share/nltk_data')" \
     && python -m spacy download en_core_web_sm
 
 # Copy the entire project code last (it changes most frequently)

@@ -2,36 +2,25 @@ from cortex_cm.utility.huggingface.config import models
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor
 from langchain_huggingface import HuggingFacePipeline, HuggingFaceEmbeddings, HuggingFaceEndpoint, ChatHuggingFace, HuggingFaceEndpointEmbeddings
 from cortex_cm.utility.logger import get_logger
+from cortex_cm.utility.config import env
 from kokoro import KPipeline
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
 import os
 from huggingface_hub import errors as hf_errors
-import sys
 
 logger = get_logger("MODELS_LOADER")
 
-def _hf_call_with_optional_retry(callable_fn, *args, **kwargs):
+def _hf_call_with_local_cache(callable_fn, *args, local_files_only: bool = False, **kwargs):
+    if local_files_only:
+        kwargs["local_files_only"] = True
     try:
         return callable_fn(*args, **kwargs)
     except (hf_errors.LocalEntryNotFoundError, OSError) as e:
-        # If HF_HUB_OFFLINE is set, try one override retry by unsetting it for this attempt.
-        offline_env = str(os.environ.get("HF_HUB_OFFLINE", "")).lower()
-        if offline_env in ("1", "true", "yes"):
-            logger.warning("HF_HUB_OFFLINE is set — unsetting for one retry.")
-            prev = os.environ.pop("HF_HUB_OFFLINE", None)
-            try:
-                return callable_fn(*args, **kwargs)
-            except Exception as e2:
-                logger.error("Hugging Face retry failed after unsetting HF_HUB_OFFLINE: %s", e2)
-                # restore previous env
-                if prev is not None:
-                    os.environ["HF_HUB_OFFLINE"] = prev
-                else:
-                    os.environ.pop("HF_HUB_OFFLINE", None)
-                sys.exit(1)
-        # If offline not set, log concise error and re-raise
-        logger.error("Hugging Face files missing from cache and HF_HUB_OFFLINE is not set. Error: %s", e)
-        sys.exit(1)
+        if local_files_only:
+            logger.error("Hugging Face local cache lookup failed with local_files_only=True. Error: %s", e)
+            raise
+        logger.error("Hugging Face load failed. Error: %s", e)
+        raise
 
 
 _STT_MODEL = None
@@ -41,13 +30,18 @@ def get_stt_model():
     if _STT_MODEL is None:
         logger.info("Initializing STTModel...")
         stt_model_cfg = models.get("stt", {})
-        _STT_PROCESSOR = _hf_call_with_optional_retry(AutoProcessor.from_pretrained, stt_model_cfg.get("name"))
-        _STT_MODEL = _hf_call_with_optional_retry(
+        _STT_PROCESSOR = _hf_call_with_local_cache(
+            AutoProcessor.from_pretrained,
+            stt_model_cfg.get("name"),
+            local_files_only=env.TRANSFORMERS_CHECK_LOCAL_CACHE,
+        )
+        _STT_MODEL = _hf_call_with_local_cache(
             AutoModelForSpeechSeq2Seq.from_pretrained,
             stt_model_cfg.get("name"),
             torch_dtype=stt_model_cfg.get("dtype"),
             low_cpu_mem_usage=True,
             use_safetensors=True,
+            local_files_only=env.TRANSFORMERS_CHECK_LOCAL_CACHE,
         ).to(stt_model_cfg.get("device"))
         logger.info("STT model loaded..")
     return _STT_MODEL, _STT_PROCESSOR
@@ -116,9 +110,17 @@ def get_voice_emotion_pipeline():
         logger.info("Initializing Voice Emotion Model...")
         emotion_model_config = models.get("voice_emotion", {})
         emotion_model_name = emotion_model_config.get("name")
-        emotion_model = _hf_call_with_optional_retry(AutoModelForSequenceClassification.from_pretrained, emotion_model_name)
-        emotion_tokenizer = _hf_call_with_optional_retry(AutoTokenizer.from_pretrained, emotion_model_name)
-        _VOICE_EMOTION_PIPELINE = _hf_call_with_optional_retry(
+        emotion_model = _hf_call_with_local_cache(
+            AutoModelForSequenceClassification.from_pretrained,
+            emotion_model_name,
+            local_files_only=env.TRANSFORMERS_CHECK_LOCAL_CACHE,
+        )
+        emotion_tokenizer = _hf_call_with_local_cache(
+            AutoTokenizer.from_pretrained,
+            emotion_model_name,
+            local_files_only=env.TRANSFORMERS_CHECK_LOCAL_CACHE,
+        )
+        _VOICE_EMOTION_PIPELINE = _hf_call_with_local_cache(
             pipeline,
             emotion_model_config.get("task"),
             model=emotion_model,
@@ -132,9 +134,10 @@ def get_embedding_model():
     global _EMBEDDING_MODEL
     if _EMBEDDING_MODEL is None:
         logger.info("Initializing Embeddings Model...")
-        _EMBEDDING_MODEL = _hf_call_with_optional_retry(
+        _EMBEDDING_MODEL = _hf_call_with_local_cache(
             HuggingFaceEmbeddings,
             model_name="sentence-transformers/all-MiniLM-L6-v2",
+            model_kwargs={"local_files_only": env.TRANSFORMERS_CHECK_LOCAL_CACHE},
         )
         logger.info("Embeddings model loaded..")
     return _EMBEDDING_MODEL
