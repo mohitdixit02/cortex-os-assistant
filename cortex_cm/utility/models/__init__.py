@@ -4,8 +4,35 @@ from langchain_huggingface import HuggingFacePipeline, HuggingFaceEmbeddings, Hu
 from cortex_cm.utility.logger import get_logger
 from kokoro import KPipeline
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
+import os
+from huggingface_hub import errors as hf_errors
+import sys
 
 logger = get_logger("MODELS_LOADER")
+
+def _hf_call_with_optional_retry(callable_fn, *args, **kwargs):
+    try:
+        return callable_fn(*args, **kwargs)
+    except (hf_errors.LocalEntryNotFoundError, OSError) as e:
+        # If HF_HUB_OFFLINE is set, try one override retry by unsetting it for this attempt.
+        offline_env = str(os.environ.get("HF_HUB_OFFLINE", "")).lower()
+        if offline_env in ("1", "true", "yes"):
+            logger.warning("HF_HUB_OFFLINE is set — unsetting for one retry.")
+            prev = os.environ.pop("HF_HUB_OFFLINE", None)
+            try:
+                return callable_fn(*args, **kwargs)
+            except Exception as e2:
+                logger.error("Hugging Face retry failed after unsetting HF_HUB_OFFLINE: %s", e2)
+                # restore previous env
+                if prev is not None:
+                    os.environ["HF_HUB_OFFLINE"] = prev
+                else:
+                    os.environ.pop("HF_HUB_OFFLINE", None)
+                sys.exit(1)
+        # If offline not set, log concise error and re-raise
+        logger.error("Hugging Face files missing from cache and HF_HUB_OFFLINE is not set. Error: %s", e)
+        sys.exit(1)
+
 
 _STT_MODEL = None
 _STT_PROCESSOR = None
@@ -14,8 +41,9 @@ def get_stt_model():
     if _STT_MODEL is None:
         logger.info("Initializing STTModel...")
         stt_model_cfg = models.get("stt", {})
-        _STT_PROCESSOR = AutoProcessor.from_pretrained(stt_model_cfg.get("name"))
-        _STT_MODEL = AutoModelForSpeechSeq2Seq.from_pretrained(
+        _STT_PROCESSOR = _hf_call_with_optional_retry(AutoProcessor.from_pretrained, stt_model_cfg.get("name"))
+        _STT_MODEL = _hf_call_with_optional_retry(
+            AutoModelForSpeechSeq2Seq.from_pretrained,
             stt_model_cfg.get("name"),
             torch_dtype=stt_model_cfg.get("dtype"),
             low_cpu_mem_usage=True,
@@ -28,8 +56,9 @@ _TTS_PIPELINE = None
 def get_tts_pipeline():
     global _TTS_PIPELINE
     if _TTS_PIPELINE is None:
+        tts_model_cfg = models.get("tts", {})
         logger.info("Initializing TTS Pipeline...")
-        _TTS_PIPELINE = KPipeline(lang_code="a")
+        _TTS_PIPELINE = KPipeline(lang_code="a", repo_id=tts_model_cfg.get("name"))
         logger.info("TTS Pipeline loaded..")
     return _TTS_PIPELINE
 
@@ -87,12 +116,13 @@ def get_voice_emotion_pipeline():
         logger.info("Initializing Voice Emotion Model...")
         emotion_model_config = models.get("voice_emotion", {})
         emotion_model_name = emotion_model_config.get("name")
-        emotion_model = AutoModelForSequenceClassification.from_pretrained(emotion_model_name)
-        emotion_tokenizer = AutoTokenizer.from_pretrained(emotion_model_name)
-        _VOICE_EMOTION_PIPELINE = pipeline(
-            emotion_model_config.get("task"), 
-            model=emotion_model, 
-            tokenizer=emotion_tokenizer
+        emotion_model = _hf_call_with_optional_retry(AutoModelForSequenceClassification.from_pretrained, emotion_model_name)
+        emotion_tokenizer = _hf_call_with_optional_retry(AutoTokenizer.from_pretrained, emotion_model_name)
+        _VOICE_EMOTION_PIPELINE = _hf_call_with_optional_retry(
+            pipeline,
+            emotion_model_config.get("task"),
+            model=emotion_model,
+            tokenizer=emotion_tokenizer,
         )
         logger.info("Voice Emotion model loaded..")
     return _VOICE_EMOTION_PIPELINE
@@ -102,8 +132,9 @@ def get_embedding_model():
     global _EMBEDDING_MODEL
     if _EMBEDDING_MODEL is None:
         logger.info("Initializing Embeddings Model...")
-        _EMBEDDING_MODEL = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2"
+        _EMBEDDING_MODEL = _hf_call_with_optional_retry(
+            HuggingFaceEmbeddings,
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
         )
         logger.info("Embeddings model loaded..")
     return _EMBEDDING_MODEL
