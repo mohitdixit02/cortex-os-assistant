@@ -20,15 +20,15 @@ This file outlines the architecture for handling voice streaming between user (E
 1. Audio Stream Socket
 - Purpose: To stream raw audio data between the Electron app and the Cortex server in both directions.
 - Server sends info of PCM Player configuration before streaming starts, so that Electron app can configure its PCM Player accordingly.
+- Send and receive real-time events related to voice interactions (e.g., start/stop speaking, errors, etc.) between the Electron app and the Cortex server.
 
 2. Event Stream Socket
-- Purpose: To send and receive real-time events related to voice interactions (e.g., start/stop speaking, errors, etc.) between the Electron app and the Cortex server.
-- Server sends event data to the Electron app, and the Electron app can also send events to the server.
+- Purpose: To share reminder events between the Electron app and the Cortex server.
 
 ## Socket Initilization
 - When the Electron app starts, it establishes a connection to the Cortex server for the Event Stream Socket.
 - The Audio Stream Socket is established when the user clicks on the Start Conversation button. It is closed when the user clicks on the Stop Conversation button.
-- The Event Stream Socket remains open as long as the Electron app is running to allow for real-time event communication.
+- The Event Stream Socket remains open as long as the Electron app is running to allow for event based communication.
 - Event Stream Socket can forcily re-open the Audio Strem Socket in case `AI_AUDIO_STREAM_START` event is recevied with reminder stream, and audio stream is closed. Only done if configuration is done in settings. (Will be implemented in later phase)
 
 ## Event Flags in Server

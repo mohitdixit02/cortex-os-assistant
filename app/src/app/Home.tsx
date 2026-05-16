@@ -16,38 +16,21 @@ export default function Home() {
   const backendUrl = useMemo(() => process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000", []);
   
   const {
-    startAudioStreaming,
-    stopAudioStreaming,
-    attachBackendListener,
-    closeSocket,
-    isListening,
-    isSpeaking
+    startAudioStream,
+    endAudioStream,
+    isConversationActive,
+    // isListening,
+    // isSpeaking
   } = useWebSocket(backendUrl.replace(/^http/, "ws") + "/ws");
 
   // Refresh messages when speech ends
-  const wasSpeaking = useRef(false);
-  useEffect(() => {
-    if (wasSpeaking.current && !isSpeaking) {
-      setTimeout(() => mutateMessages(), 500);
-    }
-    wasSpeaking.current = isSpeaking;
-  }, [isSpeaking, mutateMessages]);
-
-  useEffect(() => {
-    let detachFn: (() => void) | undefined;
-    const setup = async () => {
-      const detach = await attachBackendListener({
-        metaDataKey: "audio_meta",
-        audioEndKey: "done"
-      });
-      detachFn = detach;
-    };
-    setup();
-    return () => {
-      if (detachFn) detachFn();
-      closeSocket();
-    };
-  }, [attachBackendListener, closeSocket]);
+  // const wasSpeaking = useRef(false);
+  // useEffect(() => {
+  //   if (wasSpeaking.current && !isSpeaking) {
+  //     setTimeout(() => mutateMessages(), 500);
+  //   }
+  //   wasSpeaking.current = isSpeaking;
+  // }, [isSpeaking, mutateMessages]);
 
   return (
     <div style={{
@@ -75,14 +58,14 @@ export default function Home() {
           >
             Hello, <span className="gradient-text">{`I'm Cortex`}</span>
           </motion.h1>
-          <motion.p 
+          {/* <motion.p 
             key={isSpeaking ? "sp" : isListening ? "li" : "id"}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             style={{ color: 'var(--text-muted)', fontSize: '18px', marginTop: '10px' }}
           >
             {isSpeaking ? "Speaking..." : isListening ? "Listening..." : "How can I help you today?"}
-          </motion.p>
+          </motion.p> */}
         </div>
 
         <div style={{
@@ -94,15 +77,15 @@ export default function Home() {
           justifyContent: 'center',
           position: 'relative'
         }}>
-          <AssistantOrb3D isListening={isListening} isSpeaking={isSpeaking} />
+          <AssistantOrb3D isListening={false} isSpeaking={false} />
         </div>
 
         <div style={{ marginTop: '40px' }}>
-          {!isListening ? (
+          {!isConversationActive ? (
             <motion.button 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => startAudioStreaming(user?.id, activeThreadId)}
+              onClick={() => startAudioStream(activeThreadId)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -123,7 +106,7 @@ export default function Home() {
             <motion.button 
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={stopAudioStreaming}
+              onClick={endAudioStream}
               style={{
                 display: 'flex',
                 alignItems: 'center',

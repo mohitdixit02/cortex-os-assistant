@@ -169,6 +169,8 @@ class ResponseKey(str, Enum):
     CONVERSATION_END = "conversation_end"
     START_LISTENING = "start_listening"
     FINISH_LISTENING = "finish_listening"
+    AI_AUDIO_STREAM_START = "ai_audio_stream_start"
+    AI_AUDIO_STREAM_END = "ai_audio_stream_end"
     NO_AUDIO = "no_audio"
 
 EVENT_RESPONSE_MAP = {

@@ -31,11 +31,15 @@ class AudioStreamBridge:
         return voice_state_manager.get_state(self.streamEvent.user_id)
     
     async def send_json(self, payload: dict):
-        """Helper function to send JSON responses through the Event WebSocket connection."""
+        """Helper function to send JSON responses through the Audio WebSocket connection."""
         state = self.user_state
-        if state and state.event_socket:
+        if state and state.audio_socket:
             async with self.streamEvent.getLock():
-                await state.event_socket.send_json(payload)
+                await state.audio_socket.send_json(payload)
+        else:
+            # Fallback to the websocket passed in constructor (usually the audio socket)
+            async with self.streamEvent.getLock():
+                await self.websocket.send_json(payload)
             
     async def send_bytes(self, payload: bytes):
         """Helper function to send binary audio data over the Audio websocket with proper locking."""
