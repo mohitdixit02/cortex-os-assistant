@@ -1,5 +1,9 @@
 FROM python:3.11-slim
 
+# Enable BuildKit cache mounts for pip so large wheels (torch/CUDA) are reused across builds.
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=120
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
@@ -13,10 +17,8 @@ ENV NLTK_DATA=/usr/local/share/nltk_data
 RUN mkdir -p /usr/local/share/nltk_data
 
 # Install PyTorch and CUDA dependencies FIRST
-# These are the heaviest and least likely to change.
-# By putting them above the COPY requirements.txt, we ensure they stay cached
-# even if requirements.txt is edited.
-RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu121 \
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --index-url https://download.pytorch.org/whl/cu121 \
     nvidia-cudnn-cu12==9.1.0.70 \
     nvidia-cublas-cu12==12.1.3.1 \
     torch==2.5.1 \
@@ -24,7 +26,8 @@ RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cu12
 
 # Copy requirements and install remaining packages
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
 
 # Download NLTK data and spaCy model
 RUN python -c "import nltk; nltk.download('punkt', download_dir='/usr/local/share/nltk_data'); nltk.download('punkt_tab', download_dir='/usr/local/share/nltk_data'); nltk.download('averaged_perceptron_tagger', download_dir='/usr/local/share/nltk_data')" \

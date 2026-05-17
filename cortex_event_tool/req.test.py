@@ -46,6 +46,14 @@ Mark is_test=True when creating events through this endpoint to ensure redis is 
 """
 app = FastAPI(title="Cortex Event Tool Service")
 
+@app.get("/")
+async def root():
+    return {"message": "Cortex Event Tool Service is running", "endpoints": ["/health", "/create_event", "/get_events/{user_id}"]}
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 class EventCreateRequest(BaseModel):
     message_id: UUID
     name: str

@@ -5,16 +5,12 @@ from uuid import UUID as UUIDType
 from cortex_queue.dto import AddTaskRequest, TaskItem
 from cortex_cm.pg import TaskStatus, engine, TaskOwner, EventStatus, UserEvent
 from cortex_cm.pg.req import crud
-from cortex_core.memory.saver import MemorySaver
-from cortex_core.memory.embedding import EmbeddingModel
+from cortex_queue.service.utility import _get_memory_saver, _get_model
 from sqlmodel import Session
 from datetime import datetime, timezone
 
 from cortex_cm.utility.logger import get_logger
 logger = get_logger("TASK_QUEUE")
-
-model = EmbeddingModel()
-memory_saver = MemorySaver(engine=engine, model=model)
 
 def _update_event_status(event_id: UUIDType | str, status: EventStatus) -> Optional[UserEvent]:
     """
@@ -33,6 +29,8 @@ def _update_event_status(event_id: UUIDType | str, status: EventStatus) -> Optio
         return updated_event
 
 async def add_event_tool_task_to_queue(request: AddTaskRequest) -> TaskItem:
+    memory_saver = _get_memory_saver()
+    model = _get_model()
     message_id = request.metadata.get("message_id")
     if not message_id:
         raise HTTPException(status_code=400, detail="Missing message_id in task metadata for event tool task")
