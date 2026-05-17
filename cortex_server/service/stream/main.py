@@ -26,20 +26,24 @@ class StreamClient:
     """
 
     def __init__(self, websocket: WebSocket, streamEvent: StreamEvent, user_id: str | None = None):
+        self.websocket = websocket
         self.streamEvent = streamEvent
-        self.audioBridge = AudioStreamBridge(websocket=websocket, streamEvent=streamEvent)
-        self.voiceClient = VoiceClient(
-            audioBridge=self.audioBridge, 
-            streamEvent=streamEvent,
-            user_id=user_id
-        )
-        self._auto_stream_task = None
+        self.user_id = user_id
+        self.audioBridge = AudioStreamBridge(stream_client=self)
+        self.voiceClient = VoiceClient(stream_client=self)
 
-    def start_background_tasks(self):
-        """Start background polling for task results."""
-        if self._auto_stream_task is None or self._auto_stream_task.done():
-            self._auto_stream_task = asyncio.create_task(self.voiceClient.run_auto_task_stream())
-        
+    def get_audio_bridge(self) -> AudioStreamBridge:
+        return self.audioBridge
+
+    def get_stream_event(self) -> StreamEvent:
+        return self.streamEvent
+
+    def get_websocket(self) -> WebSocket:
+        return self.websocket
+
+    def get_user_id(self) -> str | None:
+        return self.user_id
+
     async def stream_response(self, audio_bytes: bytes):
         """
         **Process the complete audio buffer through the Cortex model and stream back TTS audio chunks in real-time.** \n
@@ -62,12 +66,7 @@ class StreamClient:
 
     async def shutdown(self) -> None:
         """Per-connection cleanup hook."""
-        if self._auto_stream_task and not self._auto_stream_task.done():
-            self._auto_stream_task.cancel()
-            try:
-                await self._auto_stream_task
-            except asyncio.CancelledError:
-                pass
+        pass
             
     # Dummy Flow Test
     async def read_flow(self, query: str):

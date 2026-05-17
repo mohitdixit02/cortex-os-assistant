@@ -3,24 +3,21 @@ from fastapi import HTTPException
 import time
 from cortex_queue.dto import AddTaskRequest, TaskItem
 from cortex_queue.service.event import add_event_tool_task_to_queue, update_submit_event_task_status
-from cortex_cm.pg import TaskStatus, engine, TaskOwner
+from cortex_cm.pg import TaskStatus, TaskOwner
 from cortex_cm.redis.redis_client import RedisClient, RedisModeType
-from cortex_core.memory.saver import MemorySaver
-from cortex_core.memory.embedding import EmbeddingModel
 from cortex_cm.pg import RoleType, AIClientType
+from cortex_queue.service.utility import _get_memory_saver, _get_model
 
 from cortex_cm.utility.logger import get_logger
 logger = get_logger("TASK_QUEUE")
-
-# Initialize shared components
-model = EmbeddingModel()
-memory_saver = MemorySaver(engine=engine, model=model)
 
 # Redis Clients
 task_redis_client = RedisClient.get_client(RedisModeType.TASK)
 result_redis_client = RedisClient.get_client(RedisModeType.RESULT)
 
 async def _add_vc_task_to_queue(request: AddTaskRequest) -> TaskItem:
+    memory_saver = _get_memory_saver()
+    model = _get_model()
     user_id = request.metadata.get("user_id")
     session_id = request.metadata.get("session_id")
     voice_client_response = request.metadata.get("voice_client_response")
@@ -93,26 +90,36 @@ async def add_task_to_queue(request: AddTaskRequest):
     return {"task_id": item.task_id, "status": item.status}
 
 async def submit_task_to_queue(request: TaskItem):
+    memory_saver = _get_memory_saver()
     if request.status not in [TaskStatus.COMPLETED, TaskStatus.FAILED]:
         raise HTTPException(status_code=400, detail="Status must be either 'completed' or 'failed'")
     
+    task_owner = request.metadata.get("task_owner")
+    logger.info(f"Submitting task: {request.task_name} (ID: {request.task_id}), Owner: {task_owner}, Status: {request.status}")
+
     memory_saver.update_task(
         task_id=request.task_id,
         status=request.status,
         status_response={"result": request.result} if request.status == TaskStatus.COMPLETED else {"error": request.error}
     )
     
-    result_redis_client.set(f"result:{request.task_id}", json.dumps({
+    if task_owner == TaskOwner.EVENT_TOOL.value:
+        await update_submit_event_task_status(request)
+
+    result_payload = json.dumps({
         "task_id": request.task_id,
         "status": request.status.value,
         "result": request.result,
         "error": request.error,
+        "metadata": request.metadata,
+        "task_name": request.task_name,
+        "task_description": request.task_description,
         "finished_at": time.time()
-    }), ttl=3600)
+    })
     
-    task_owner = request.metadata.get("task_owner")
-    if task_owner == TaskOwner.EVENT_TOOL.value:
-        await update_submit_event_task_status(request)
+    user_id = request.metadata.get("user_id")
+    if user_id:
+        result_redis_client.client.publish(f"user_stream:{user_id}", result_payload)
     
     return {"status": "success"}
 

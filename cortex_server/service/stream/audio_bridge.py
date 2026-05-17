@@ -19,10 +19,17 @@ class AudioStreamBridge:
     - The corresponding `StreamEvent object` for handling streaming events.
     """
     
-    def __init__(self, websocket: WebSocket, streamEvent: StreamEvent):
-        self.websocket = websocket
-        self.streamEvent = streamEvent
+    def __init__(self, stream_client: any):
+        self.stream_client = stream_client
         self._stream_lock = asyncio.Lock()
+
+    @property
+    def websocket(self):
+        return self.stream_client.get_websocket() if self.stream_client else None
+
+    @property
+    def streamEvent(self):
+        return self.stream_client.get_stream_event() if self.stream_client else None
 
     @property
     def user_state(self):
@@ -80,18 +87,30 @@ class AudioStreamBridge:
         """
         logger.info("[Audio Bridge] Starting audio streaming to client through WebSocket...")
         logger.info("[Audio Bridge] Audio chunk generator provided: %s", audio_chunk_generator)
-        logger.info("[Audio Bridge] StreamEvent response cancel event status: %s", self.streamEvent.response_cancel_event.is_set() if self.streamEvent else "No cancel event")
-        logger.info("[Audio Bridge] StreamEvent lock status: %s", "Locked" if self.streamEvent and self.streamEvent.send_lock.locked() else "Unlocked" if self.streamEvent else "No stream event")
+        
+        # Safely check for cancel event status
+        cancel_status = "No cancel event"
+        if self.streamEvent and self.streamEvent.response_cancel_event:
+            cancel_status = "Set" if self.streamEvent.response_cancel_event.is_set() else "Not Set"
+        logger.info("[Audio Bridge] StreamEvent response cancel event status: %s", cancel_status)
+        
+        # Safely check for lock status
+        lock_status = "No stream event"
+        if self.streamEvent:
+            lock_status = "Locked" if self.streamEvent.send_lock.locked() else "Unlocked"
+        logger.info("[Audio Bridge] StreamEvent lock status: %s", lock_status)
+        
         logger.info("[Audio Bridge] StreamEvent isCancelEventSet: %s", self.streamEvent.isCancelEventSet() if self.streamEvent else "No stream event")
-        logger.info("[Audio Bridge] Audio Bridge Stream Lock Status: %s", "Locked" if self.streamEvent and self._stream_lock.locked() else "Unlocked")
+        logger.info("[Audio Bridge] Audio Bridge Stream Lock Status: %s", "Locked" if self._stream_lock.locked() else "Unlocked")
 
         async with self._stream_lock:
             if self.streamEvent is None:
                 logger.error("[Audio Bridge] StreamEvent is None, cannot stream audio.")
                 return {"status": "error", "message": "StreamEvent is not available for streaming."}
             
-            stream_id = self.streamEvent.beginPlaybackTracking()
-            sent_done = False
+            # Increment and get new stream ID
+            stream_id = self.streamEvent.increment_stream_id()
+            
             try:
                 await self.send_json(
                     {
@@ -126,9 +145,6 @@ class AudioStreamBridge:
                 logger.info("[Audio Bridge] Audio streaming completed successfully: %s", audio_chunk_generator.__name__)
                 if not self.streamEvent.isCancelEventSet():
                     await self.send_json({"type": "done", "streamId": stream_id})
-                    sent_done = True
-                else:
-                    print("Audio streaming completed but cancel event was set, not sending done signal")
             except asyncio.CancelledError:
                 print("Response task cancelled")
                 raise
@@ -136,8 +152,5 @@ class AudioStreamBridge:
                 print("Response streaming error:", e)
                 await self.send_json({"type": "error", "message": str(e)})
                 return {"status": "error", "message": str(e)}
-            finally:
-                if not sent_done:
-                    self.streamEvent.forcePlaybackDone()
 
             return {"status": "completed", "message": "Audio streaming completed successfully."}

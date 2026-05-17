@@ -10,6 +10,7 @@ class UserVoiceState:
     event_socket: any = None  # Store WebSocket object for event stream
     audio_socket: any = None  # Store WebSocket object for audio stream
     stream_event: any = None  # Store active StreamEvent object
+    stream_client: any = None # Store active StreamClient object
 
 class VoiceStateManager:
     _instance = None

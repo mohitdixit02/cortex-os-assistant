@@ -1,9 +1,9 @@
 from http.client import HTTPException
-from typing import Optional
+from typing import Optional, Union
 from uuid import UUID as UUIDType
 
 from cortex_queue.dto import AddTaskRequest, TaskItem
-from cortex_cm.pg import TaskStatus, engine, TaskOwner, EventStatus, UserEvent
+from cortex_cm.pg import TaskStatus, engine, TaskOwner, EventStatus, UserEvent, Message
 from cortex_cm.pg.req import crud
 from cortex_queue.service.utility import _get_memory_saver, _get_model
 from sqlmodel import Session
@@ -11,6 +11,25 @@ from datetime import datetime, timezone
 
 from cortex_cm.utility.logger import get_logger
 logger = get_logger("TASK_QUEUE")
+
+def resolve_event_task_identities(request: Union[AddTaskRequest, TaskItem]):
+    """
+    Helper function to resolve user_id and session_id from message_id in PostgreSQL.
+    Injects the resolved IDs into the request metadata directly.
+    """
+    user_id = request.metadata.get("user_id")
+    session_id = request.metadata.get("session_id")
+    message_id = request.metadata.get("message_id")
+    
+    if (not user_id or not session_id) and message_id:
+        with Session(engine) as session:
+            msg = crud.get_by_id(session, Message, UUIDType(str(message_id)))
+            if msg:
+                if not user_id:
+                    request.metadata["user_id"] = str(msg.user_id)
+                if not session_id:
+                    request.metadata["session_id"] = str(msg.session_id)
+                logger.info(f"Resolved event identities: user={msg.user_id}, session={msg.session_id}")
 
 def _update_event_status(event_id: UUIDType | str, status: EventStatus) -> Optional[UserEvent]:
     """
@@ -35,6 +54,9 @@ async def add_event_tool_task_to_queue(request: AddTaskRequest) -> TaskItem:
     if not message_id:
         raise HTTPException(status_code=400, detail="Missing message_id in task metadata for event tool task")
     
+    # Resolve user_id and session_id
+    resolve_event_task_identities(request)
+
     task_obj = memory_saver.add_new_task(
         message_id=message_id,
         tool_id=None,
@@ -66,3 +88,6 @@ async def update_submit_event_task_status(request: TaskItem):
         _update_event_status(event_id, new_status)
     else:
         logger.warning("Warning: No event_id found in task payload for status update")
+
+    # Resolve missing identities using the helper
+    resolve_event_task_identities(request)

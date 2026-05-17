@@ -97,14 +97,8 @@ export const handleAudioMessage = async (
                     Emitter.EventType.AI_STOP_SPEAKING, 
                     { streamId: doneStreamId }
                 );
+                playbackDrainTimerRef.current = null;
             }, ackAfterMs);
-
-            // Temp Delay of 10s before AI finished Response
-            setTimeout(() => {
-                // setIsSpeaking(false);
-                // setIsListening(isStreamingRef.current);
-                Emitter.emitAudioSocket(audioSocket.current, Emitter.EventType.AI_STOP_SPEAKING);
-            }, 10000);
         }
     }
 

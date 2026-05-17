@@ -7,9 +7,19 @@ from cortex_server.controller.chat_controller import router as chat_router
 from cortex_server.controller.task_controller import router as task_router
 from cortex_server.controller.user_controller import router as user_router
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+from cortex_server.service.stream.result_worker import result_stream_worker
 import uvicorn
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Start the background result worker
+    result_stream_worker.start()
+    yield
+    # Shutdown: Stop the background result worker
+    await result_stream_worker.stop()
+
+app = FastAPI(lifespan=lifespan)
 
 # Add CORS middleware
 app.add_middleware(

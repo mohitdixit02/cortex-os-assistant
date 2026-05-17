@@ -46,17 +46,20 @@ async def ws_audio(websocket: WebSocket, user_id: str = Query(...)):
         streamEvent=streamEvent
     )
     
-    streamClient = StreamClient(
+    state.stream_client = StreamClient(
         websocket=websocket,
         streamEvent=streamEvent,
         user_id=user_id
     )
-    # Background task for auto-streaming (e.g. results from Redis)
-    streamClient.start_background_tasks()
 
     try:
         while True:
             res = await websocket.receive()
+            
+            # Handle Disconnect cleanly
+            if res.get("type") == "websocket.disconnect":
+                break
+
             print(f"Received on /audio socket (user_id={user_id}): {res.keys()}")
             if "text" in res:
                 print(f"Text payload: {res['text']}")
@@ -105,7 +108,7 @@ async def ws_audio(websocket: WebSocket, user_id: str = Query(...)):
                     audio_snapshot = streamEvent.getAudioBufferBytes()
                     streamEvent.resetAudioBuffer()
                     streamEvent.startStreamResponse(
-                        streamResponse=streamClient.stream_response,
+                        streamResponse=state.stream_client.stream_response,
                         audio_bytes=audio_snapshot,
                     )
 
@@ -114,15 +117,17 @@ async def ws_audio(websocket: WebSocket, user_id: str = Query(...)):
                     state.is_ai_speaking = True
                 
                 elif msg_type == "AIStopSpeakingEvent":
-                    state.is_ai_speaking = False
-                
-                # 4. Playback Acknowledgments
-                elif msg_type == "AIStopSpeakingEvent": # Usually includes streamId
                     stream_id = payload.get("streamId")
-                    streamEvent.markPlaybackDone(stream_id=stream_id)
-                    state.is_ai_speaking = False
+                    print(f"Received AIStopSpeakingEvent for user_id={user_id}, streamId={stream_id}")
+                    
+                    # Validate streamId to prevent stale timeouts from unlocking the stream
+                    if stream_id is None or stream_id == streamEvent.current_stream_id:
+                        state.is_ai_speaking = False
+                    else:
+                        print(f"Ignoring stale AIStopSpeakingEvent (expected {streamEvent.current_stream_id}, got {stream_id})")
 
     except WebSocketDisconnect:
         state.audio_socket = None
     finally:
-        await streamClient.shutdown()
+        if state.stream_client:
+            await state.stream_client.shutdown()

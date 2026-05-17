@@ -21,9 +21,7 @@ class StreamEvent:
     send_lock: asyncio.Lock
     response_task: asyncio.Task | None
     response_cancel_event: asyncio.Event | None
-    playback_done_event: asyncio.Event
-    awaiting_playback_stream_id: int | None
-    stream_seq: int
+    current_stream_id: int
     user_id: str | None
     session_id: str | None
 
@@ -32,61 +30,20 @@ class StreamEvent:
         self.send_lock = asyncio.Lock()
         self.response_task = None
         self.response_cancel_event = None
-        self.playback_done_event = asyncio.Event()
-        self.playback_done_event.set()
-        self.awaiting_playback_stream_id = None
-        self.stream_seq = 0
+        self.current_stream_id = 0
         self.user_id = user_id
         self.session_id = None
+
+    def increment_stream_id(self) -> int:
+        """Generate a new unique ID for the next audio stream."""
+        self.current_stream_id += 1
+        return self.current_stream_id
 
     @property
     def user_state(self):
         if not self.user_id:
             return None
         return voice_state_manager.get_state(self.user_id)
-
-    # ***** Playback ACK Management ***** #
-    def beginPlaybackTracking(self) -> int:
-        """Start waiting for playback completion ACK for a newly-started audio stream."""
-        self.stream_seq += 1
-        self.awaiting_playback_stream_id = self.stream_seq
-        self.playback_done_event.clear()
-        return self.stream_seq
-
-    def markPlaybackDone(self, stream_id: int | None = None) -> bool:
-        """Mark playback as completed. If stream_id is provided, it must match the pending stream."""
-        if self.awaiting_playback_stream_id is None:
-            self.playback_done_event.set()
-            return True
-
-        if stream_id is not None and stream_id != self.awaiting_playback_stream_id:
-            return False
-
-        self.awaiting_playback_stream_id = None
-        self.playback_done_event.set()
-        return True
-
-    def forcePlaybackDone(self) -> None:
-        """Unblock playback waiters when a stream ends without a playback ACK path (e.g. cancellation)."""
-        self.awaiting_playback_stream_id = None
-        self.playback_done_event.set()
-
-    def isAwaitingPlaybackAck(self) -> bool:
-        return self.awaiting_playback_stream_id is not None
-
-    async def waitForPlaybackDone(self, timeout_s: float | None = None) -> bool:
-        """Wait until the client acknowledges playback completion."""
-        if self.playback_done_event.is_set():
-            return True
-
-        try:
-            if timeout_s is None:
-                await self.playback_done_event.wait()
-            else:
-                await asyncio.wait_for(self.playback_done_event.wait(), timeout=timeout_s)
-            return True
-        except asyncio.TimeoutError:
-            return False
     
     # ***** Response Event Management ***** #
     async def cancel(self, reason: str):
@@ -174,31 +131,43 @@ class ResponseKey(str, Enum):
     NO_AUDIO = "no_audio"
 
 EVENT_RESPONSE_MAP = {
-    "conversation_start": {
+    ResponseKey.CONVERSATION_START: {
         "status": "ok",
         "type": "conversation",
         "stage": "started",
         "message": "Conversation started, ready to receive audio"
     },
-    "conversation_end": {
+    ResponseKey.CONVERSATION_END: {
         "status": "ok",
         "type": "conversation",
         "stage": "ended",
         "message": "Conversation ended successfully"
     },
-    "start_listening": {
+    ResponseKey.START_LISTENING: {
         "status": "ok",
         "type": "interruption",
         "stage": "started",
         "message": "User started speaking, ready to receive audio"
     },
-    "finish_listening": {
+    ResponseKey.FINISH_LISTENING: {
         "status": "ok",
         "type": "interruption",
         "stage": "finished",
         "message": "User finished speaking, processing audio"
     },
-    "no_audio": {
+    ResponseKey.AI_AUDIO_STREAM_START: {
+        "status": "ok",
+        "type": "ai_stream",
+        "stage": "started",
+        "message": "AI started streaming audio"
+    },
+    ResponseKey.AI_AUDIO_STREAM_END: {
+        "status": "ok",
+        "type": "ai_stream",
+        "stage": "ended",
+        "message": "AI finished streaming audio"
+    },
+    ResponseKey.NO_AUDIO: {
         "status": "error",
         "type": "response",
         "stage": "no_audio",
@@ -221,12 +190,12 @@ class StreamEventResponse:
         self.websocket = websocket
         self.streamEvent = streamEvent
     
-    async def send_response(self, response: str):
+    async def send_response(self, response: ResponseKey):
         """Send a standardized JSON response based on the provided response key (thread-safe) \n"""
-        if response not in EVENT_RESPONSE_MAP.keys():
+        if response not in EVENT_RESPONSE_MAP:
             raise ValueError(f"Invalid response key: {response}")
         
-        response = EVENT_RESPONSE_MAP[response]
+        payload = EVENT_RESPONSE_MAP[response]
 
         async with self.streamEvent.getLock():
-            await self.websocket.send_json(response)
+            await self.websocket.send_json(payload)
