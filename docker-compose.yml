@@ -28,11 +28,19 @@ services:
     restart: always
     ports:
       - "${CORTEX_QUEUE_PORT:-8001}:8001"
+    volumes:
+      - hf_cache:${HF_CACHE_DIR:-/root/.cache/huggingface}
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pg:5432/${POSTGRES_DB}
       - CORTEX_QUEUE_URL=http://cortex-queue:8001
+      - HF_HOME=${HF_CACHE_DIR:-/root/.cache/huggingface}
+      - HF_DATASETS_CACHE=${HF_CACHE_DIR:-/root/.cache/huggingface}
+      - TRANSFORMERS_CACHE=${HF_CACHE_DIR:-/root/.cache/huggingface}
+      - SENTENCE_TRANSFORMERS_HOME=${HF_CACHE_DIR:-/root/.cache/huggingface}
+      - TRANSFORMERS_CHECK_LOCAL_CACHE=${TRANSFORMERS_CHECK_LOCAL_CACHE:-1}
+      - HF_TOKEN=${HF_TOKEN}
     command: python cortex_queue/main.py
     depends_on:
       - redis

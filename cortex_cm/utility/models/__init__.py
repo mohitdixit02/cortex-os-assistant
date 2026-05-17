@@ -134,9 +134,10 @@ def get_embedding_model():
     global _EMBEDDING_MODEL
     if _EMBEDDING_MODEL is None:
         logger.info("Initializing Embeddings Model...")
+        embd_model_config = models.get("embedding", {})
         _EMBEDDING_MODEL = _hf_call_with_local_cache(
             HuggingFaceEmbeddings,
-            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            model_name=embd_model_config.get("name"),
             model_kwargs={"local_files_only": env.TRANSFORMERS_CHECK_LOCAL_CACHE},
         )
         logger.info("Embeddings model loaded..")

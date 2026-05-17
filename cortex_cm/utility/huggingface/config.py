@@ -58,5 +58,8 @@ models = {
         "task":"conversational",
         "max_new_tokens":8192,
         "temperature":0.6,
+    },
+    "embedding": {
+        "name": "sentence-transformers/all-MiniLM-L6-v2",
     }
 }
