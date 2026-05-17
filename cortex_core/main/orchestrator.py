@@ -10,8 +10,7 @@ from cortex_core.graph.state import (
     CortexToolList, 
     CortexTool,
     ToolManagerState,
-    WebSearchToolState, 
-    TaskRetrieverToolState
+    ToolExecutionState
 )
 from cortex_core.manager.tools import AvailableToolsType, WebSearchTool, WebSearchInput
 from cortex_core.graph.manager import tool_manager_workflow
@@ -384,17 +383,22 @@ class Orchestrator:
             user_id=state.user_id,
             session_id=state.session_id,
             task_id=state.task_id,
+            message_id=state.user_message_id if state.user_message_id else None,
             query=state.query,
         )
         
         for tool in selected_tools_list:
             if isinstance(tool, CortexTool):
                 if tool.tool_id == AvailableToolsType.WEB_SEARCH_TOOL.value:
-                    tool_manager_state.web_search_tool = WebSearchToolState(
+                    tool_manager_state.web_search_tool = ToolExecutionState(
                         instructions=tool.instructions,
                     )
                 if tool.tool_id == AvailableToolsType.TASK_RETRIEVER_TOOL.value:
-                    tool_manager_state.task_retriever_tool = TaskRetrieverToolState(
+                    tool_manager_state.task_retriever_tool = ToolExecutionState(
+                        instructions=tool.instructions,
+                    )
+                if tool.tool_id == AvailableToolsType.EVENT_TOOL.value:
+                    tool_manager_state.event_tool = ToolExecutionState(
                         instructions=tool.instructions,
                     )
             else:
@@ -418,6 +422,13 @@ class Orchestrator:
                 instructions=res.task_retriever_tool.instructions,
                 tool_result=res.task_retriever_tool.tool_result,
                 tool_exec_status=res.task_retriever_tool.tool_exec_status
+            ))
+        if res.event_tool:
+            tools_result.append(CortexTool(
+                tool_id=AvailableToolsType.EVENT_TOOL.value,
+                instructions=res.event_tool.instructions,
+                tool_result=res.event_tool.tool_result,
+                tool_exec_status=res.event_tool.tool_exec_status
             ))
             
         orchestration_state.selected_tools = CortexToolList(root=tools_result)

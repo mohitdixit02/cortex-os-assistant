@@ -12,12 +12,19 @@ class WebQueryPlanResult(BaseModel):
     is_diversified: bool = Field(..., description="Whether the documents from web search are diversified.")
 
 class TaskPlanResult(BaseModel):
-    reasoning: str = Field(..., description="The reasoning behind selecting the fetch mode and generating the plan.")
+    reasoning: str = Field(..., description="The reasoning behind selecting the fetch mode and generating the plan. Not more than 50 words.")
     fetch_mode: Annotated[Literal["description", "time", "recent"], Field(description="Mode to fetch tasks (description, time, or recent)")] = "description"
     task_description: Optional[str] = Field(default=None, description="Description or type of tasks to retrieve.")
     time_start_range: Optional[str] = Field(default=None, description="Start of the time range for task creation. (only applicable when fetch_mode is 'time')")
     time_end_range: Optional[str] = Field(default=None, description="End of the time range for task creation. (only applicable when fetch_mode is 'time')")
     recent_count: Optional[int] = Field(default=None, description="Number of recent tasks to retrieve when fetch_mode is 'recent'.")
+
+class EventToolPlanResult(BaseModel):
+    reasoning: str = Field(..., description="The reasoning behind the generated event details. Not more than 50 words.")
+    name: str = Field(default=None, description="Name of the event to be created.")
+    trigger_time: str = Field(default=None, description="Trigger time for the event in ISO format.")
+    event_description: str = Field(default=None, description="Description of the event.")
+    result: str = Field(default=None, description="Any additional information regarding the event planning.")
 
 MANAGER_WEB_QUERY_PROMPT = """
 # Context: \n
@@ -144,6 +151,40 @@ You have to strictly reply in the following format with no extra explanation, te
 {format_instructions}
 """
 
+EVENT_TOOL_PLAN_PROMPT = """
+# Context: \n
+You will be provided following as input: \n
+1. User Query: Question or information that user have asked regarding creating an event or reminder which they want to be reminded of in future. \n
+2. Orchestrator Instructions (can be null or empty): Additional instructions provided by orchestrator to condition the event tool input generation. \n
+3. Current Time: The current time when the query is made. \n
+
+## Objective: \n
+You are the event tool input generator. Your job is to generate the input which the event tool will use to create an event based on the user query. \n
+
+## Instructions to generate the input: \n
+1. name: The name of the event which should be a short string in human readable format describing the event. \n
+2. event_description: A detailed description which includes all the relevant information regarding the event. It must include what, why and any other relevant information based on query, and instructions by orchestrator. Do NOT include any relative time phrases like "in 5 minutes", "after 1 hour", etc., or the trigger time itself in the description, as the timing is already captured in the trigger_time field. \n
+3. trigger_time: \n
+a. The time when the event should be triggered. It should be in ISO format. \n
+b. Use current_time provided and time asked by the user in query to decide the trigger time. \n
+c. Always keep seconds = 0, and only include date, hours and minutes. \n
+d. If user query doesn't have a specific time mentioned, then use your understanding of the query and instructions by orchestrator to set the trigger time. \n
+e. If you are not sure about the trigger time, set it to 30 mins later from the current time. \n
+4. result: In this provide information that you want to convey to orchestrator after creating the event. It can be:
+a. success (if everything goes right) or failure message (if you are not able to generate the input) \n
+b. assumption made if some information is missing in the user query (For example, if trigger time is not mentioned in the user query and you set it to 30 mins later from current time). \n
+5. In the starting, you also have to give reasoning on how you come up with the generated input based on the user query and orchestrator instructions. \n
+
+# Input: \n
+User Query: {user_query}
+Orchestrator Instructions: {orchestrator_instructions}
+Current Time: {current_time}
+
+# Response Format: \n
+You have to strictly reply in the following format with no extra explanation, text, formatting, python function, etc.
+{format_instructions}
+"""
+
 def get_manager_client_prompts(
     type: str,
     tool_type: Optional[str] = None,
@@ -179,6 +220,18 @@ def get_manager_client_prompts(
         parser = PydanticOutputParser(pydantic_object=TaskPlanResult)
         prompt = PromptTemplate(
             template=TASK_RETRIEVAL_PLAN_PROMPT,
+            input_variables=[
+                "user_query",
+                "orchestrator_instructions",
+                "current_time",
+                "format_instructions"
+            ],
+        )
+        return prompt.partial(format_instructions=parser.get_format_instructions()), parser
+    elif type == "event_tool_plan_generation":
+        parser = PydanticOutputParser(pydantic_object=EventToolPlanResult)
+        prompt = PromptTemplate(
+            template=EVENT_TOOL_PLAN_PROMPT,
             input_variables=[
                 "user_query",
                 "orchestrator_instructions",

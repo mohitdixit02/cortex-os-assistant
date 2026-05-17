@@ -67,6 +67,7 @@ class MainClient:
         self.logger.info("***** Task Metadata >> %s", taskItem.metadata)
         user_id = taskItem.metadata.get("user_id")
         session_id = taskItem.metadata.get("session_id")
+        user_message_id = taskItem.metadata.get("message_id")
         task_id = taskItem.task_id
         voice_client_response = taskItem.metadata.get("voice_client_response")
         
@@ -83,10 +84,14 @@ class MainClient:
         emotion = taskItem.payload.get("emotion", "neutral")
         self.logger.info("Initializing conversation state for user_id: %s, session_id: %s, query: %s, emotion: %s", user_id, session_id, query, emotion)
         
+        if not user_message_id:
+            self.logger.warning("Missing message_id in task metadata. In case, Event Tool is used, it will get failed!")
+        
         state = ConversationState(
             user_id=str(user_id),
             session_id=str(session_id),
             task_id=str(task_id),
+            user_message_id=str(user_message_id) if user_message_id else None,
             query=query,
             query_emotion=emotion,
             voice_client_response=voice_client_response

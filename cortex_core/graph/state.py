@@ -130,13 +130,8 @@ class MemoryState(BaseModel):
 """
     Manager State Models
 """
-class WebSearchToolState(BaseModel):
-    instructions: Optional[str] = None
-    tool_result: Optional[str] = None
-    tool_exec_status: Optional[str] = None
-    
-class TaskRetrieverToolState(BaseModel):
-    task_description: Optional[str] = None
+class ToolExecutionState(BaseModel):
+    """Represents the execution state of a tool, including its instructions, result, and status."""
     instructions: Optional[str] = None
     tool_result: Optional[str] = None
     tool_exec_status: Optional[str] = None
@@ -145,9 +140,11 @@ class ToolManagerState(BaseModel):
     user_id: str
     session_id: str
     task_id: str
+    message_id: Optional[str] = None
     query: str
-    web_search_tool: Optional[WebSearchToolState] = None
-    task_retriever_tool: Optional[TaskRetrieverToolState] = None
+    web_search_tool: Optional[ToolExecutionState] = None
+    task_retriever_tool: Optional[ToolExecutionState] = None
+    event_tool: Optional[ToolExecutionState] = None
 
 """
     Orchestration State Models
@@ -235,6 +232,7 @@ class ConversationState(BaseModel):
     session_id: str
     task_id: str
     query: str
+    user_message_id: Optional[str] = None
     voice_client_response: Optional[str] = None
     query_emotion: Optional[str] = None
     query_timestamp: datetime = Field(default_factory=UTC_NOW)

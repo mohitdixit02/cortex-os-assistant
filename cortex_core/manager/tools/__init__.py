@@ -6,9 +6,7 @@ from .EventTool import EventTool, EventToolInput
 class AvailableToolsType(str, Enum):
     WEB_SEARCH_TOOL = "web_search_01"
     TASK_RETRIEVER_TOOL = "task_retriever_02"
-    CALENDAR_TOOL = "calendar_03"
-    EMAIL_TOOL = "email_04"
-    EVENT_TOOL = "event_tool_05"
+    EVENT_TOOL = "event_tool_03"
 
 AVAILABLE_TOOLS = [
     {

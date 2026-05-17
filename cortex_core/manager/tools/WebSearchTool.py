@@ -1,7 +1,7 @@
 import asyncio
 import time
 from typing import Type
-from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeoutError
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 from pydantic import BaseModel, Field
 import json
 from contextlib import nullcontext
@@ -29,12 +29,11 @@ class WebSearchTool(BaseTool):
     description: str = __doc__
     args_schema: Type[BaseModel] = WebSearchInput
     max_results: int = 2
-    max_query_workers: int = 6
-    max_url_workers: int = 8
+    max_url_workers: int = 10
     max_urls_per_query: int = 4
     ddg_timeout_s: int = 8
     scrape_timeout_s: float = 8.0
-    overall_search_timeout_s: float = 40.0
+    overall_timeout_s: float = 30.0
 
     def _no_trace_context(self):
         """Return a context manager that disables LangSmith tracing when available."""
@@ -47,26 +46,29 @@ class WebSearchTool(BaseTool):
         self,
         query: str,
     ) -> str:
-        """Execute a synchronous web search."""
+        """Execute a synchronous web search using DuckDuckGo."""
         with self._no_trace_context():
-            from ddgs import DDGS
+            try:
+                from ddgs import DDGS
+                with DDGS(timeout=self.ddg_timeout_s) as ddgs:
+                    raw_results = ddgs.text(
+                        query,
+                        max_results=self.max_results,
+                        backend="auto",
+                    )
 
-            with DDGS(timeout=self.ddg_timeout_s) as ddgs:
-                raw_results = ddgs.text(
-                    query,
-                    max_results=self.max_results,
-                    backend="auto",
-                )
-
-            normalized_results = [
-                {
-                    "snippet": item.get("body", ""),
-                    "title": item.get("title", ""),
-                    "link": item.get("href", ""),
-                }
-                for item in raw_results or []
-            ]
-            return json.dumps(normalized_results)
+                normalized_results = [
+                    {
+                        "snippet": item.get("body", ""),
+                        "title": item.get("title", ""),
+                        "link": item.get("href", ""),
+                    }
+                    for item in raw_results or []
+                ]
+                return json.dumps(normalized_results)
+            except Exception as e:
+                print(f"[WebSearch] DDG Search failed for '{query}': {e}")
+                return "[]"
 
     async def _arun(
         self,
@@ -75,20 +77,10 @@ class WebSearchTool(BaseTool):
         """Execute an asynchronous web search."""
         return await asyncio.to_thread(self._run, query)
 
-    def _search_single_query(self, query: str) -> list[dict]:
-        """Search one query and scrape a small bounded set of result URLs."""
-        res = self._run(query)
-        parsed = json.loads(res)
-        urls = [
-            item.get("link")
-            for item in parsed
-            if item.get("link") and "youtube" not in item.get("link", "")
-        ]
-        urls = list(dict.fromkeys(urls))[: self.max_urls_per_query]
-        return self.web_scrap(urls)
-    
     def _load_single_url(self, url: str) -> dict | None:
+        """Load and scrape a single URL."""
         try:
+            print(f"[WebSearch] Scraping URL: {url}")
             with self._no_trace_context():
                 loader = WebBaseLoader(
                     url,
@@ -107,84 +99,75 @@ class WebSearchTool(BaseTool):
                 "url": url,
                 "data": formatted_data,
             }
-        except Exception:
+        except Exception as e:
+            print(f"[WebSearch] Failed to scrape {url}: {e}")
             return None
     
     def web_scrap(self, urls: list[str]) -> list[dict]:
-        """Perform web search using the tool."""
+        """Parallel scraping of a list of URLs with an overall timeout."""
         if not urls:
             return []
 
         results: list[dict] = []
-        deadline = time.monotonic() + (self.scrape_timeout_s * max(1, len(urls)))
+        # Use a single executor for all URLs
         executor = ThreadPoolExecutor(max_workers=self.max_url_workers)
         try:
-            futures = [executor.submit(self._load_single_url, url) for url in urls]
-            while futures:
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    break
-                try:
-                    completed_iter = as_completed(futures, timeout=remaining)
-                    future = next(completed_iter)
-                except (FutureTimeoutError, StopIteration):
-                    break
-
-                futures.remove(future)
-                try:
+            future_to_url = {executor.submit(self._load_single_url, url): url for url in urls}
+            
+            # Simplified overall timeout for all scraping tasks
+            try:
+                for future in as_completed(future_to_url, timeout=self.overall_timeout_s):
                     item = future.result()
-                    if item is not None:
+                    if item:
                         results.append(item)
-                except Exception:
-                    continue
+            except TimeoutError:
+                print(f"[WebSearch] Scraping timed out after {self.overall_timeout_s}s. Returning partial results.")
+            except Exception as e:
+                print(f"[WebSearch] Error during scraping loop: {e}")
+                
         finally:
+            # Shutdown without waiting to avoid hanging if threads are stuck
             executor.shutdown(wait=False, cancel_futures=True)
+
         return results
 
+    @classmethod
     def search(
-        self,
+        cls,
         input: WebSearchInput,
     ) -> list[dict]:
-        """Perform web search using the tool."""
-        query_value = input.query
-        queries = [query_value] if isinstance(query_value, str) else list(query_value)
+        """
+        Entry point for web search. 
+        Performs sequential DDG searches followed by parallel scraping.
+        """
+        instance = cls()
+        queries = input.query
+        if isinstance(queries, str):
+            queries = [queries]
 
-        cleaned_queries = [str(query).strip() for query in queries if str(query).strip()]
-        if not cleaned_queries:
+        print(f"[WebSearch] Starting search for {len(queries)} queries...")
+        
+        # 1. Gather all URLs from all queries sequentially (Safer for DDG)
+        all_urls = []
+        for q in queries:
+            print(f"[WebSearch] Searching DDG for: {q}")
+            res_json = instance._run(q)
+            try:
+                res_data = json.loads(res_json)
+                for item in res_data:
+                    url = item.get("link")
+                    if url and "youtube" not in url:
+                        all_urls.append(url)
+            except Exception:
+                continue
+        
+        # Remove duplicates
+        unique_urls = list(dict.fromkeys(all_urls))[:instance.max_urls_per_query * len(queries)]
+        
+        if not unique_urls:
+            print("[WebSearch] No URLs found to scrape.")
             return []
 
-        results: list[dict] = []
-        start_time = time.monotonic()
-        executor = ThreadPoolExecutor(max_workers=self.max_query_workers)
-        try:
-            future_to_query = {
-                executor.submit(self._search_single_query, query): query
-                for query in cleaned_queries
-            }
-            pending = list(future_to_query.keys())
-
-            while pending:
-                remaining_timeout = self.overall_search_timeout_s - (time.monotonic() - start_time)
-                if remaining_timeout <= 0:
-                    break
-                try:
-                    completed_iter = as_completed(pending, timeout=remaining_timeout)
-                    future = next(completed_iter)
-                except (FutureTimeoutError, StopIteration):
-                    break
-
-                pending.remove(future)
-                try:
-                    docs = future.result()
-                    if docs:
-                        results.extend(docs)
-                except Exception:
-                    continue
-
-            for future in pending:
-                future.cancel()
-        finally:
-            executor.shutdown(wait=False, cancel_futures=True)
-
-        return results
-    
+        # 2. Scrape all unique URLs in a single parallel batch
+        print(f"[WebSearch] Starting parallel scraping of {len(unique_urls)} URLs...")
+        return instance.web_scrap(unique_urls)

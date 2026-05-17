@@ -1,5 +1,5 @@
-from cortex_core.manager.tools import AvailableToolsType, WebSearchTool, WebSearchInput, TaskRetrieverTool, TaskRetrieverInput, TaskRetrieverResult
-from cortex_core.graph.state import CortexTool, ToolManagerState, WebSearchToolState, TaskRetrieverToolState
+from cortex_core.manager.tools import AvailableToolsType, WebSearchTool, WebSearchInput, TaskRetrieverTool, TaskRetrieverInput, TaskRetrieverResult, EventToolInput, EventTool
+from cortex_core.graph.state import CortexTool, ToolManagerState, ToolExecutionState
 from cortex_core.manager.model import ManagerModel
 from cortex_cm.utility.logger import get_logger
 from langchain_core.documents import Document
@@ -28,12 +28,11 @@ class ManagerClient():
                 self.logger.warning("No keywords generated for web search tool")
                 raise ValueError("Failed to generate keywords for web search tool")
 
-            web_search_tool = WebSearchTool()
             self.logger.info(f"Executing web search tool with query: {res.query}")
             self.logger.info(f"Web search tool context: {res.context}")
             self.logger.info(f"Web search tool diversification flag: {res.is_diversified}")
             search_input = WebSearchInput(query=res.query)
-            result = web_search_tool.search(input=search_input)
+            result = WebSearchTool.search(input=search_input)
             docs = []
             for doc in result:
                 data = doc.get("data", "")
@@ -58,20 +57,20 @@ class ManagerClient():
             for doc in relevant_docs:
                 result += doc.page_content + "\n"
                 
-            state.web_search_tool = state.web_search_tool.model_copy(update={
-                "tool_result": result,
-                "tool_exec_status": "completed",
-            })
+            state.web_search_tool = ToolExecutionState(
+                tool_result=result,
+                tool_exec_status="completed",
+            )
         
             return {
                 "web_search_tool": state.web_search_tool,
             }
         except Exception as e:
             self.logger.error(f"Error executing web search tool: {str(e)}")
-            state.web_search_tool = state.web_search_tool.model_copy(update={
-                "tool_result": "Failed to execute web search tool.",
-                "tool_exec_status": "failed",
-            })
+            state.web_search_tool = ToolExecutionState(
+                tool_result="Failed to execute web search tool.",
+                tool_exec_status="failed",
+            )
             return {
                 "web_search_tool": state.web_search_tool,
             }
@@ -84,7 +83,6 @@ class ManagerClient():
             self.logger.info(f"Task retriever tool: {state.task_retriever_tool}")
             task_plan_res = self.model.build_task_retrieval_plan(state=state)
             self.logger.info(f"Task retrieval plan result: {task_plan_res}")
-            task_retriever_tool = TaskRetrieverTool()
             tool_input = TaskRetrieverInput(
                 fetch_mode=task_plan_res.fetch_mode,
                 task_description=task_plan_res.task_description,
@@ -95,7 +93,7 @@ class ManagerClient():
                 user_id=state.user_id,
                 session_id=state.session_id,
             )
-            task_res = task_retriever_tool.retrieve_tasks(
+            task_res = TaskRetrieverTool.retrieve_tasks(
                 input=tool_input,
                 model=self.embd_model,
             )
@@ -105,8 +103,7 @@ class ManagerClient():
             self.logger.info(f"Retrieved {len(task_res)} tasks from task retriever tool.")
             self.logger.info(f"Task retriever tool results: {task_res}")
                             
-            state.task_retriever_tool = TaskRetrieverToolState(
-                task_description=task_plan_res.task_description,
+            state.task_retriever_tool = ToolExecutionState(
                 tool_result=json.dumps(tool_result),
                 tool_exec_status="completed",
             )
@@ -116,12 +113,55 @@ class ManagerClient():
         except Exception as e:
             self.logger.error(e)
             self.logger.error(f"[MANAGER] Error executing task retriever tool: {str(e)}")
-            state.task_retriever_tool = state.task_retriever_tool.model_copy(update={
-                "tool_result": "Failed to retrieve task.",
-                "tool_exec_status": "failed",
-            })
+            state.task_retriever_tool = ToolExecutionState(
+                tool_result="Failed to retrieve task.",
+                tool_exec_status="failed",
+            )
             return {
                 "task_retriever_tool": state.task_retriever_tool,
+            }
+    
+    def event_tool(self, state: ToolManagerState):
+        try:
+            message_id = state.message_id
+            if not message_id:
+                self.logger.error("Missing message_id in state for event tool. Tool will not be able to excute")
+                state.event_tool = ToolExecutionState(
+                    tool_exec_status="failed",
+                    tool_result="Failed to execute event tool due to missing message_id."
+                )
+                return {
+                    "event_tool": state.event_tool
+                }
+            
+            event_tool_plan = self.model.build_event_tool_plan(state=state)
+            self.logger.info(f"Event tool plan: {event_tool_plan}")
+            event_tool_input = EventToolInput(
+                message_id=message_id,
+                name=event_tool_plan.name,
+                event_description=event_tool_plan.event_description,
+                trigger_time=event_tool_plan.trigger_time,
+            )
+            event_tool_res = EventTool.create_event(input=event_tool_input)
+
+            # Use ToolExecutionState for the result
+            state.event_tool = ToolExecutionState(
+                tool_exec_status="completed" if event_tool_res.status == "success" else "failed",
+                tool_result=event_tool_res.result # Extract the actual string message
+            )
+            return {
+                "event_tool": state.event_tool
+            }
+
+            
+        except Exception as e:
+            self.logger.error(f"Error executing event tool: {str(e)}")
+            state.event_tool = ToolExecutionState(
+                tool_exec_status="failed",
+                tool_result="Failed to execute event tool"
+            )
+            return {
+                "event_tool": state.event_tool
             }
     
     def tool_result_aggregator(self, state: ToolManagerState):
@@ -138,7 +178,7 @@ class ManagerClient():
     def execute_tools_route(
         self, 
         state: ToolManagerState
-    ) -> Literal["web_search_tool", "task_retriever_tool", "tool_result_aggregator"]:
+    ) -> Literal["web_search_tool", "task_retriever_tool", "event_tool", "tool_result_aggregator"]:
         
         called_tools = []
         if state.web_search_tool is not None:
@@ -147,6 +187,9 @@ class ManagerClient():
         if state.task_retriever_tool is not None:
             self.logger.info("Task retriever tool selected for execution...")
             called_tools.append("task_retriever_tool")
+        if state.event_tool is not None:
+            self.logger.info("Event tool selected for execution...")
+            called_tools.append("event_tool")
             
         if len(called_tools) == 0:
             self.logger.info("No tools to execute based on the current conversation state.")
@@ -163,9 +206,10 @@ class ManagerClient():
                     query = state.query,
                     tool_type = AvailableToolsType.WEB_SEARCH_TOOL.value
                 )
-                state.web_search_tool = state.web_search_tool.model_copy(update={
-                    "tool_result": summary,
-                })
+                state.web_search_tool = ToolExecutionState(
+                    tool_result=summary,
+                    tool_exec_status=state.web_search_tool.tool_exec_status
+                )
                 return {
                     "web_search_tool": state.web_search_tool,
                 }
@@ -177,4 +221,3 @@ class ManagerClient():
         else:
             self.logger.info("No tool results to summarize.")
             return {}
-        

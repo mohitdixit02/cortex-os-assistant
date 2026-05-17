@@ -11,6 +11,7 @@ manager_client = ManagerClient()
 tool_manager_graph = StateGraph(ToolManagerState)
 tool_manager_graph.add_node("tools_manager", manager_client.tools_manager)
 tool_manager_graph.add_node("web_search_tool", manager_client.web_search_tool)
+tool_manager_graph.add_node("event_tool", manager_client.event_tool)
 tool_manager_graph.add_node("summarize_tool_results", manager_client.summarize_tool_results)
 tool_manager_graph.add_node("task_retriever_tool", manager_client.task_retriever_tool)
 tool_manager_graph.add_node("tool_result_aggregator", manager_client.tool_result_aggregator)
@@ -22,11 +23,12 @@ tool_manager_graph.add_conditional_edges(
     {
         "web_search_tool": "web_search_tool",
         "task_retriever_tool": "task_retriever_tool",
+        "event_tool": "event_tool",
         "tool_result_aggregator": "tool_result_aggregator",
     }
 )
 tool_manager_graph.add_edge("web_search_tool", "summarize_tool_results")
-tool_manager_graph.add_edge(["summarize_tool_results", "task_retriever_tool"], "tool_result_aggregator")
+tool_manager_graph.add_edge(["summarize_tool_results", "task_retriever_tool", "event_tool"], "tool_result_aggregator")
 tool_manager_graph.add_edge("tool_result_aggregator", END)
 
 tool_manager_workflow = tool_manager_graph.compile()

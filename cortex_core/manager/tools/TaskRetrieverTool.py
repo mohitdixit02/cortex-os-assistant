@@ -33,7 +33,7 @@ class TaskRetrieverTool(BaseTool):
     Tool for retrieving and managing tasks that you have done in the past. \n
     **When to use:** \n
     - User about any past task or task related information, or something he/she has asked to do in the past. \n
-    - User ask about the status of any task. \n
+    - User ask about the status of any task or activity (including events/ reminders). \n
     Response will include the tasks that are done in past based on the task description and instructions provided. \n
     Instructions should specify the type, description or nature of task. If provided, it will be used to search for tasks \n. 
     """
@@ -180,8 +180,9 @@ class TaskRetrieverTool(BaseTool):
             
         return results
     
+    @classmethod
     def retrieve_tasks(
-        self,
+        cls,
         input: TaskRetrieverInput,
         model: EmbeddingModel,
     ) -> list[TaskRetrieverResult]:
@@ -190,6 +191,6 @@ class TaskRetrieverTool(BaseTool):
         if `task_id` is provided, that specific task will be skipped.
         """
         print(f"Retrieving tasks with description: {input.task_description}, user_id: {input.user_id}, session_id: {input.session_id}, excluding task_id: {input.task_id}")
-        return self._run(input=input, model=model)
+        return cls()._run(input=input, model=model)
 
 __all__ = ["TaskRetrieverTool", "TaskRetrieverInput", "TaskRetrieverResult"]

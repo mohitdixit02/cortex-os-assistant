@@ -2,7 +2,7 @@ from langchain_huggingface import HuggingFacePipeline, HuggingFaceEmbeddings, Hu
 from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
 from pydantic import BaseModel, Field
 from cortex_core.graph.state import CortexTool, OrchestrationState, ToolManagerState
-from cortex_core.manager.prompts import get_manager_client_prompts, WebQueryPlanResult, TaskPlanResult
+from cortex_core.manager.prompts import get_manager_client_prompts, WebQueryPlanResult, TaskPlanResult, EventToolPlanResult
 from typing import TypedDict, Annotated, Literal, Optional, Dict, Any
 import numpy as np
 from numpy import dot
@@ -111,6 +111,37 @@ class ManagerModel:
         chain = formatted_prompt | self.model | parser
 
         instructions = state.task_retriever_tool.instructions if state.task_retriever_tool.instructions else ""
+        
+        timestamp = UTC_NOW()
+        if timestamp.tzinfo is not None and timestamp.tzinfo.utcoffset(timestamp) is not None:
+            local_timestamp = timestamp.astimezone()
+        else:
+            local_timestamp = timestamp
+
+        res = chain.invoke({
+            "user_query": state.query,
+            "orchestrator_instructions": instructions,
+            "current_time": local_timestamp,
+        })
+        return res
+
+    def build_event_tool_plan(
+        self,
+        state: ToolManagerState
+    ) -> EventToolPlanResult:
+        """
+        Generate the input for event tool based on the user query and orchestrator instructions. \n
+        - query: user query for which the event tool input is to be generated
+        - tool: CortexTool object which may contain instructions from the orchestrator for event tool input planning
+        
+        Returns: An EventToolPlanResult object containing the generated input for event tool which may include event name, description, trigger time and any other relevant information.
+        """
+        formatted_prompt, parser = get_manager_client_prompts(
+            type="event_tool_plan_generation",
+        )
+        chain = formatted_prompt | self.model | parser
+
+        instructions = state.event_tool.instructions if state.event_tool.instructions else ""
         
         timestamp = UTC_NOW()
         if timestamp.tzinfo is not None and timestamp.tzinfo.utcoffset(timestamp) is not None:

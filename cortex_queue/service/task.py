@@ -77,6 +77,10 @@ async def add_task_to_queue(request: AddTaskRequest):
         task_description=request.task_description,
         status=TaskStatus.QUEUED
     )
+    
+    # Message ID - metadata (Use the actual message_id from the task record)
+    item.metadata["message_id"] = str(task_obj.message_id)
+    
     # Push to Redis DB 1
     task_redis_client.lpush("pending_tasks", json.dumps({
         "task_id": str(item.task_id),
