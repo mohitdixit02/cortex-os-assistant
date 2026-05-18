@@ -18,6 +18,7 @@ class StreamEvent:
         - response_cancel_event: An asyncio.Event for signaling cancellation of the response task.
     """
     audio_buffer: bytearray
+    transcribed_buffer: list[str]
     send_lock: asyncio.Lock
     response_task: asyncio.Task | None
     response_cancel_event: asyncio.Event | None
@@ -27,6 +28,7 @@ class StreamEvent:
 
     def __init__(self, user_id: str | None = None):
         self.audio_buffer = bytearray()
+        self.transcribed_buffer = []
         self.send_lock = asyncio.Lock()
         self.response_task = None
         self.response_cancel_event = None
@@ -98,6 +100,20 @@ class StreamEvent:
         """Get the current size of the audio buffer"""
         return len(self.audio_buffer)
     
+    # ***** Transcribed Buffer Management ***** #
+    def appendTranscribedBuffer(self, text: str):
+        """Append transcribed text to the buffer."""
+        if text and text.strip():
+            self.transcribed_buffer.append(text.strip())
+            
+    def getTranscribedText(self) -> str:
+        """Get the combined transcribed text from the buffer."""
+        return " ".join(self.transcribed_buffer)
+        
+    def resetTranscribedBuffer(self):
+        """Clear the transcribed buffer."""
+        self.transcribed_buffer.clear()
+    
     # ***** User Speaking State Management ***** #
     def isUserSpeaking(self) -> bool:
         """Check if the user is currently speaking, used to manage conversation flow and interruptions."""
@@ -114,6 +130,10 @@ class StreamEvent:
     def startStreamResponse(self, streamResponse: Callable[..., Awaitable[None]], *args, **kwargs):
         """**Start the asynchronous task for generating and sending responses based on the current conversation state.** \n
         This method initializes the response task and cancellation event, and should be called when starting to process a new conversation or after an interruption."""
+        # Cancel previous task if exists
+        if self.response_task is not None and not self.response_task.done():
+            self.response_task.cancel()
+            
         self.response_cancel_event = asyncio.Event()
         self.response_task = asyncio.create_task(streamResponse(*args, **kwargs))
 
@@ -126,6 +146,7 @@ class ResponseKey(str, Enum):
     CONVERSATION_END = "conversation_end"
     START_LISTENING = "start_listening"
     FINISH_LISTENING = "finish_listening"
+    WAITING_FOR_FURTHER_AUDIO = "waiting_for_further_audio"
     AI_AUDIO_STREAM_START = "ai_audio_stream_start"
     AI_AUDIO_STREAM_END = "ai_audio_stream_end"
     NO_AUDIO = "no_audio"
@@ -154,6 +175,12 @@ EVENT_RESPONSE_MAP = {
         "type": "interruption",
         "stage": "finished",
         "message": "User finished speaking, processing audio"
+    },
+    ResponseKey.WAITING_FOR_FURTHER_AUDIO: {
+        "status": "ok",
+        "type": "interruption",
+        "stage": "waiting",
+        "message": "User paused, waiting for further audio"
     },
     ResponseKey.AI_AUDIO_STREAM_START: {
         "status": "ok",

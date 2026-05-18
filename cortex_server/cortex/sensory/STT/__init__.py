@@ -73,7 +73,7 @@ class STTClient:
         final_text = " ".join(output).strip()
         self.logger.info("STT Transcription completed at: %s", time.strftime("%H:%M:%S", time.localtime(time.time())))
         self.logger.info("Total transcription time: %f", time.time() - start_time)
-        self.logger.info("Combined Text: %s", final_text)
+        self.logger.info("Segment Transcription: %s", final_text)
         return final_text
     
     async def transcribe(self, audio_bytes: bytes) -> str:

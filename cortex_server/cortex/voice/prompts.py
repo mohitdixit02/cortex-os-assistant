@@ -10,6 +10,39 @@ class VoiceClientRouteQuery(BaseModel):
     task_name: Annotated[str, Field(description="An human-readable name for the task to be created for this query in task queue")]
     task_description: Annotated[str, Field(description="A description for the task to be created for this query in task queue")]
 
+class VoiceClientQueryConfidence(BaseModel):
+    reasoning: Annotated[str, Field(description="The reasoning behind whether the thought is complete or not, and how the confidence score is determined. Not more than 80 words")]
+    is_complete: Annotated[bool, Field(description="Whether the user has finished their complete thought/sentence")]
+    confidence: Annotated[float, Field(description="Confidence score between 0.0 and 1.0")]
+    refined_query: Annotated[str, Field(description="The refined/combined query after handling any 'forget' or 'discard' requests")]
+
+VOICE_CLIENT_QUERY_COMPLETION_CONFIDENCE = """
+# Objective:
+You are an expert conversational analyzer. Your task is to determine if a user has finished their complete thought or sentence in a voice-based interaction, especially when natural pauses occur.
+
+# Instructions:
+1. Analyze the provided "current_text" which might be a fragment or a combination of previous fragments.
+2. Determine if the user has expressed a complete thought that can be processed.
+3. **CRITICAL:** If the user explicitly asks to "forget", "discard", "ignore", or "start over" regarding the previous part of their current speech (e.g., "Wait, forget that, what I meant was..."), you must:
+    - Set `is_complete` based on whether the *new* part of the thought is complete.
+    - Set `refined_query` to only include the relevant part of the query, discarding the parts the user asked to forget.
+4. If there are no such requests, `refined_query` should be the same as `current_text`.
+5. Provide a confidence score for your decision.
+
+# Examples:
+- Text: "I am planning to go out" -> is_complete: false, confidence: 0.6, refined_query: "I am planning to go out"
+- Text: "I am planning to go out I guess to Mumbai" -> is_complete: true, confidence: 0.95, refined_query: "I am planning to go out I guess to Mumbai"
+- Text: "Can you set a reminder for 3 PM... wait forget that, set it for 5 PM" -> is_complete: true, confidence: 0.9, refined_query: "Set a reminder for 5 PM"
+- Text: "What is the weather in... actually nevermind, what is the capital of France?" -> is_complete: true, confidence: 0.95, refined_query: "What is the capital of France?"
+
+# Input:
+Current Text: {current_text}
+
+# Response Format:
+Reply in the given format only.
+format_instructions: {format_instructions}
+"""
+
 VOICE_CLIENT_ROUTE_QUERY = """
 # Objective: \n
 You are a smart router who will route based on the user query and following instructions: \n
@@ -120,6 +153,13 @@ def get_voice_client_prompts(
         prompt = PromptTemplate(
             template=VOICE_CLIENT_ROUTE_QUERY,
             input_variables=["user_query", "format_instructions"],
+        )
+        return prompt.partial(format_instructions=parser.get_format_instructions()), parser
+    elif type == "query_completion_confidence":
+        parser = PydanticOutputParser(pydantic_object=VoiceClientQueryConfidence)
+        prompt = PromptTemplate(
+            template=VOICE_CLIENT_QUERY_COMPLETION_CONFIDENCE,
+            input_variables=["current_text", "format_instructions"],
         )
         return prompt.partial(format_instructions=parser.get_format_instructions()), parser
     elif type == "casual_response":

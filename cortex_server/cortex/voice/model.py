@@ -9,7 +9,7 @@ from cortex_cm.utility.logger import get_logger
 from cortex_cm.utility.huggingface.config import models
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from cortex_cm.utility.huggingface.request import HuggingFaceRequest
-from cortex.voice.prompts import VoiceClientRouteQuery, get_voice_client_prompts
+from cortex.voice.prompts import VoiceClientRouteQuery, VoiceClientQueryConfidence, get_voice_client_prompts
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
 from cortex_cm.utility.models import get_main_model, get_planner_model, get_voice_emotion_pipeline
 
@@ -53,6 +53,17 @@ class VoiceMainModel:
         )
         chain = formatted_prompt | self.plan_model | parser
         res = chain.invoke({"user_query": query})
+        return res
+
+    def get_conversation_end_confidence(self, text: str) -> VoiceClientQueryConfidence:
+        """Evaluates if the current text represents a complete thought and handles query refinement."""
+        self.logger.info("Evaluating conversation end confidence for text: %s", text)
+        formatted_prompt, parser = get_voice_client_prompts(
+            type="query_completion_confidence",
+            query=text
+        )
+        chain = formatted_prompt | self.plan_model | parser
+        res = chain.invoke({"current_text": text})
         return res
 
     def stream_text_tokens(self, query: str):

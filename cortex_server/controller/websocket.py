@@ -102,8 +102,8 @@ async def ws_audio(websocket: WebSocket, user_id: str = Query(...)):
                 
                 elif msg_type == "UserSpeechEndEvent":
                     state.is_user_speaking = False
-                    print(f"Sending response key: {ResponseKey.FINISH_LISTENING} to user_id={user_id}")
-                    await streamEventResponse.send_response(response=ResponseKey.FINISH_LISTENING)
+                    print(f"Sending response key: {ResponseKey.WAITING_FOR_FURTHER_AUDIO} to user_id={user_id}")
+                    await streamEventResponse.send_response(response=ResponseKey.WAITING_FOR_FURTHER_AUDIO)
                     # Trigger processing automatically when user stops speaking
                     audio_snapshot = streamEvent.getAudioBufferBytes()
                     streamEvent.resetAudioBuffer()
