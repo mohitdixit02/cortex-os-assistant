@@ -20,7 +20,8 @@ from .models import (
     UserKnowledgeBase,
     UserShortTermMemory,
     UserToolSubscription,
-    UserEvent
+    UserEvent,
+    UserConfig
 )
 
 engine = create_engine(env.DB_URL, echo=False)
@@ -43,5 +44,6 @@ __all__ = [
     "engine",
     "TaskOwner",
     "EventStatus",
-    "UserEvent"
+    "UserEvent",
+    "UserConfig"
 ]

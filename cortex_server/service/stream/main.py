@@ -88,15 +88,13 @@ class StreamClient:
 
             # Check if complete or if vc should wait
             if not query_completion_res.is_complete and query_completion_res.confidence < 0.8:
-                # Get user config for timeout
+                # Get user config for timeout (prioritizes Redis)
                 timeout = 3.0 # Default fallback
                 if self.user_id:
                     try:
-                        # need to change to redis after setup
-                        config = config_service.get_user_config(UUID(self.user_id))
-                        timeout = config.voice_client_timeout
+                        timeout = config_service.get_voice_client_timeout(UUID(self.user_id))
                     except Exception as e:
-                        print(f"Error fetching user config, using default timeout: {e}")
+                        print(f"Error fetching voice client timeout, using default: {e}")
 
                 print(f"Thought incomplete, waiting for {timeout}s...")
                 try:

@@ -57,6 +57,17 @@ CREATE TABLE IF NOT EXISTS users (
     deleted_at TIMESTAMPTZ
 );
 
+CREATE TABLE IF NOT EXISTS user_configs (
+    user_id UUID PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
+    voice_client_timeout INTEGER NOT NULL DEFAULT 3,
+    force_open_websocket BOOLEAN NOT NULL DEFAULT TRUE,
+    reminder_before_trigger_time INTEGER NOT NULL DEFAULT 0,
+    timezone VARCHAR(100) NOT NULL DEFAULT 'UTC',
+    timezone_mode VARCHAR(20) NOT NULL DEFAULT 'AUTO',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS chat_sessions (
     session_id UUID PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,

@@ -10,6 +10,7 @@ from cortex_cm.utility.config import env
 from cortex_cm.redis.redis_client import RedisClient, RedisModeType
 from cortex_cm.pg.models import User
 from cortex_cm.pg.req import crud
+from cortex_server.service.config_service import config_service
 from sqlmodel import Session
 from cortex_cm.pg import engine
 
@@ -90,6 +91,8 @@ class AuthService:
                     google_refresh_token=credentials.refresh_token # TODO: Encrypt
                 )
                 user = crud.create_one(session, user)
+                # Create default configurations for new user
+                config_service.create_default_config(user.user_id)
             else:
                 if credentials.refresh_token:
                     user.google_refresh_token = credentials.refresh_token # TODO: Encrypt

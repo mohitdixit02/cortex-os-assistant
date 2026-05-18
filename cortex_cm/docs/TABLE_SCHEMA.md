@@ -9,6 +9,16 @@ MoodTrend: STABLE, INCREASING, DECREASING
 TaskOwner: VOICE_CLIENT, EVENT_TOOL, OTHER
 EventStatus: CREATED, QUEUED, DONE, FAILED, CANCELLED
 
+### User Configurations Table
+user_id: UUID (PK, FK -> Users.user_id)
+voice_client_timeout: Integer (Default: 3)
+force_open_websocket: Boolean (Default: True)
+reminder_before_trigger_time: Integer (Default: 0)
+timezone: String (Default: 'UTC')
+timezone_mode: String (Default: 'AUTO')
+created_at: Timestamp
+updated_at: Timestamp
+
 ### Users Table (Google OAuth)
 user_id: UUID (PK)
 google_id: String (Unique, Indexed) — From Google OAuth sub field
