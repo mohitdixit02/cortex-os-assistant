@@ -137,15 +137,6 @@ CREATE TABLE IF NOT EXISTS tools (
     deleted_at TIMESTAMPTZ
 );
 
-CREATE TABLE IF NOT EXISTS user_tool_subscriptions (
-    user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-    tool_id UUID NOT NULL REFERENCES tools(tool_id) ON DELETE CASCADE,
-    is_subscribed BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL,
-    PRIMARY KEY (user_id, tool_id)
-);
-
 CREATE TABLE IF NOT EXISTS tasks (
     task_id UUID PRIMARY KEY,
     message_id UUID NOT NULL REFERENCES messages(message_id) ON DELETE CASCADE,

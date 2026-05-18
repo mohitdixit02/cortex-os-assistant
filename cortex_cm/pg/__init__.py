@@ -19,7 +19,6 @@ from .models import (
     UserEmotionalProfile,
     UserKnowledgeBase,
     UserShortTermMemory,
-    UserToolSubscription,
     UserEvent,
     UserConfig
 )
@@ -40,7 +39,6 @@ __all__ = [
     "UserKnowledgeBase",
     "Tool",
     "Task",
-    "UserToolSubscription",
     "engine",
     "TaskOwner",
     "EventStatus",

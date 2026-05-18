@@ -11,9 +11,9 @@ EventStatus: CREATED, QUEUED, DONE, FAILED, CANCELLED
 
 ### User Configurations Table
 user_id: UUID (PK, FK -> Users.user_id)
-voice_client_timeout: Integer (Default: 3)
+voice_client_timeout: Integer (Default: 3) - seconds to wait for additional audio input before processing
 force_open_websocket: Boolean (Default: True)
-reminder_before_trigger_time: Integer (Default: 0)
+reminder_before_trigger_time: Integer (Default: 5) — Minutes before event trigger to send reminder
 timezone: String (Default: 'UTC')
 timezone_mode: String (Default: 'AUTO')
 created_at: Timestamp
@@ -89,13 +89,6 @@ is_active: Boolean (Default: True)
 created_at: Timestamp
 updated_at: Timestamp
 deleted_at: Timestamp (Nullable for Soft Delete)
-
-### User Tool Subscriptions
-user_id: UUID (FK -> Users.user_id)
-tool_id: UUID (FK -> Tools.tool_id)
-is_subscribed: Boolean (Default: True)
-created_at: Timestamp
-updated_at: Timestamp
 
 
 ### Tasks Table (The Queue)

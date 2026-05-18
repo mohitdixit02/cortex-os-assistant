@@ -54,6 +54,3 @@ class ReminderCreate(BaseModel):
 class CalendarStatusResponse(BaseModel):
     linked: bool
     token_valid: bool
-
-class ToolSubscriptionRequest(BaseModel):
-    is_subscribed: bool

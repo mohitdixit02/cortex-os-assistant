@@ -16,8 +16,6 @@ export default function Settings() {
   const [voice, setVoice] = useState('en-US-Standard-C');
   const [language, setLanguage] = useState('English');
   const [volume, setVolume] = useState(80);
-  const [calendarSubscribed, setCalendarSubscribed] = useState(false);
-  const [isUpdatingCalendar, setIsUpdatingCalendar] = useState(false);
 
   // User Config State
   const [voiceClientTimeout, setVoiceClientTimeout] = useState(3);
@@ -29,19 +27,6 @@ export default function Settings() {
 
   const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
   const [speakerDevices, setSpeakerDevices] = useState<MediaDeviceInfo[]>([]);
-
-  // Fetch initial tool subscription status
-  useEffect(() => {
-    async function fetchToolStatus() {
-      try {
-        const status = await apiClient<{ linked: boolean, token_valid: boolean }>('/api/v1/calendar/status');
-        setCalendarSubscribed(status.linked);
-      } catch (err) {
-        console.error("Failed to fetch tool status", err);
-      }
-    }
-    fetchToolStatus();
-  }, []);
 
   // Fetch User Config
   useEffect(() => {
@@ -109,22 +94,6 @@ export default function Settings() {
       alert("Failed to save settings.");
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const toggleCalendar = async () => {
-    try {
-      setIsUpdatingCalendar(true);
-      const newStatus = !calendarSubscribed;
-      await apiClient(`/api/v1/user/tools/google_calendar/subscription`, {
-        method: 'POST',
-        body: JSON.stringify({ is_subscribed: newStatus })
-      });
-      setCalendarSubscribed(newStatus);
-    } catch (err) {
-      console.error("Failed to update calendar subscription", err);
-    } finally {
-      setIsUpdatingCalendar(false);
     }
   };
 
@@ -412,37 +381,6 @@ export default function Settings() {
                     <option key={device.deviceId} value={device.deviceId}>{device.label || `Device ${device.deviceId.slice(0, 5)}`}</option>
                   ))}
                 </select>
-              </div>
-            </div>
-          </section>
-
-          <section className="glass-card" style={{ padding: '30px' }}>
-            <h2 style={{ fontSize: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <FaCalendarAlt color="var(--accent-secondary)" /> Tools & Integrations
-            </h2>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: '600' }}>Google Calendar API</div>
-                  <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Allow Cortex to manage your schedule</div>
-                </div>
-                <button 
-                  onClick={toggleCalendar}
-                  disabled={isUpdatingCalendar}
-                  style={{
-                    fontSize: '32px',
-                    color: calendarSubscribed ? 'var(--accent-secondary)' : 'var(--text-muted)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    opacity: isUpdatingCalendar ? 0.5 : 1,
-                    cursor: isUpdatingCalendar ? 'not-allowed' : 'pointer',
-                    background: 'none',
-                    border: 'none'
-                  }}
-                >
-                  {calendarSubscribed ? <FaToggleOn /> : <FaToggleOff />}
-                </button>
               </div>
             </div>
           </section>
