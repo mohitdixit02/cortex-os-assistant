@@ -6,12 +6,14 @@ import { FaMicrophone, FaLanguage, FaToggleOn, FaToggleOff, FaHeadphones, FaSave
 import { apiClient } from '../../utility/apiClient';
 import { useAppContext } from '../../components/AppContext';
 import { toast } from 'react-toastify';
+import TimezoneSelect from 'react-timezone-select';
 
 export default function Settings() {
   const { 
     user,
     selectedMic, setSelectedMic, 
-    selectedSpeaker, setSelectedSpeaker 
+    selectedSpeaker, setSelectedSpeaker,
+    userConfig, setUserConfig
   } = useAppContext();
 
   const [voice, setVoice] = useState('en-US-Standard-C');
@@ -31,35 +33,35 @@ export default function Settings() {
   const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
   const [speakerDevices, setSpeakerDevices] = useState<MediaDeviceInfo[]>([]);
 
-  // Fetch User Config
+  // Sync with global userConfig
   useEffect(() => {
-    async function fetchUserConfig() {
-      const userId = user?.id || user?.user_id;
-      if (!userId) return;
-      try {
-        const config = await apiClient<any>(`/api/v1/user/config/${userId}`);
-        if (config) {
-          const cfg = {
-            voice_client_timeout_seconds: config.voice_client_timeout_seconds,
-            force_open_websocket: config.force_open_websocket,
-            reminder_minutes_before_trigger_time: config.reminder_minutes_before_trigger_time,
-            timezone: config.timezone,
-            timezone_mode: config.timezone_mode
-          };
-          setVoiceClientTimeout(cfg.voice_client_timeout_seconds);
-          setForceOpenWebsocket(cfg.force_open_websocket);
-          setReminderBeforeTriggerTime(cfg.reminder_minutes_before_trigger_time);
-          setTimezone(cfg.timezone);
-          setTimezoneMode(cfg.timezone_mode);
-          
-          initialConfig.current = cfg;
-        }
-      } catch (err) {
-        console.error("Failed to fetch user config", err);
+    if (userConfig) {
+      const cfg = {
+        voice_client_timeout_seconds: userConfig.voice_client_timeout_seconds,
+        force_open_websocket: userConfig.force_open_websocket,
+        reminder_minutes_before_trigger_time: userConfig.reminder_minutes_before_trigger_time,
+        timezone: userConfig.timezone,
+        timezone_mode: userConfig.timezone_mode
+      };
+      setVoiceClientTimeout(cfg.voice_client_timeout_seconds);
+      setForceOpenWebsocket(cfg.force_open_websocket);
+      setReminderBeforeTriggerTime(cfg.reminder_minutes_before_trigger_time);
+      setTimezone(cfg.timezone);
+      setTimezoneMode(cfg.timezone_mode);
+      
+      initialConfig.current = cfg;
+    }
+  }, [userConfig]);
+
+  // Handle Automatic Timezone Detection (Locally for UI responsiveness)
+  useEffect(() => {
+    if (timezoneMode === 'AUTO') {
+      const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (detectedTz && detectedTz !== timezone) {
+        setTimezone(detectedTz);
       }
     }
-    fetchUserConfig();
-  }, [user]);
+  }, [timezoneMode, timezone]);
 
   // Fetch audio devices
   useEffect(() => {
@@ -277,27 +279,48 @@ export default function Settings() {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
+                <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: '600' }}>Timezone</div>
-                  <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Set your local timezone</div>
+                  <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{timezoneMode === 'AUTO' ? 'Automatically detected' : 'Set your local timezone'}</div>
                 </div>
-                <input 
-                  type="text"
-                  value={timezone}
-                  disabled={timezoneMode === 'AUTO'}
-                  onChange={(e) => setTimezone(e.target.value)}
-                  placeholder="e.g. UTC, Asia/Kolkata"
-                  style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    color: 'white',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    padding: '8px 15px',
-                    borderRadius: '8px',
-                    width: '200px',
-                    outline: 'none',
-                    opacity: timezoneMode === 'AUTO' ? 0.5 : 1
-                  }}
-                />
+                <div style={{ width: '350px' }}>
+                  <TimezoneSelect
+                    value={timezone}
+                    isDisabled={timezoneMode === 'AUTO'}
+                    onChange={(tz) => setTimezone(tz.value)}
+                    menuPortalTarget={typeof window !== 'undefined' ? document.body : null}
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        background: timezoneMode === 'AUTO' ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        color: 'white',
+                        borderRadius: '8px',
+                        cursor: timezoneMode === 'AUTO' ? 'not-allowed' : 'pointer',
+                      }),
+                      menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                      menu: (base) => ({
+                        ...base,
+                        background: '#1a1a1a',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                      }),
+                      option: (base, { isFocused }) => ({
+                        ...base,
+                        background: isFocused ? 'rgba(255,255,255,0.05)' : 'transparent',
+                        color: 'white',
+                        cursor: 'pointer'
+                      }),
+                      singleValue: (base) => ({
+                        ...base,
+                        color: 'white'
+                      }),
+                      input: (base) => ({
+                        ...base,
+                        color: 'white'
+                      })
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </section>

@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { apiClient } from '../utility/apiClient';
+import { toast } from 'react-toastify';
 
 interface AppContextType {
   isOnboarded: boolean;
@@ -20,6 +21,8 @@ interface AppContextType {
   setSelectedMic: (label: string | null) => void;
   selectedSpeaker: string | null;
   setSelectedSpeaker: (id: string | null) => void;
+  userConfig: any;
+  setUserConfig: (config: any) => void;
   logout: () => void;
 }
 
@@ -136,6 +139,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const [userConfig, setUserConfig] = useState<any>(null);
+
+  // Global Timezone & Config Sync
+  useEffect(() => {
+    async function syncConfig() {
+      const userId = user?.id || user?.user_id;
+      if (!isLoggedIn || !userId) return;
+
+      try {
+        const config = await apiClient<any>(`/api/v1/user/config/${userId}`);
+        setUserConfig(config);
+
+        // Automatic Timezone Sync
+        if (config?.timezone_mode === 'AUTO') {
+          const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+          if (detectedTz && detectedTz !== config.timezone) {
+            console.log(`Timezone mismatch detected. Syncing ${detectedTz}...`);
+            await apiClient(`/api/v1/user/config/${userId}`, {
+              method: 'POST',
+              body: JSON.stringify({
+                timezone: detectedTz
+              })
+            });
+            // Inform user
+            toast.info(`Timezone automatically updated to ${detectedTz}`);
+            // Update local state to match
+            setUserConfig({ ...config, timezone: detectedTz });
+          }
+        }
+      } catch (err) {
+        console.error("Failed to sync global user config", err);
+      }
+    }
+    syncConfig();
+  }, [isLoggedIn, user]);
+
   const logout = async () => {
     try {
       if (token) {
@@ -146,6 +185,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     setToken(null);
     setUser(null);
+    setUserConfig(null);
     updateActiveThreadId(null);
   };
 
@@ -167,7 +207,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSelectedMic,
       selectedSpeaker,
       setSelectedSpeaker,
-      logout
+      logout,
+      userConfig,
+      setUserConfig
     }}>
       {children}
     </AppContext.Provider>
