@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { FaMicrophone, FaLanguage, FaVolumeUp, FaMoon, FaCalendarAlt, FaToggleOn, FaToggleOff, FaHeadphones, FaSave, FaClock, FaGlobe } from 'react-icons/fa';
+import { FaMicrophone, FaLanguage, FaToggleOn, FaToggleOff, FaHeadphones, FaSave, FaClock, FaGlobe } from 'react-icons/fa';
 import { apiClient } from '../../utility/apiClient';
 import { useAppContext } from '../../components/AppContext';
+import { toast } from 'react-toastify';
 
 export default function Settings() {
   const { 
@@ -15,7 +16,6 @@ export default function Settings() {
 
   const [voice, setVoice] = useState('en-US-Standard-C');
   const [language, setLanguage] = useState('English');
-  const [volume, setVolume] = useState(80);
 
   // User Config State
   const [voiceClientTimeout, setVoiceClientTimeout] = useState(3);
@@ -25,21 +25,34 @@ export default function Settings() {
   const [timezoneMode, setTimezoneMode] = useState('AUTO');
   const [isSaving, setIsSaving] = useState(false);
 
+  // Keep track of initial config to detect changes
+  const initialConfig = useRef<any>(null);
+
   const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
   const [speakerDevices, setSpeakerDevices] = useState<MediaDeviceInfo[]>([]);
 
   // Fetch User Config
   useEffect(() => {
     async function fetchUserConfig() {
-      if (!user?.user_id) return;
+      const userId = user?.id || user?.user_id;
+      if (!userId) return;
       try {
-        const config = await apiClient<any>(`/api/v1/user/config/${user.user_id}`);
+        const config = await apiClient<any>(`/api/v1/user/config/${userId}`);
         if (config) {
-          setVoiceClientTimeout(config.voice_client_timeout);
-          setForceOpenWebsocket(config.force_open_websocket);
-          setReminderBeforeTriggerTime(config.reminder_before_trigger_time);
-          setTimezone(config.timezone);
-          setTimezoneMode(config.timezone_mode);
+          const cfg = {
+            voice_client_timeout_seconds: config.voice_client_timeout_seconds,
+            force_open_websocket: config.force_open_websocket,
+            reminder_minutes_before_trigger_time: config.reminder_minutes_before_trigger_time,
+            timezone: config.timezone,
+            timezone_mode: config.timezone_mode
+          };
+          setVoiceClientTimeout(cfg.voice_client_timeout_seconds);
+          setForceOpenWebsocket(cfg.force_open_websocket);
+          setReminderBeforeTriggerTime(cfg.reminder_minutes_before_trigger_time);
+          setTimezone(cfg.timezone);
+          setTimezoneMode(cfg.timezone_mode);
+          
+          initialConfig.current = cfg;
         }
       } catch (err) {
         console.error("Failed to fetch user config", err);
@@ -75,23 +88,44 @@ export default function Settings() {
   }, []);
 
   const handleSaveConfigs = async () => {
-    if (!user?.user_id) return;
+    const userId = user?.id || user?.user_id;
+    if (!userId) {
+      toast.error("User not authenticated.");
+      return;
+    }
+
+    const currentConfig = {
+      voice_client_timeout_seconds: voiceClientTimeout,
+      force_open_websocket: forceOpenWebsocket,
+      reminder_minutes_before_trigger_time: reminderBeforeTriggerTime,
+      timezone: timezone,
+      timezone_mode: timezoneMode
+    };
+
+    // Check if anything has changed
+    if (initialConfig.current) {
+      const isChanged = Object.keys(currentConfig).some(
+        key => (currentConfig as any)[key] !== (initialConfig.current as any)[key]
+      );
+      
+      if (!isChanged) {
+        toast.info("No changes detected so far.");
+        return;
+      }
+    }
+
     try {
       setIsSaving(true);
-      await apiClient(`/api/v1/user/config/${user.user_id}`, {
+      await apiClient(`/api/v1/user/config/${userId}`, {
         method: 'POST',
-        body: JSON.stringify({
-          voice_client_timeout: voiceClientTimeout,
-          force_open_websocket: forceOpenWebsocket,
-          reminder_before_trigger_time: reminderBeforeTriggerTime,
-          timezone: timezone,
-          timezone_mode: timezoneMode
-        })
+        body: JSON.stringify(currentConfig)
       });
-      alert("Settings saved successfully!");
+      
+      initialConfig.current = currentConfig;
+      toast.success("Settings saved successfully!");
     } catch (err) {
       console.error("Failed to save user config", err);
-      alert("Failed to save settings.");
+      toast.error("Failed to save settings.");
     } finally {
       setIsSaving(false);
     }
@@ -131,7 +165,7 @@ export default function Settings() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', paddingBottom: '40px' }}>
-          {/* Voice Client Settings */}
+          {/* Voice Interaction Section */}
           <section className="glass-card" style={{ padding: '30px' }}>
             <h2 style={{ fontSize: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <FaMicrophone color="var(--accent-primary)" /> Voice Interaction
@@ -146,7 +180,7 @@ export default function Settings() {
                 <input 
                   type="number"
                   value={voiceClientTimeout}
-                  onChange={(e) => setVoiceClientTimeout(parseInt(e.target.value))}
+                  onChange={(e) => setVoiceClientTimeout(parseInt(e.target.value) || 0)}
                   style={{
                     background: 'rgba(255,255,255,0.05)',
                     color: 'white',
@@ -192,12 +226,12 @@ export default function Settings() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontWeight: '600' }}>Reminder Buffer Time</div>
-                  <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Seconds to trigger before event time</div>
+                  <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Minutes to trigger before event time</div>
                 </div>
                 <input 
                   type="number"
                   value={reminderBeforeTriggerTime}
-                  onChange={(e) => setReminderBeforeTriggerTime(parseInt(e.target.value))}
+                  onChange={(e) => setReminderBeforeTriggerTime(parseInt(e.target.value) || 0)}
                   style={{
                     background: 'rgba(255,255,255,0.05)',
                     color: 'white',
@@ -268,6 +302,7 @@ export default function Settings() {
             </div>
           </section>
 
+          {/* Voice & Speech Section */}
           <section className="glass-card" style={{ padding: '30px' }}>
             <h2 style={{ fontSize: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <FaMicrophone color="var(--accent-primary)" /> Voice & Speech
@@ -325,6 +360,7 @@ export default function Settings() {
             </div>
           </section>
 
+          {/* Audio Devices Section */}
           <section className="glass-card" style={{ padding: '30px' }}>
             <h2 style={{ fontSize: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <FaHeadphones color="var(--accent-secondary)" /> Audio Devices
@@ -381,68 +417,6 @@ export default function Settings() {
                     <option key={device.deviceId} value={device.deviceId}>{device.label || `Device ${device.deviceId.slice(0, 5)}`}</option>
                   ))}
                 </select>
-              </div>
-            </div>
-          </section>
-
-          <section className="glass-card" style={{ padding: '30px' }}>
-            <h2 style={{ fontSize: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <FaVolumeUp color="var(--accent-secondary)" /> Audio Output
-            </h2>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                  <span style={{ fontWeight: '600' }}>Volume</span>
-                  <span>{volume}%</span>
-                </div>
-                <input 
-                  type="range" 
-                  min="0" 
-                  max="100" 
-                  value={volume} 
-                  onChange={(e) => setVolume(parseInt(e.target.value))}
-                  style={{
-                    width: '100%',
-                    accentColor: 'var(--accent-secondary)',
-                    background: 'rgba(255,255,255,0.1)',
-                    height: '6px',
-                    borderRadius: '3px',
-                    appearance: 'none',
-                    outline: 'none',
-                    cursor: 'pointer'
-                  }}
-                />
-              </div>
-            </div>
-          </section>
-
-          <section className="glass-card" style={{ padding: '30px' }}>
-            <h2 style={{ fontSize: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <FaMoon color="var(--accent-primary)" /> Appearance
-            </h2>
-            
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <div style={{ fontWeight: '600' }}>Dark Mode</div>
-                <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Currently enforced theme</div>
-              </div>
-              <div style={{
-                width: '50px',
-                height: '26px',
-                background: 'var(--primary-gradient)',
-                borderRadius: '13px',
-                position: 'relative',
-              }}>
-                <div style={{
-                  position: 'absolute',
-                  right: '3px',
-                  top: '3px',
-                  width: '20px',
-                  height: '20px',
-                  background: 'white',
-                  borderRadius: '50%'
-                }} />
               </div>
             </div>
           </section>

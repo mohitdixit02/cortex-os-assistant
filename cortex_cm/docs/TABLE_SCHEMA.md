@@ -11,9 +11,9 @@ EventStatus: CREATED, QUEUED, DONE, FAILED, CANCELLED
 
 ### User Configurations Table
 user_id: UUID (PK, FK -> Users.user_id)
-voice_client_timeout: Integer (Default: 3) - seconds to wait for additional audio input before processing
+voice_client_timeout_seconds: Integer (Default: 3) - seconds to wait for additional audio input before processing
 force_open_websocket: Boolean (Default: True)
-reminder_before_trigger_time: Integer (Default: 5) — Minutes before event trigger to send reminder
+reminder_minutes_before_trigger_time: Integer (Default: 5) — Minutes before event trigger to send reminder
 timezone: String (Default: 'UTC')
 timezone_mode: String (Default: 'AUTO')
 created_at: Timestamp

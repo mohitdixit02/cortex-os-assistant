@@ -59,9 +59,9 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS user_configs (
     user_id UUID PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
-    voice_client_timeout INTEGER NOT NULL DEFAULT 3,
+    voice_client_timeout_seconds INTEGER NOT NULL DEFAULT 3,
     force_open_websocket BOOLEAN NOT NULL DEFAULT TRUE,
-    reminder_before_trigger_time INTEGER NOT NULL DEFAULT 0,
+    reminder_minutes_before_trigger_time INTEGER NOT NULL DEFAULT 5,
     timezone VARCHAR(100) NOT NULL DEFAULT 'UTC',
     timezone_mode VARCHAR(20) NOT NULL DEFAULT 'AUTO',
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -40,35 +40,37 @@ class ConfigService:
 
     def sync_to_redis(self, user_id: UUID, config: UserConfig):
         # Redis DB:0 is typically for Core configuration/state
-        redis_client = RedisClient.get_client(RedisModeType.CORE)
+        redis_client = RedisClient.get_client(RedisModeType.TOKEN)
         key = f"cortex:config:{user_id}"
-        
+
         config_payload = {
-            "voice_client_timeout": config.voice_client_timeout,
+            "voice_client_timeout_seconds": config.voice_client_timeout_seconds,
             "force_open_websocket": config.force_open_websocket,
+            "reminder_minutes_before_trigger_time": config.reminder_minutes_before_trigger_time,
             "timezone": config.timezone,
             "timezone_mode": config.timezone_mode
         }
-        
+
         redis_client.client.set(key, json.dumps(config_payload))
 
     def get_voice_client_timeout(self, user_id: UUID) -> int:
-        """Fetch voice_client_timeout from Redis, fallback to DB if not found."""
-        redis_client = RedisClient.get_client(RedisModeType.CORE)
+        """Fetch voice_client_timeout_seconds from Redis, fallback to DB if not found."""
+        redis_client = RedisClient.get_client(RedisModeType.TOKEN)
         key = f"cortex:config:{user_id}"
-        
+
         cached_config = redis_client.client.get(key)
         if cached_config:
             try:
                 config_data = json.loads(cached_config)
-                return config_data.get("voice_client_timeout", 3)
+                return config_data.get("voice_client_timeout_seconds", 3)
             except (json.JSONDecodeError, TypeError):
                 pass
-        
+
         # Fallback to DB
         config = self.get_user_config(user_id)
         # Re-sync to Redis
         self.sync_to_redis(user_id, config)
-        return config.voice_client_timeout
+        return config.voice_client_timeout_seconds
+
 
 config_service = ConfigService()

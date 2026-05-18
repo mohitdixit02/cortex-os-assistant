@@ -51,9 +51,9 @@ class UserConfig(SQLModel, table=True):
     user_id: UUID = Field(
         sa_column=Column(PGUUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True, nullable=False)
     )
-    voice_client_timeout: int = Field(default=3, sa_column=Column(nullable=False, server_default="3"))
+    voice_client_timeout_seconds: int = Field(default=3, sa_column=Column(nullable=False, server_default="3"))
     force_open_websocket: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, server_default="TRUE"))
-    reminder_before_trigger_time: int = Field(default=5, sa_column=Column(nullable=False, server_default="0"))
+    reminder_minutes_before_trigger_time: int = Field(default=5, sa_column=Column(nullable=False, server_default="5"))
     timezone: str = Field(default="UTC", sa_column=Column(String(100), nullable=False, server_default="'UTC'"))
     timezone_mode: str = Field(default="AUTO", sa_column=Column(String(20), nullable=False, server_default="'AUTO'"))
     created_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
