@@ -116,6 +116,7 @@ class MemoryState(BaseModel):
     """Represents the overall memory state for a user, including emotional profile and knowledge items."""
     user_id: str
     session_id: str
+    user_timezone: Optional[str] = "UTC"
     query: str
     ai_response: str
     query_emotion: Optional[str] = None
@@ -140,6 +141,7 @@ class ToolManagerState(BaseModel):
     user_id: str
     session_id: str
     task_id: str
+    user_timezone: Optional[str] = "UTC"
     message_id: Optional[str] = None
     query: str
     web_search_tool: Optional[ToolExecutionState] = None
@@ -233,6 +235,7 @@ class ConversationState(BaseModel):
     task_id: str
     query: str
     user_message_id: Optional[str] = None
+    user_timezone: Optional[str] = "UTC"
     voice_client_response: Optional[str] = None
     query_emotion: Optional[str] = None
     query_timestamp: datetime = Field(default_factory=UTC_NOW)
@@ -251,9 +254,11 @@ class ConversationState(BaseModel):
 """
 class EventToolState(BaseModel):
     message_id: str
+    user_timezone: Optional[str] = "UTC"
     event_name: str
     event_description: str
     trigger_time: datetime
+    time_left: int = 5
     user_name: Optional[str] = None
     time_of_query: Optional[str] = None
     final_reminder: Optional[str] = None

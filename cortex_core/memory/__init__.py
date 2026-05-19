@@ -55,28 +55,6 @@ class MemoryClient:
         self.embd_model = EmbeddingModel()
         self.logger = get_logger("CORTEX_MEMORY")
         self.memory_saver = MemorySaver(engine=engine, model=self.embd_model)
-        
-    def _get_time_behavior(self, timestamp) -> TimeOfDay:
-        """
-        Helper function to determine the time behavior (e.g., morning, afternoon, evening) based on the timestamp. \n
-        Can be used for tuning the response generation to be more contextually relevant based on the time of day. \n
-        """
-        
-        # converting timestamp to local time if it's in UTC
-        if timestamp.tzinfo is not None and timestamp.tzinfo.utcoffset(timestamp) is not None:
-            local_timestamp = timestamp.astimezone()
-        else:
-            local_timestamp = timestamp
-        
-        hour = local_timestamp.hour
-        if 5 <= hour < 12:
-            return TimeOfDay.MORNING
-        elif 12 <= hour < 17:
-            return TimeOfDay.AFTERNOON
-        elif 17 <= hour < 21:
-            return TimeOfDay.EVENING
-        else:
-            return TimeOfDay.NIGHT
 
     def _extract_final_response_text(self, final_response) -> str:
         """Normalize final response state/model/string into plain text."""
@@ -470,7 +448,7 @@ class MemoryClient:
         """
         user_id = state.user_id
         session_id = state.session_id
-        time_behavior = self._get_time_behavior(state.query_timestamp)
+        time_behavior = state.query_time
         mood = state.query_emotion
         with Session(self.engine) as session:
             res = get_one(

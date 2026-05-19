@@ -16,16 +16,12 @@ class EventToolModel:
             type="build_reminder",
         )
         chain = formatted_prompt | self.model | parser
-        
-        # Time Left = state.trigger_time - current_time in minutes
-        current_time = UTC_NOW()
-        time_left = (state.trigger_time - current_time).total_seconds() / 60
                 
         res = chain.invoke({
             "event_name": state.event_name,
             "event_description": state.event_description,
             "user_name": state.user_name if state.user_name else "",
-            "time_left": time_left,
+            "time_left": state.time_left,
             "time_of_query": state.time_of_query if state.time_of_query else "",
         })
         return res

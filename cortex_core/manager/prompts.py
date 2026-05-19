@@ -165,7 +165,7 @@ You are the event tool input generator. Your job is to generate the input which 
 1. name: The name of the event which should be a short string in human readable format describing the event. \n
 2. event_description: A detailed description which includes all the relevant information regarding the event. It must include what, why and any other relevant information based on query, and instructions by orchestrator. Do NOT include any relative time phrases like "in 5 minutes", "after 1 hour", etc., or the trigger time itself in the description, as the timing is already captured in the trigger_time field. \n
 3. trigger_time: \n
-a. The time when the event should be triggered. It should be in ISO format. \n
+a. The time when the event should be triggered. It should be in ISO format (YYYY-MM-DDTHH:MM:SS) WITHOUT any timezone offset or 'Z' suffix. Assume the time is in the user's local timezone. \n
 b. Use current_time provided and time asked by the user in query to decide the trigger time. \n
 c. Always keep seconds = 0, and only include date, hours and minutes. \n
 d. If user query doesn't have a specific time mentioned, then use your understanding of the query and instructions by orchestrator to set the trigger time. \n

@@ -1,15 +1,16 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 
 from sqlmodel import Session
-from cortex_cm.pg import engine, UserEvent, EventStatus
+from cortex_cm.pg import engine, UserEvent, EventStatus, Message
 from cortex_cm.pg.req import crud
 from cortex_cm.redis.event_tool import (
     save_event_to_redis,
     get_due_events_from_redis,
     delete_event_from_redis
 )
+from cortex_cm.redis.config_helper import get_reminder_window_minutes
 
 def create_event(
     message_id: UUID,
@@ -31,17 +32,27 @@ def create_event(
         )
         db_event = crud.create_one(session, event)
         
+        # Fetch user_id from message to get reminder window
+        message = crud.get_by_id(session, Message, message_id)
+        user_id = message.user_id if message else None
+        
+        # Calculate Effective Trigger Time (Actual - Window)
+        reminder_window = get_reminder_window_minutes(user_id) if user_id else 5
+        effective_trigger_time = trigger_time - timedelta(minutes=reminder_window)
+
         # Save to Redis for fast retrieval and worker to track
         redis_data = {
             "id": str(db_event.id),
             "message_id": str(db_event.message_id),
+            "user_id": str(user_id) if user_id else None,
             "name": db_event.name,
             "event_description": db_event.event_description,
             "trigger_time": db_event.trigger_time.isoformat(),
+            "reminder_window": reminder_window,
             "status": db_event.status.value,
             "created_at": db_event.created_at.isoformat()
         }
-        save_event_to_redis(str(db_event.id), db_event.trigger_time, redis_data, is_test=is_test)
+        save_event_to_redis(str(db_event.id), effective_trigger_time, redis_data, is_test=is_test)
         
         return db_event
 

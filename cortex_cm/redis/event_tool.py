@@ -1,6 +1,6 @@
 import json
 from typing import List, Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from cortex_cm.redis.redis_client import RedisClient, RedisModeType
 
 event_redis_client = RedisClient.get_client(RedisModeType.EVENT)
@@ -48,7 +48,7 @@ def get_due_events_from_redis(time_window_seconds: int = 300) -> List[Dict[str, 
     Returns:
         List[Dict[str, Any]]: List of due event data dictionaries.
     """
-    now = datetime.now().timestamp()
+    now = datetime.now(timezone.utc).timestamp()
     future_limit = now + time_window_seconds
     
     # Get IDs of events due between -inf and now + window

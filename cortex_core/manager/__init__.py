@@ -2,6 +2,7 @@ from cortex_core.manager.tools import AvailableToolsType, WebSearchTool, WebSear
 from cortex_core.graph.state import CortexTool, ToolManagerState, ToolExecutionState
 from cortex_core.manager.model import ManagerModel
 from cortex_cm.utility.logger import get_logger
+from cortex_cm.utility.time_utils import parse_iso_to_utc
 from langchain_core.documents import Document
 from cortex_core.manager.utility import retrieve_relevant_docs_utility
 from cortex_core.memory.embedding import EmbeddingModel
@@ -83,11 +84,16 @@ class ManagerClient():
             self.logger.info(f"Task retriever tool: {state.task_retriever_tool}")
             task_plan_res = self.model.build_task_retrieval_plan(state=state)
             self.logger.info(f"Task retrieval plan result: {task_plan_res}")
+            
+            user_tz = state.user_timezone or "UTC"
+            time_start_range = parse_iso_to_utc(task_plan_res.time_start_range, user_tz).isoformat() if task_plan_res.time_start_range else None
+            time_end_range = parse_iso_to_utc(task_plan_res.time_end_range, user_tz).isoformat() if task_plan_res.time_end_range else None
+
             tool_input = TaskRetrieverInput(
                 fetch_mode=task_plan_res.fetch_mode,
                 task_description=task_plan_res.task_description,
-                time_start_range=task_plan_res.time_start_range,
-                time_end_range=task_plan_res.time_end_range,
+                time_start_range=time_start_range,
+                time_end_range=time_end_range,
                 recent_count=task_plan_res.recent_count,
                 task_id=state.task_id,
                 user_id=state.user_id,
@@ -121,6 +127,14 @@ class ManagerClient():
                 "task_retriever_tool": state.task_retriever_tool,
             }
     
+    # Pending:
+    # 2. Fix: Trigger time set, retrieve and execution require normalization to ensure timezone consistency.
+    # 3. Config for vc_delay, reminder_minutes_before_trigger_time, timezone, force_open_websocket, etc.**
+    # 4. Timezone fix is required in general query time pass also (other than event tool)
+    # 5. Fix tables data entry (specifically for tools)
+    # 6. Fix UI to allow conversation name change, Pagination, layout, animation for ORB, listening, thinking, etc.
+    # 7. Check language translation (STT)
+    
     def event_tool(self, state: ToolManagerState):
         try:
             message_id = state.message_id
@@ -136,11 +150,15 @@ class ManagerClient():
             
             event_tool_plan = self.model.build_event_tool_plan(state=state)
             self.logger.info(f"Event tool plan: {event_tool_plan}")
+            
+            user_tz = state.user_timezone or "UTC"
+            trigger_time_utc = parse_iso_to_utc(event_tool_plan.trigger_time, user_tz).isoformat() if event_tool_plan.trigger_time else None
+
             event_tool_input = EventToolInput(
                 message_id=message_id,
                 name=event_tool_plan.name,
                 event_description=event_tool_plan.event_description,
-                trigger_time=event_tool_plan.trigger_time,
+                trigger_time=trigger_time_utc,
             )
             event_tool_res = EventTool.create_event(input=event_tool_input)
 

@@ -383,6 +383,7 @@ class Orchestrator:
             user_id=state.user_id,
             session_id=state.session_id,
             task_id=state.task_id,
+            user_timezone=state.user_timezone,
             message_id=state.user_message_id if state.user_message_id else None,
             query=state.query,
         )

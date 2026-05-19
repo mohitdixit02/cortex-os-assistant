@@ -12,7 +12,7 @@ from cortex_cm.utility.logger import get_logger
 logger = get_logger("EVENT_TOOL_WORKER")
 
 SUBMIT_TASK_URL = f"{env.CORTEX_QUEUE_URL}/api/queue/add_task"
-TIME_WINDOW_MINUTES = 5
+TIME_WINDOW_MINUTES = 1
 
 async def check_and_process_events(client: httpx.AsyncClient):
     """
@@ -49,7 +49,8 @@ async def check_and_process_events(client: httpx.AsyncClient):
                 "event_id": event['id'],
                 "name": event['name'],
                 "event_description": event.get('event_description'),
-                "trigger_time": event['trigger_time']
+                "trigger_time": event['trigger_time'],
+                "reminder_window": event.get('reminder_window', 5)
             }
             
             metadata = {

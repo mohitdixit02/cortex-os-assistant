@@ -254,12 +254,6 @@ class CortexMainModel:
         else:
             retrieved_messages = None
         
-        timestamp = UTC_NOW()
-        if timestamp.tzinfo is not None and timestamp.tzinfo.utcoffset(timestamp) is not None:
-            local_timestamp = timestamp.astimezone()
-        else:
-            local_timestamp = timestamp
-
         res = chain.invoke({
             "available_tools": available_tools,
             "user_query": state.query,
@@ -271,7 +265,7 @@ class CortexMainModel:
             "tool_selection_feedback": tool_selection_feedback,
             "retrieved_user_knowledge": retrieved_user_knowledge,
             "retrieved_messages": retrieved_messages,
-            "timestamp": local_timestamp,
+            "timestamp": state.query_timestamp,
         })
         return res
     

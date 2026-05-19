@@ -22,7 +22,13 @@ from cortex_core.graph.memory import build_memory_workflow
 from cortex_core.graph.event import event_tool_workflow
 from cortex_queue.dto import TaskStatus, TaskItem
 from cortex_cm.utility.logger import get_logger
-from cortex_cm.pg import TimeOfDay
+from cortex_cm.pg import TimeOfDay, engine, Session
+from cortex_cm.pg.models import Message, User
+from cortex_cm.pg.req import crud
+from cortex_cm.redis.config_helper import get_user_config_from_redis
+from cortex_cm.utility.time_utils import get_local_time, get_time_of_day
+from datetime import datetime, timezone
+from uuid import UUID
 import asyncio
 
 class MainClient:
@@ -87,13 +93,25 @@ class MainClient:
         if not user_message_id:
             self.logger.warning("Missing message_id in task metadata. In case, Event Tool is used, it will get failed!")
         
+        # Fetch user configuration (including timezone) from Redis
+        user_config = get_user_config_from_redis(UUID(user_id)) if user_id else None
+        user_timezone = user_config.get("timezone", "UTC") if user_config else "UTC"
+
+        # Calculate local query time behavior
+        now_utc = datetime.now(timezone.utc)
+        local_time = get_local_time(now_utc, user_timezone)
+        query_time = get_time_of_day(local_time)
+
         state = ConversationState(
             user_id=str(user_id),
             session_id=str(session_id),
             task_id=str(task_id),
             user_message_id=str(user_message_id) if user_message_id else None,
+            user_timezone=user_timezone,
             query=query,
             query_emotion=emotion,
+            query_timestamp=local_time,
+            query_time=query_time,
             voice_client_response=voice_client_response
         )
         return state
@@ -130,6 +148,7 @@ class MainClient:
         memory_state = MemoryState(
             user_id=convState.user_id,
             session_id=convState.session_id,
+            user_timezone=convState.user_timezone,
             query=convState.query,
             ai_response=ai_response,
             query_emotion=convState.query_emotion,
@@ -151,16 +170,28 @@ class MainClient:
         event_name = taskItem.payload.get("name")
         event_description = taskItem.payload.get("event_description")
         trigger_time = taskItem.payload.get("trigger_time")
+        reminder_window = taskItem.payload.get("reminder_window", 5)
         
         if not event_description or not trigger_time:
             self.logger.error("Missing event_description or trigger_time in task metadata. Cannot initialize event tool state.")
             raise ValueError("Missing event_description or trigger_time in task metadata.")
         
+        # Fetch user_id from message to get timezone
+        user_timezone = "UTC"
+        with Session(engine) as session:
+            message = crud.get_by_id(session, Message, message_id)
+            if message:
+                user_id = message.user_id
+                user_config = get_user_config_from_redis(user_id)
+                user_timezone = user_config.get("timezone", "UTC") if user_config else "UTC"
+
         event_state = EventToolState(
             message_id=message_id,
+            user_timezone=user_timezone,
             event_name=event_name,
             event_description=event_description,
-            trigger_time=trigger_time
+            trigger_time=trigger_time,
+            time_left=reminder_window
         )
         self.logger.info("Initialized event tool state: %s", event_state)
         return event_state

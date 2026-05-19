@@ -5,7 +5,9 @@ from cortex_cm.pg.enums import TimeOfDay
 from cortex_cm.pg import engine, Session
 from cortex_cm.pg.models import Message, User
 from cortex_cm.pg.req import get_by_id
+from typing import Optional
 
+from cortex_cm.utility.time_utils import get_local_time, get_time_of_day
 from datetime import datetime, timezone
 UTC_NOW = lambda: datetime.now(timezone.utc)
 
@@ -17,27 +19,13 @@ class EventToolClient():
         self.logger = get_logger("CORTEX_EVENT_TOOL")
         self.model = EventToolModel()
         
-    def _get_time_behavior(self, timestamp) -> TimeOfDay:
+    def _get_time_behavior(self, timestamp: datetime, timezone_str: Optional[str] = "UTC") -> TimeOfDay:
         """
         Helper function to determine the time behavior (e.g., morning, afternoon, evening) based on the timestamp. \n
         Can be used for tuning the response generation to be more contextually relevant based on the time of day. \n
         """
-        
-        # converting timestamp to local time if it's in UTC
-        if timestamp.tzinfo is not None and timestamp.tzinfo.utcoffset(timestamp) is not None:
-            local_timestamp = timestamp.astimezone()
-        else:
-            local_timestamp = timestamp
-        
-        hour = local_timestamp.hour
-        if 5 <= hour < 12:
-            return TimeOfDay.MORNING
-        elif 12 <= hour < 17:
-            return TimeOfDay.AFTERNOON
-        elif 17 <= hour < 21:
-            return TimeOfDay.EVENING
-        else:
-            return TimeOfDay.NIGHT
+        local_timestamp = get_local_time(timestamp, timezone_str or "UTC")
+        return get_time_of_day(local_timestamp)
         
     def build_pre_reminder_info(self, state: EventToolState):
         try:
@@ -50,8 +38,8 @@ class EventToolClient():
                     if user:
                         user_name = user.full_name
             
-            # Time of Query - Local Time stamp in User Config - Pending Implementation
-            time_of_query = self._get_time_behavior(UTC_NOW())
+            # Time of Query - Local Time stamp in User Config
+            time_of_query = self._get_time_behavior(UTC_NOW(), state.user_timezone).name
             
             return {
                 "user_name": user_name,

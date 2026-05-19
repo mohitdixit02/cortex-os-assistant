@@ -13,6 +13,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, Syst
 import json
 from cortex_cm.utility.models import get_planner_model
 
+from cortex_cm.utility.time_utils import get_local_time
 from datetime import datetime, timezone
 UTC_NOW = lambda: datetime.now(timezone.utc)
 
@@ -113,10 +114,8 @@ class ManagerModel:
         instructions = state.task_retriever_tool.instructions if state.task_retriever_tool.instructions else ""
         
         timestamp = UTC_NOW()
-        if timestamp.tzinfo is not None and timestamp.tzinfo.utcoffset(timestamp) is not None:
-            local_timestamp = timestamp.astimezone()
-        else:
-            local_timestamp = timestamp
+        user_tz = state.user_timezone or "UTC"
+        local_timestamp = get_local_time(timestamp, user_tz).replace(tzinfo=None)
 
         res = chain.invoke({
             "user_query": state.query,
@@ -144,10 +143,8 @@ class ManagerModel:
         instructions = state.event_tool.instructions if state.event_tool.instructions else ""
         
         timestamp = UTC_NOW()
-        if timestamp.tzinfo is not None and timestamp.tzinfo.utcoffset(timestamp) is not None:
-            local_timestamp = timestamp.astimezone()
-        else:
-            local_timestamp = timestamp
+        user_tz = state.user_timezone or "UTC"
+        local_timestamp = get_local_time(timestamp, user_tz).replace(tzinfo=None)
 
         res = chain.invoke({
             "user_query": state.query,
