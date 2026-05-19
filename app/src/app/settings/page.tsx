@@ -9,59 +9,57 @@ import { toast } from 'react-toastify';
 import TimezoneSelect from 'react-timezone-select';
 
 export default function Settings() {
-  const { 
-    user,
-    selectedMic, setSelectedMic, 
-    selectedSpeaker, setSelectedSpeaker,
-    userConfig, setUserConfig
-  } = useAppContext();
+  const { userConfig, refreshUserConfig } = useAppContext();
+
+  if (!userConfig) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: 'var(--text-muted)' }}>
+        Loading settings...
+      </div>
+    );
+  }
+
+  const configKey = userConfig.updated_at || JSON.stringify(userConfig);
+
+  return (
+    <SettingsForm 
+      key={configKey} 
+      initialConfig={userConfig} 
+      refreshUserConfig={refreshUserConfig} 
+    />
+  );
+}
+
+function SettingsForm({ initialConfig, refreshUserConfig }: { initialConfig: any, refreshUserConfig: () => Promise<void> }) {
+  const { user, selectedMic, setSelectedMic, selectedSpeaker, setSelectedSpeaker } = useAppContext();
 
   const [voice, setVoice] = useState('en-US-Standard-C');
   const [language, setLanguage] = useState('English');
 
-  // User Config State
-  const [voiceClientTimeout, setVoiceClientTimeout] = useState(3);
-  const [forceOpenWebsocket, setForceOpenWebsocket] = useState(true);
-  const [reminderBeforeTriggerTime, setReminderBeforeTriggerTime] = useState(0);
-  const [timezone, setTimezone] = useState('UTC');
-  const [timezoneMode, setTimezoneMode] = useState('AUTO');
+  // Local State initialized from props
+  const [voiceClientTimeout, setVoiceClientTimeout] = useState(initialConfig.voice_client_timeout_seconds || 3);
+  const [forceOpenWebsocket, setForceOpenWebsocket] = useState(initialConfig.force_open_websocket ?? true);
+  const [reminderBeforeTriggerTime, setReminderBeforeTriggerTime] = useState(initialConfig.reminder_minutes_before_trigger_time || 0);
+  const [timezone, setTimezone] = useState(initialConfig.timezone || 'UTC');
+  const [timezoneMode, setTimezoneMode] = useState(initialConfig.timezone_mode || 'AUTO');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Keep track of initial config to detect changes
-  const initialConfig = useRef<any>(null);
+  // Track initial values to detect changes
+  const initialValues = useRef(initialConfig);
 
   const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
   const [speakerDevices, setSpeakerDevices] = useState<MediaDeviceInfo[]>([]);
 
-  // Sync with global userConfig
-  useEffect(() => {
-    if (userConfig) {
-      const cfg = {
-        voice_client_timeout_seconds: userConfig.voice_client_timeout_seconds,
-        force_open_websocket: userConfig.force_open_websocket,
-        reminder_minutes_before_trigger_time: userConfig.reminder_minutes_before_trigger_time,
-        timezone: userConfig.timezone,
-        timezone_mode: userConfig.timezone_mode
-      };
-      setVoiceClientTimeout(cfg.voice_client_timeout_seconds);
-      setForceOpenWebsocket(cfg.force_open_websocket);
-      setReminderBeforeTriggerTime(cfg.reminder_minutes_before_trigger_time);
-      setTimezone(cfg.timezone);
-      setTimezoneMode(cfg.timezone_mode);
-      
-      initialConfig.current = cfg;
-    }
-  }, [userConfig]);
-
   // Handle Automatic Timezone Detection (Locally for UI responsiveness)
-  useEffect(() => {
-    if (timezoneMode === 'AUTO') {
+  const handleTimezoneModeChange = (mode: string) => {
+    setTimezoneMode(mode);
+    if (mode === 'AUTO') {
       const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       if (detectedTz && detectedTz !== timezone) {
         setTimezone(detectedTz);
       }
     }
-  }, [timezoneMode, timezone]);
+  };
 
   // Fetch audio devices
   useEffect(() => {
@@ -72,7 +70,6 @@ export default function Settings() {
         if (devicesBefore.some(d => d.kind === 'audioinput' && !d.label)) {
           await navigator.mediaDevices.getUserMedia({ audio: true });
         }
-        
         const allDevices = await navigator.mediaDevices.enumerateDevices();
         setMicDevices(allDevices.filter(d => d.kind === 'audioinput'));
         setSpeakerDevices(allDevices.filter(d => d.kind === 'audiooutput'));
@@ -105,26 +102,24 @@ export default function Settings() {
     };
 
     // Check if anything has changed
-    if (initialConfig.current) {
-      const isChanged = Object.keys(currentConfig).some(
-        key => (currentConfig as any)[key] !== (initialConfig.current as any)[key]
-      );
-      
-      if (!isChanged) {
-        toast.info("No changes detected so far.");
-        return;
-      }
+    const isChanged = Object.keys(currentConfig).some(
+      key => (currentConfig as any)[key] !== (initialValues.current as any)[key]
+    );
+
+    if (!isChanged) {
+      toast.info("No changes detected.");
+      return;
     }
 
     try {
       setIsSaving(true);
-      await apiClient(`/api/v1/user/config/${userId}`, {
+      await apiClient<any>(`/api/v1/user/config/${userId}`, {
         method: 'POST',
         body: JSON.stringify(currentConfig)
       });
-      
-      initialConfig.current = currentConfig;
+
       toast.success("Settings saved successfully!");
+      await refreshUserConfig();
     } catch (err) {
       console.error("Failed to save user config", err);
       toast.error("Failed to save settings.");
@@ -262,7 +257,7 @@ export default function Settings() {
                 </div>
                 <select 
                   value={timezoneMode} 
-                  onChange={(e) => setTimezoneMode(e.target.value)}
+                  onChange={(e) => handleTimezoneModeChange(e.target.value)}
                   style={{
                     background: 'rgba(255,255,255,0.05)',
                     color: 'white',

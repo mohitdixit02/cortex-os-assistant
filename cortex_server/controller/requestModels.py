@@ -33,6 +33,14 @@ class TaskResponse(BaseModel):
     status: str
     created_at: datetime
 
+class EventResponse(BaseModel):
+    id: UUID
+    name: str
+    event_description: Optional[str]
+    trigger_time: datetime
+    status: str
+    created_at: datetime
+
 class CalendarEventCreate(BaseModel):
     summary: str
     description: Optional[str] = None

@@ -19,9 +19,22 @@ export default function Home() {
     startAudioStream,
     endAudioStream,
     isConversationActive,
-    // isListening,
-    // isSpeaking
+    isListening,
+    isSpeaking
   } = useWebSocket(backendUrl.replace(/^http/, "ws") + "/ws");
+
+  const [isThinking, setIsThinking] = useState(false);
+
+  // Derive thinking state: User stopped speaking but assistant hasn't started yet
+  useEffect(() => {
+    if (!isListening && isConversationActive && !isSpeaking) {
+      // Small delay to avoid flickering between states
+      const timer = setTimeout(() => setIsThinking(true), 500);
+      return () => clearTimeout(timer);
+    } else {
+      setIsThinking(false);
+    }
+  }, [isListening, isSpeaking, isConversationActive]);
 
   // Refresh messages when speech ends
   // const wasSpeaking = useRef(false);
@@ -77,7 +90,11 @@ export default function Home() {
           justifyContent: 'center',
           position: 'relative'
         }}>
-          <AssistantOrb3D isListening={false} isSpeaking={false} />
+          <AssistantOrb3D 
+            isListening={isListening} 
+            isSpeaking={isSpeaking} 
+            isThinking={isThinking} 
+          />
         </div>
 
         <div style={{ marginTop: '40px' }}>

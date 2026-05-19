@@ -16,9 +16,6 @@
   },
   "dependencies": {
     "@ericedouard/vad-node-realtime": "^0.2.0",
-    "@react-three/drei": "^10.7.7",
-    "@react-three/fiber": "^9.6.0",
-    "@types/three": "^0.184.0",
     "framer-motion": "^12.38.0",
     "next": "16.2.0",
     "next-auth": "^4.24.14",
@@ -30,8 +27,7 @@
     "react-timezone-select": "^3.3.3",
     "react-toastify": "^11.1.0",
     "sox-bin": "^1.1.0",
-    "swr": "^2.4.1",
-    "three": "^0.184.0"
+    "swr": "^2.4.1"
   },
   "devDependencies": {
     "@types/electron": "^1.6.12",

@@ -29,6 +29,8 @@ export const useWebSocket = (
         stopAudioStreaming,
         attachAudioListener,
         closeAudioSocket,
+        isListening,
+        isSpeaking
     } = useAudioWebSocket(audioStreamSession);
 
     // Event Socket
@@ -89,5 +91,7 @@ export const useWebSocket = (
         startAudioStream,
         endAudioStream,
         isConversationActive,
+        isListening,
+        isSpeaking
     };
 };

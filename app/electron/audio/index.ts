@@ -14,7 +14,7 @@ type MicStreamOptions = {
     errorRendererEndPoint: string;
 }
 
-class AudioManager {
+export class AudioManager {
     // Types
     micRecorder: typeof AudioRecorder | null;
     micStream: NodeJS.ReadableStream | null;
@@ -126,9 +126,3 @@ class AudioManager {
         });
     }
 }
-
-module.exports = {
-    AudioManager,
-};
-
-export { };

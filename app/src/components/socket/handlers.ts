@@ -36,14 +36,16 @@ export const handleAudioMessage = async (
     playbackDrainTimerRef: React.RefObject<ReturnType<typeof setTimeout> | null>,
     playAudio: (data: Blob | ArrayBuffer) => Promise<void>,
     configAudioSpec: (spec: AudioConfig) => void,
+    setIsSpeaking: (val: boolean) => void,
+    setIsListening: (val: boolean) => void,
 ) => {
     console.log("Received event message:", event.data);
 
     if (typeof event.data === "string") {
         const data = JSON.parse(event.data) as AudioMetaData;
         if (data.type === META_DATA_KEY) {
-            // setIsSpeaking(true);
-            // setIsListening(false);
+            setIsSpeaking(true);
+            setIsListening(false);
             // Report to backend
             Emitter.emitAudioSocket(audioSocket.current, Emitter.EventType.AI_START_SPEAKING);
             const isInt16 = (data.format || "f32le").toLowerCase().includes("16");
@@ -90,8 +92,8 @@ export const handleAudioMessage = async (
             }
 
             playbackDrainTimerRef.current = setTimeout(() => {
-                // setIsSpeaking(false);
-                // setIsListening(isStreamingRef.current);
+                setIsSpeaking(false);
+                // setIsListening(isStreamingRef.current); // Assuming we stay active for now
                 Emitter.emitAudioSocket(
                     audioSocket.current, 
                     Emitter.EventType.AI_STOP_SPEAKING, 

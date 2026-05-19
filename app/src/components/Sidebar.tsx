@@ -141,7 +141,7 @@ export default function Sidebar() {
           justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
           cursor: 'pointer'
         }}
-        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(199,80,82,0.05)'}
+        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,242,255,0.05)'}
         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
       >
         <FaSignOutAlt size={18} />

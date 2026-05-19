@@ -53,7 +53,9 @@ export const useAudioWebSocket = (
                 streamPlaybackRef,
                 playbackDrainTimerRef,
                 playAudio,
-                configAudioSpec
+                configAudioSpec,
+                setIsSpeaking,
+                setIsListening
             );
         };
 
@@ -91,6 +93,12 @@ export const useAudioWebSocket = (
             };
 
             const interruptionHandler = (res: MicStreamRes) => {
+                if (res.event === "speech-start") {
+                    setIsListening(true);
+                    setIsSpeaking(false);
+                } else if (res.event === "speech-end") {
+                    setIsListening(false);
+                }
                 const eventType: typeof Emitter.EventType[keyof typeof Emitter.EventType] = res.event === "speech-start"
                     ? Emitter.EventType.USER_START_SPEAKING
                     : Emitter.EventType.USER_STOP_SPEAKING;

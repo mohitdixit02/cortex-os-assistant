@@ -57,7 +57,7 @@ const ChatHistory = ({ messages }: ChatHistoryProps) => {
               color: 'white',
               fontSize: '14px',
               lineHeight: '1.5',
-              boxShadow: msg.role === "USER" ? '0 4px 15px rgba(199,80,82,0.2)' : 'none'
+              boxShadow: msg.role === "USER" ? '0 4px 15px rgba(255,0,229,0.2)' : 'none'
               }}>              {msg.content}
             </div>
           </motion.div>

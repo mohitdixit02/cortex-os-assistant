@@ -27,8 +27,17 @@ export interface Task {
   created_at: string;
 }
 
+export interface UserEvent {
+  id: string;
+  name: string;
+  event_description?: string;
+  trigger_time: string;
+  status: string;
+  created_at: string;
+}
+
 export function useThreads() {
-  const { data, error, mutate } = useSWR<ChatThread[]>('/api/v1/chat/threads', (url) => apiClient(url));
+  const { data, error, mutate } = useSWR<ChatThread[]>('/api/v1/chat/threads', (url: string) => apiClient<ChatThread[]>(url));
   
   return {
     threads: data,
@@ -41,7 +50,7 @@ export function useThreads() {
 export function useMessages(threadId: string | null) {
   const { data, error, mutate } = useSWR<Message[]>(
     threadId ? `/api/v1/chat/threads/${threadId}/messages` : null,
-    (url) => apiClient(url)
+    (url: string) => apiClient<Message[]>(url)
   );
 
   return {
@@ -60,6 +69,20 @@ export function useTasks(page = 1, limit = 20) {
 
   return {
     tasks: data,
+    isLoading: !error && !data,
+    isError: error,
+    mutate
+  };
+}
+
+export function useEvents(page = 1, limit = 20) {
+  const { data, error, mutate } = useSWR<UserEvent[]>(
+    [`/api/v1/events`, page, limit],
+    ([url, p, l]) => apiClient(url as string, { params: { page: p as number, limit: l as number } })
+  );
+
+  return {
+    events: data,
     isLoading: !error && !data,
     isError: error,
     mutate

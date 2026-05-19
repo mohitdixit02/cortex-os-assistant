@@ -23,6 +23,7 @@ interface AppContextType {
   setSelectedSpeaker: (id: string | null) => void;
   userConfig: any;
   setUserConfig: (config: any) => void;
+  refreshUserConfig: () => Promise<void>;
   logout: () => void;
 }
 
@@ -141,39 +142,52 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [userConfig, setUserConfig] = useState<any>(null);
 
-  // Global Timezone & Config Sync
-  useEffect(() => {
-    async function syncConfig() {
-      const userId = user?.id || user?.user_id;
-      if (!isLoggedIn || !userId) return;
+  const refreshUserConfig = React.useCallback(async () => {
+    const userId = user?.id || user?.user_id;
+    if (!isLoggedIn || !userId) return;
 
-      try {
-        const config = await apiClient<any>(`/api/v1/user/config/${userId}`);
-        setUserConfig(config);
+    try {
+      let config = await apiClient<any>(`/api/v1/user/config/${userId}`);
 
-        // Automatic Timezone Sync
-        if (config?.timezone_mode === 'AUTO') {
-          const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-          if (detectedTz && detectedTz !== config.timezone) {
-            console.log(`Timezone mismatch detected. Syncing ${detectedTz}...`);
-            await apiClient(`/api/v1/user/config/${userId}`, {
+      // Automatic Timezone Sync - Handle before setting state to avoid double render
+      if (config?.timezone_mode === 'AUTO') {
+        const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (detectedTz && detectedTz !== config.timezone) {
+          console.log(`Timezone mismatch detected. Syncing ${detectedTz}...`);
+          try {
+            const updated = await apiClient<any>(`/api/v1/user/config/${userId}`, {
               method: 'POST',
               body: JSON.stringify({
                 timezone: detectedTz
               })
             });
-            // Inform user
+            
+            if (updated && updated.config) {
+              config = updated.config;
+            } else {
+              config = { ...config, timezone: detectedTz };
+            }
             toast.info(`Timezone automatically updated to ${detectedTz}`);
-            // Update local state to match
-            setUserConfig({ ...config, timezone: detectedTz });
+          } catch (syncErr) {
+            console.error("Failed to sync timezone automatically", syncErr);
           }
         }
-      } catch (err) {
-        console.error("Failed to sync global user config", err);
       }
+      
+      setUserConfig(config);
+    } catch (err) {
+      console.error("Failed to sync global user config", err);
     }
-    syncConfig();
   }, [isLoggedIn, user]);
+
+  // Global Timezone & Config Sync
+  useEffect(() => {
+    let mounted = true;
+    if (isLoggedIn && user) {
+      refreshUserConfig();
+    }
+    return () => { mounted = false; };
+  }, [isLoggedIn, user, refreshUserConfig]);
 
   const logout = async () => {
     try {
@@ -209,7 +223,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSelectedSpeaker,
       logout,
       userConfig,
-      setUserConfig
+      setUserConfig,
+      refreshUserConfig
     }}>
       {children}
     </AppContext.Provider>

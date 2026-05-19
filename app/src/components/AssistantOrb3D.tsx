@@ -1,179 +1,106 @@
 "use client";
 
-import { useEffect, useRef, memo } from "react";
-import * as THREE from "three";
+import React from "react";
+import { motion } from "framer-motion";
 
-interface AIOrbProps {
+interface AssistantOrbProps {
   isListening: boolean;
   isSpeaking: boolean;
+  isThinking?: boolean;
 }
 
-function AssistantOrb3D({ isListening, isSpeaking }: AIOrbProps) {
-  const mountRef = useRef<HTMLDivElement>(null);
-  const materialRef = useRef<THREE.ShaderMaterial>(null!);
-  const stateRef = useRef(0);
+export default function AssistantOrb3D({ isListening, isSpeaking, isThinking = false }: AssistantOrbProps) {
+  // Speed and scale based on assistant state
+  // Idle: 12s, Listening: 6s, Thinking: 1.5s (Rapid), Speaking: 3s
+  const rotationDuration = isThinking ? 1.5 : isSpeaking ? 3 : isListening ? 6 : 12;
+  
+  // Pulsing scale
+  const pulseScale = isSpeaking ? [1, 1.15, 1] : isThinking ? [1, 1.04, 1] : isListening ? [1, 1.08, 1] : [1, 1.02, 1];
+  const pulseDuration = isSpeaking ? 0.4 : isThinking ? 0.8 : isListening ? 1.2 : 2.5;
 
-  // Sync internal state with props
-  useEffect(() => {
-    if (isSpeaking) {
-      stateRef.current = 2;
-    } else if (isListening) {
-      stateRef.current = 1;
-    } else {
-      stateRef.current = 0;
-    }
-    
-    if (materialRef.current) {
-      materialRef.current.uniforms.state.value = stateRef.current;
-    }
-  }, [isListening, isSpeaking]);
+  // Distortion animation (blob effect) speed
+  const distortionDuration = isSpeaking || isThinking ? 2 : isListening ? 4 : 6;
 
-  useEffect(() => {
-    const mountPoint = mountRef.current;
-    if (!mountPoint) return;
+  // Color shift: Listening -> more Cyan, Speaking -> more Pink, Thinking -> Mix
+  const gradientColors = isListening 
+    ? "#00f2ff, #7950c7, #00f2ff, #7950c7, #00f2ff" 
+    : isSpeaking 
+    ? "#ff00e5, #7950c7, #ff00e5, #7950c7, #ff00e5" 
+    : "#00f2ff, #ff00e5, #00f2ff, #ff00e5, #00f2ff";
 
-    // To prevent duplicate canvases, clear the mount point
-    mountPoint.innerHTML = '';
-
-    const scene = new THREE.Scene();
-
-    const camera = new THREE.PerspectiveCamera(
-      75,
-      mountPoint.clientWidth / mountPoint.clientHeight,
-      0.1,
-      100
-    );
-    camera.position.z = 3;
-
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(
-      mountPoint.clientWidth,
-      mountPoint.clientHeight
-    );
-    renderer.setClearColor(0x000000, 0); // Transparent background
-    mountPoint.appendChild(renderer.domElement);
-
-    // 💡 Light
-    const light = new THREE.PointLight(0xffffff, 1.5);
-    light.position.set(3, 3, 3);
-    scene.add(light);
-
-    // 🟣 Perfect Sphere
-    const geometry = new THREE.SphereGeometry(1, 128, 128);
-
-    const material = new THREE.ShaderMaterial({
-      uniforms: {
-        time: { value: 0 },
-        state: { value: stateRef.current },
-      },
-      vertexShader: `
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        varying vec2 vUv;
-        uniform float time;
-        uniform float state;
-
-        void main() {
-          vec3 primaryRed = vec3(0.78, 0.31, 0.32); // #c75052
-          vec3 primaryPurple = vec3(0.47, 0.31, 0.78); // #7950c7
-          vec3 black = vec3(0.0, 0.0, 0.0);
-
-          float pulse = 0.5 + 0.5 * sin(time * 2.0);
-
-          vec3 color;
-
-          if (state == 0.0) {
-            color = mix(primaryPurple, primaryRed, vUv.y + pulse * 0.2);
-          } else if (state == 1.0) {
-            color = mix(primaryRed, black, vUv.y + pulse * 0.4);
-          } else {
-            color = mix(black, primaryPurple, vUv.y + pulse * 0.6);
-          }
-
-          // glow effect
-          float glow = pow(1.0 - vUv.y, 2.0);
-          color += glow * 0.6;
-
-          gl_FragColor = vec4(color, 1.0);
-        }
-      `,
-    });
-
-    materialRef.current = material;
-
-    const sphere = new THREE.Mesh(geometry, material);
-    scene.add(sphere);
-
-    let animationId: number;
-
-    const animate = (time: number) => {
-      animationId = requestAnimationFrame(animate);
-
-      const t = time * 0.001;
-      material.uniforms.time.value = t;
-
-      // 🔁 Smooth pulsating scale
-      let scale = 1;
-      const currentState = stateRef.current;
-
-      if (currentState === 0) {
-        scale = 1 + Math.sin(t * 1.5) * 0.02;
-      } else if (currentState === 1) {
-        scale = 1 + Math.sin(t * 3.0) * 0.05;
-      } else {
-        scale = 1 + Math.sin(t * 6.0) * 0.08;
-      }
-
-      sphere.scale.set(scale, scale, scale);
-
-      // subtle rotation
-      sphere.rotation.y += 0.003;
-
-      renderer.render(scene, camera);
-    };
-
-    animate(0);
-
-    const handleResize = () => {
-      const width = mountPoint.clientWidth;
-      const height = mountPoint.clientHeight;
-
-      renderer.setSize(width, height);
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      cancelAnimationFrame(animationId);
-      window.removeEventListener("resize", handleResize);
-
-      geometry.dispose();
-      material.dispose();
-      renderer.dispose();
-
-      if (mountPoint && renderer.domElement && mountPoint.contains(renderer.domElement)) {
-        mountPoint.removeChild(renderer.domElement);
-      }
-    };
-  }, []);
+  const distortion = [
+    "50% 50% 50% 50% / 50% 50% 50% 50%",
+    "48% 52% 51% 49% / 51% 48% 52% 49%",
+    "52% 48% 49% 51% / 49% 52% 48% 51%",
+    "50% 52% 48% 50% / 52% 50% 50% 48%",
+    "50% 50% 50% 50% / 50% 50% 50% 50%"
+  ];
 
   return (
-    <div
-      ref={mountRef}
-      style={{
-        width: "400px",
-        height: "400px",
-        background: "transparent",
-      }}
-    />
+    <div style={{ 
+      width: "100%", 
+      height: "100%", 
+      display: "flex", 
+      alignItems: "center", 
+      justifyContent: "center",
+      minHeight: "400px"
+    }}>
+      <motion.div
+        animate={{ 
+          rotate: 360,
+          scale: pulseScale,
+          borderRadius: distortion
+        }}
+        transition={{
+          rotate: {
+            duration: rotationDuration,
+            repeat: Infinity,
+            ease: "linear"
+          },
+          scale: {
+            duration: pulseDuration,
+            repeat: Infinity,
+            ease: "easeInOut"
+          },
+          borderRadius: {
+            duration: distortionDuration,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }
+        }}
+        style={{
+          width: "240px",
+          height: "240px",
+          padding: "25px", // Thickness of the gradient ring
+          background: `conic-gradient(from 0deg, ${gradientColors})`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: isListening 
+            ? "0 0 40px rgba(0, 242, 255, 0.5)" 
+            : isSpeaking 
+            ? "0 0 40px rgba(255, 0, 229, 0.5)" 
+            : "0 0 30px rgba(255, 255, 255, 0.1)",
+          position: "relative",
+          overflow: "hidden",
+          transition: "box-shadow 0.5s ease"
+        }}
+      >
+        {/* Inner Circle - Black center with matching distortion */}
+        <motion.div 
+          animate={{ borderRadius: distortion }}
+          transition={{
+            duration: distortionDuration,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          style={{
+            width: "100%",
+            height: "100%",
+            background: "#000000"
+          }} 
+        />
+      </motion.div>
+    </div>
   );
 }
-
-export default memo(AssistantOrb3D);
