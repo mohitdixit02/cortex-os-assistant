@@ -16,7 +16,7 @@ DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@localhost:{DB_PORT}/{DB_NAME}"
 os.environ["DB_URL"] = DB_URL
 
 # Redis Setup
-os.environ["REDIS_HOST"] = os.getenv("REDIS_HOST", "localhost")
+os.environ["REDIS_HOST"] = "localhost"
 os.environ["REDIS_PORT"] = os.getenv("REDIS_PORT", "6379")
 
 from fastapi import FastAPI, HTTPException

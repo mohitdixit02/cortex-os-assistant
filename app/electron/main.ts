@@ -21,6 +21,11 @@ if (env.toLowerCase() === "development") {
   });
 }
 
+// Set App ID for Windows Notifications
+if (process.platform === 'win32') {
+  app.setAppUserModelId("com.memoryawareai.app");
+}
+
 let mainWindow;
 
 function createWindow() {

@@ -149,6 +149,8 @@ class ResponseKey(str, Enum):
     WAITING_FOR_FURTHER_AUDIO = "waiting_for_further_audio"
     AI_AUDIO_STREAM_START = "ai_audio_stream_start"
     AI_AUDIO_STREAM_END = "ai_audio_stream_end"
+    REMINDER_TRIGGERED = "reminder_triggered"
+    OPEN_AUDIO_WEBSOCKET = "open_audio_websocket"
     NO_AUDIO = "no_audio"
 
 EVENT_RESPONSE_MAP = {
@@ -194,6 +196,18 @@ EVENT_RESPONSE_MAP = {
         "stage": "ended",
         "message": "AI finished streaming audio"
     },
+    ResponseKey.REMINDER_TRIGGERED: {
+        "status": "ok",
+        "type": "reminder",
+        "stage": "triggered",
+        "message": "A reminder has been triggered"
+    },
+    ResponseKey.OPEN_AUDIO_WEBSOCKET: {
+        "status": "ok",
+        "type": "audio_socket",
+        "stage": "open_request",
+        "message": "Requesting to open audio websocket"
+    },
     ResponseKey.NO_AUDIO: {
         "status": "error",
         "type": "response",
@@ -217,12 +231,14 @@ class StreamEventResponse:
         self.websocket = websocket
         self.streamEvent = streamEvent
     
-    async def send_response(self, response: ResponseKey):
+    async def send_response(self, response: ResponseKey, message: str | None = None):
         """Send a standardized JSON response based on the provided response key (thread-safe) \n"""
         if response not in EVENT_RESPONSE_MAP:
             raise ValueError(f"Invalid response key: {response}")
         
-        payload = EVENT_RESPONSE_MAP[response]
+        payload = EVENT_RESPONSE_MAP[response].copy()
+        if message:
+            payload["message"] = message
 
         async with self.streamEvent.getLock():
             await self.websocket.send_json(payload)

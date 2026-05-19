@@ -5,6 +5,7 @@ import { handleEventMessage } from "./handlers";
 type EventListenerProps = {
     userId: string;
     sessionId?: string;
+    onMessage?: (event: MessageEvent) => void;
 }
 
 export const useEventWebSocket = (
@@ -15,7 +16,7 @@ export const useEventWebSocket = (
     }
     const eventSocketRef = useRef<WebSocket | null>(null);;
     const attachEventListener = useCallback(async (
-        { userId }: EventListenerProps
+        { userId, onMessage }: EventListenerProps
     ) => {
         const eventUrl = `${baseUrl}/event?user_id=${userId}`;
         if (!eventSocketRef.current || eventSocketRef.current.readyState !== WebSocket.OPEN) {
@@ -23,14 +24,31 @@ export const useEventWebSocket = (
         }
         const eventSocket = eventSocketRef.current;
         if (eventSocket) {
-            eventSocket.addEventListener("message", handleEventMessage);
+            if (onMessage) {
+                eventSocket.addEventListener("message", onMessage);
+            } else {
+                eventSocket.addEventListener("message", handleEventMessage);
+            }
         }
         return () => {
-            eventSocket?.removeEventListener("message", handleEventMessage);
+            if (onMessage) {
+                eventSocket?.removeEventListener("message", onMessage);
+            } else {
+                eventSocket?.removeEventListener("message", handleEventMessage);
+            }
         };
     }, [baseUrl]);
 
+    const sendEventMessage = useCallback((message: any) => {
+        if (eventSocketRef.current && eventSocketRef.current.readyState === WebSocket.OPEN) {
+            eventSocketRef.current.send(JSON.stringify(message));
+        } else {
+            console.warn("Event socket not open, cannot send message:", message);
+        }
+    }, []);
+
     return {
         attachEventListener,
+        sendEventMessage
     }
 };

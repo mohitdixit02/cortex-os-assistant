@@ -24,6 +24,22 @@ async def ws_event(websocket: WebSocket, user_id: str = Query(...)):
         while True:
             res = await websocket.receive_text()
             print(f"Received on /event socket (user_id={user_id}): {res}")
+            
+            try:
+                payload = json.loads(res)
+                msg_type = payload.get("type")
+                
+                if msg_type == "WEBSOCKET_OPEN_TRUE":
+                    state.audio_ws_success = True
+                    state.audio_ws_opened_event.set()
+                    
+                elif msg_type == "WEBSOCKET_OPEN_FALSE":
+                    state.audio_ws_success = False
+                    state.audio_ws_opened_event.set()
+                    
+            except json.JSONDecodeError:
+                continue
+                
     except WebSocketDisconnect:
         state.event_socket = None
 

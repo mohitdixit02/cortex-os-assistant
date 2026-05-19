@@ -110,6 +110,9 @@ async def submit_task_to_queue(request: TaskItem):
     if task_owner == TaskOwner.EVENT_TOOL.value:
         await update_submit_event_task_status(request)
 
+    user_id = request.metadata.get("user_id")
+    logger.info(f"Publishing result for task {request.task_id}. User ID: {user_id}")
+
     result_payload = json.dumps({
         "task_id": request.task_id,
         "status": request.status.value,
@@ -121,9 +124,12 @@ async def submit_task_to_queue(request: TaskItem):
         "finished_at": time.time()
     })
     
-    user_id = request.metadata.get("user_id")
     if user_id:
-        result_redis_client.client.publish(f"user_stream:{user_id}", result_payload)
+        channel = f"user_stream:{user_id}"
+        logger.info(f"Publishing to Redis channel: {channel}")
+        result_redis_client.client.publish(channel, result_payload)
+    else:
+        logger.warning(f"No user_id found in metadata for task {request.task_id}. Cannot publish to user_stream.")
     
     return {"status": "success"}
 

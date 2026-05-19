@@ -11,6 +11,8 @@ class UserVoiceState:
     audio_socket: any = None  # Store WebSocket object for audio stream
     stream_event: any = None  # Store active StreamEvent object
     stream_client: any = None # Store active StreamClient object
+    audio_ws_opened_event: asyncio.Event = field(default_factory=asyncio.Event)
+    audio_ws_success: bool = False
 
 class VoiceStateManager:
     _instance = None

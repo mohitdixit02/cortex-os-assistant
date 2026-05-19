@@ -38,6 +38,7 @@ export const handleAudioMessage = async (
     configAudioSpec: (spec: AudioConfig) => void,
     setIsSpeaking: (val: boolean) => void,
     setIsListening: (val: boolean) => void,
+    onFinishSpeaking?: () => void,
 ) => {
     console.log("Received event message:", event.data);
 
@@ -100,6 +101,11 @@ export const handleAudioMessage = async (
                     { streamId: doneStreamId }
                 );
                 playbackDrainTimerRef.current = null;
+                
+                // Trigger callback after playback finishes and backend is notified
+                if (onFinishSpeaking) {
+                    onFinishSpeaking();
+                }
             }, ackAfterMs);
         }
     }

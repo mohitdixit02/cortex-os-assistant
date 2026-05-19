@@ -19,11 +19,8 @@ export default function Settings() {
     );
   }
 
-  const configKey = userConfig.updated_at || JSON.stringify(userConfig);
-
   return (
     <SettingsForm 
-      key={configKey} 
       initialConfig={userConfig} 
       refreshUserConfig={refreshUserConfig} 
     />
@@ -46,6 +43,16 @@ function SettingsForm({ initialConfig, refreshUserConfig }: { initialConfig: any
 
   // Track initial values to detect changes
   const initialValues = useRef(initialConfig);
+
+  // Sync local state if the global config is refreshed
+  useEffect(() => {
+    setVoiceClientTimeout(initialConfig.voice_client_timeout_seconds || 3);
+    setForceOpenWebsocket(initialConfig.force_open_websocket ?? true);
+    setReminderBeforeTriggerTime(initialConfig.reminder_minutes_before_trigger_time || 0);
+    setTimezone(initialConfig.timezone || 'UTC');
+    setTimezoneMode(initialConfig.timezone_mode || 'AUTO');
+    initialValues.current = initialConfig;
+  }, [initialConfig]);
 
   const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
   const [speakerDevices, setSpeakerDevices] = useState<MediaDeviceInfo[]>([]);

@@ -38,7 +38,7 @@ export const useAudioWebSocket = (
         closeAudioPlayer
     } = useAudioManager();
 
-    const attachAudioListener = useCallback(async () => {
+    const attachAudioListener = useCallback(async (onFinishSpeaking?: () => void) => {
         if (playbackDrainTimerRef.current) {
             clearTimeout(playbackDrainTimerRef.current);
             playbackDrainTimerRef.current = null;
@@ -55,7 +55,8 @@ export const useAudioWebSocket = (
                 playAudio,
                 configAudioSpec,
                 setIsSpeaking,
-                setIsListening
+                setIsListening,
+                onFinishSpeaking
             );
         };
 
