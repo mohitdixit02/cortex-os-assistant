@@ -48,6 +48,8 @@ is_summarized: Boolean (Default: False)
 is_tool_used: Boolean (Default: False)
 tool_id: String (Nullable)
 embedding: Vector — For pgvector search (variable dimensions)
+is_refined_query: Boolean (Default: False)
+refined_query: Text (Nullable)
 created_at: Timestamp
 
 ### UserShortTermMemory (STM)

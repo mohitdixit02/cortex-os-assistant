@@ -58,7 +58,19 @@ const ChatHistory = ({ messages }: ChatHistoryProps) => {
               fontSize: '14px',
               lineHeight: '1.5',
               boxShadow: msg.role === "USER" ? '0 4px 15px rgba(255,0,229,0.2)' : 'none'
-              }}>              {msg.content}
+              }}>
+              {msg.is_refined_query ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ opacity: 0.8, fontSize: '13px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px' }}>
+                    <span style={{ fontWeight: 'bold' }}>Original:</span> {msg.content}
+                  </div>
+                  <div>
+                    <span style={{ fontWeight: 'bold' }}>Refined:</span> {msg.refined_query}
+                  </div>
+                </div>
+              ) : (
+                msg.content
+              )}
             </div>
           </motion.div>
         ))}

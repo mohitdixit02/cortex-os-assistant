@@ -25,14 +25,25 @@ async def _add_vc_task_to_queue(request: AddTaskRequest) -> TaskItem:
     if not user_id or not session_id:
         raise HTTPException(status_code=400, detail="Missing User ID or Session ID in task metadata")
     
+    query = request.payload.get("query", "")
+    original_query = request.payload.get("original_query")
+    is_refined_query = request.payload.get("is_refined_query", False)
+    
+    # If refined, content is the original spoken text, refined_query is the AI-refined version.
+    # If not refined, content is just the query.
+    content_to_save = original_query if is_refined_query and original_query else query
+    refined_query_to_save = query if is_refined_query else None
+
     user_msg = memory_saver.save_message(
         session_id=session_id,
         user_id=user_id,
-        content=request.payload.get("query", ""),
+        content=content_to_save,
         role=RoleType.USER,
         ai_client=None,
         is_tool_used=False,
-        tool_id=None
+        tool_id=None,
+        is_refined_query=is_refined_query,
+        refined_query=refined_query_to_save
     )
     
     memory_saver.save_message(

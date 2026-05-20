@@ -31,6 +31,8 @@ class MemorySaver:
         is_tool_used: Optional[bool] = False,
         is_summarized: Optional[bool] = False,
         tool_id: Optional[str] = None,
+        is_refined_query: bool = False,
+        refined_query: Optional[str] = None
     ) -> Message:
         """
         ### Save a message to the database. \n
@@ -43,6 +45,8 @@ class MemorySaver:
         - `is_tool_used`: (Optional) Whether a tool was used in generating the message. Default is False. \n
         - `is_summarized`: (Optional) Whether this message has already been summarized. Default is False. \n
         - `tool_id`: (Optional) The ID of the tool used, if applicable. \n
+        - `is_refined_query`: (Optional) Whether the query was refined. Default is False. \n
+        - `refined_query`: (Optional) The refined query text. \n
         **Output**: The created message object
         """
         # Implement database saving logic here using self.engine
@@ -63,7 +67,9 @@ class MemorySaver:
                         is_tool_used=is_tool_used,
                         is_summarized=is_summarized,
                         tool_id=tool_id,
-                        embedding=embedding
+                        embedding=embedding,
+                        is_refined_query=is_refined_query,
+                        refined_query=refined_query
                     )
                 message_obj = create_one(
                     session=session,

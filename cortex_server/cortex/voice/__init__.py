@@ -156,7 +156,9 @@ class VoiceClient:
         query: str,
         submit_task: bool = True,
         user_id: str | None = None,
-        session_id: str | None = None
+        session_id: str | None = None,
+        original_query: str | None = None,
+        is_refined_query: bool = False
     ) -> AsyncGenerator[bytes, None]:
         """
         ### Process Transcribed Query and Reply with Audio Stream
@@ -189,6 +191,8 @@ class VoiceClient:
                         await MainTaskQueue.add_task(
                             payload={
                                 "query": query,
+                                "original_query": original_query,
+                                "is_refined_query": is_refined_query,
                                 "emotion": emotion.get("label", "neutral"),
                             },
                             task_name=task_name,

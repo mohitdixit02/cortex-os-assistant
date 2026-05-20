@@ -87,6 +87,8 @@ CREATE TABLE IF NOT EXISTS messages (
     is_tool_used BOOLEAN NOT NULL DEFAULT FALSE,
     tool_id VARCHAR(255),
     embedding VECTOR,
+    is_refined_query BOOLEAN NOT NULL DEFAULT FALSE,
+    refined_query TEXT,
     created_at TIMESTAMPTZ NOT NULL
 );
 

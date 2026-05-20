@@ -109,11 +109,14 @@ class StreamClient:
             await stream_event_response.send_response(ResponseKey.FINISH_LISTENING)
             
             final_query = query_completion_res.refined_query
+            is_refined = query_completion_res.is_refined
             self.streamEvent.resetTranscribedBuffer()
             
             await self.audioBridge.stream_audio_websocket(
                 audio_chunk_generator=self.voiceClient.respond_to_text,
                 query=final_query,
+                original_query=combined_text,
+                is_refined_query=is_refined,
                 user_id=self.streamEvent.user_id,
                 session_id=self.streamEvent.session_id
             )

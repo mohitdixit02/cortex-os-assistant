@@ -105,6 +105,8 @@ class Message(SQLModel, table=True):
     is_summarized: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, default=False, index=True))
     tool_id: Optional[str] = Field(default=None, sa_column=Column(String(255), nullable=True))
     embedding: Optional[list[float]] = Field(default=None, sa_column=Column(Vector(), nullable=True))
+    is_refined_query: bool = Field(default=False, sa_column=Column(Boolean, nullable=False, default=False))
+    refined_query: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
     created_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False, index=True))
 
     session: "ChatSession" = Relationship(back_populates="messages")

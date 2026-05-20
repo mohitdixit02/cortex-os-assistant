@@ -16,6 +16,8 @@ export interface Message {
   user_id: string;
   content: string;
   role: string;
+  is_refined_query?: boolean;
+  refined_query?: string;
   created_at: string;
 }
 

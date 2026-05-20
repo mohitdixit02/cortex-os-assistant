@@ -24,6 +24,8 @@ class MessageResponse(BaseModel):
     user_id: UUID
     content: str
     role: str
+    is_refined_query: bool = False
+    refined_query: Optional[str] = None
     created_at: datetime
 
 class TaskResponse(BaseModel):

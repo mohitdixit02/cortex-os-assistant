@@ -14,6 +14,7 @@ class VoiceClientQueryConfidence(BaseModel):
     reasoning: Annotated[str, Field(description="The reasoning behind whether the thought is complete or not, and how the confidence score is determined. Not more than 80 words")]
     is_complete: Annotated[bool, Field(description="Whether the user has finished their complete thought/sentence")]
     confidence: Annotated[float, Field(description="Confidence score between 0.0 and 1.0")]
+    is_refined: Annotated[bool, Field(description="Whether the original query was refined (e.g., portions discarded due to 'forget' or 'ignore' requests)")]
     refined_query: Annotated[str, Field(description="The refined/combined query after handling any 'forget' or 'discard' requests")]
 
 VOICE_CLIENT_QUERY_COMPLETION_CONFIDENCE = """
@@ -25,15 +26,16 @@ You are an expert conversational analyzer. Your task is to determine if a user h
 2. Determine if the user has expressed a complete thought that can be processed.
 3. **CRITICAL:** If the user explicitly asks to "forget", "discard", "ignore", or "start over" regarding the previous part of their current speech (e.g., "Wait, forget that, what I meant was..."), you must:
     - Set `is_complete` based on whether the *new* part of the thought is complete.
+    - Set `is_refined` to true.
     - Set `refined_query` to only include the relevant part of the query, discarding the parts the user asked to forget.
-4. If there are no such requests, `refined_query` should be the same as `current_text`.
+4. If there are no such requests, `is_refined` should be false and `refined_query` should be the same as `current_text`.
 5. Provide a confidence score for your decision.
 
 # Examples:
-- Text: "I am planning to go out" -> is_complete: false, confidence: 0.6, refined_query: "I am planning to go out"
-- Text: "I am planning to go out I guess to Mumbai" -> is_complete: true, confidence: 0.95, refined_query: "I am planning to go out I guess to Mumbai"
-- Text: "Can you set a reminder for 3 PM... wait forget that, set it for 5 PM" -> is_complete: true, confidence: 0.9, refined_query: "Set a reminder for 5 PM"
-- Text: "What is the weather in... actually nevermind, what is the capital of France?" -> is_complete: true, confidence: 0.95, refined_query: "What is the capital of France?"
+- Text: "I am planning to go out" -> is_complete: false, confidence: 0.6, is_refined: false, refined_query: "I am planning to go out"
+- Text: "I am planning to go out I guess to Mumbai" -> is_complete: true, confidence: 0.95, is_refined: false, refined_query: "I am planning to go out I guess to Mumbai"
+- Text: "Can you set a reminder for 3 PM... wait forget that, set it for 5 PM" -> is_complete: true, confidence: 0.9, is_refined: true, refined_query: "Set a reminder for 5 PM"
+- Text: "What is the weather in... actually nevermind, what is the capital of France?" -> is_complete: true, confidence: 0.95, is_refined: true, refined_query: "What is the capital of France?"
 
 # Input:
 Current Text: {current_text}
