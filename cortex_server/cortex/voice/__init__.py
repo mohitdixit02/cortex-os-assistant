@@ -255,8 +255,15 @@ class VoiceClient:
         """
         with self._no_trace_context():
             self.logger.info("Starting Cortex Main Server...")
-            query = await self.stt_client.transcribe(audio_bytes)
+            query, detected_lang = await self.stt_client.transcribe(audio_bytes)
+            self.logger.info("Detected Language: %s", detected_lang)
             if not query:
+                return
+
+            if detected_lang and detected_lang != "en":
+                self.logger.info("Non-English language detected (%s), sending fallback response.", detected_lang)
+                async for chunk in self.tts_client.get_audio_stream("Sorry! I can't understand what you said"):
+                    yield chunk
                 return
 
             async for chunk in self.respond_to_text(

@@ -83,7 +83,7 @@ class STTModel:
             self, 
             audio_chunks: List[np.ndarray], 
             batch_size: int = 1
-        ) -> List[str]:
+        ) -> tuple[List[str], str | None]:
         """
         ### Transcribe Audio Chunks using Model (in Batches if specified) \n
         Transcribe a list of audio chunks using Model. \n
@@ -96,13 +96,16 @@ class STTModel:
         - `batch_size`: Number of chunks to transcribe in a single batch. Default is 1 (no batching). \n
 
         **Output**: \n
-        - `List of transcribed texts` corresponding to each audio chunk (in order).
+        - `Tuple` containing:
+            1. `List of transcribed texts` corresponding to each audio chunk (in order).
+            2. `Detected language` as a string (e.g., "en") or None if not detected.
         """
         if not audio_chunks:
-            return []
+            return [], None
 
         safe_batch_size = max(1, int(batch_size))
         outputs: List[str] = []
+        detected_language = None
 
         for i in range(0, len(audio_chunks), safe_batch_size):
             batch = audio_chunks[i:i + safe_batch_size]
@@ -121,11 +124,37 @@ class STTModel:
             input_features = self._normalize_input_features(input_features)
 
             with torch.inference_mode():
-                generated_ids = self.model.generate(
+                # For Whisper, we can get the language by looking at the first predicted token
+                # when forced_decoder_ids is not set to a specific language.
+                generation_outputs = self.model.generate(
                     input_features=input_features,
                     task=self.model_cfg.get("task"),
                     return_timestamps=self.model_cfg.get("return_timestamps"),
+                    return_dict_in_generate=True,
+                    output_scores=True,
                 )
+                generated_ids = generation_outputs.sequences
+
+            # Detect language from the first batch if not already detected
+            if detected_language is None and generated_ids.shape[0] > 0:
+                # In HuggingFace, generated_ids usually starts with the decoder_start_token_id
+                # The language token is the first token actually "generated" by the model
+                # if it's not forced.
+                
+                # Let's look at the generated sequence and decode everything including special tokens
+                full_tokens = self.processor.tokenizer.convert_ids_to_tokens(generated_ids[0])
+                self.logger.info("Raw Whisper tokens: %s", full_tokens)
+                
+                for token in full_tokens:
+                    # Whisper language tokens are in the format '<|en|>', '<|fr|>', etc.
+                    if token.startswith("<|") and token.endswith("|>") and len(token) == 6:
+                        detected_language = token.strip("<|>")
+                        break
+                
+                if detected_language:
+                    self.logger.info("Detected language from Whisper tokens: %s", detected_language)
+                else:
+                    self.logger.warning("Could not find language token in Whisper tokens.")
 
             texts = self.processor.batch_decode(
                 generated_ids,
@@ -133,4 +162,4 @@ class STTModel:
             )
             outputs.extend([t.strip() for t in texts])
 
-        return outputs
+        return outputs, detected_language

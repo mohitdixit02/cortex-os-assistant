@@ -55,7 +55,7 @@ class STTClient:
         return chunks
 
     # Sync function as involves Audio decoding and model inference, which are both CPU/GPU bound and not natively async-friendly.
-    def _transcribe_sync(self, audio_bytes: bytes) -> str:
+    def _transcribe_sync(self, audio_bytes: bytes) -> tuple[str, str | None]:
         """
             Transcribe audio bytes synchronously.
                 1. Decode incoming PCM audio bytes to numpy array.
@@ -69,18 +69,18 @@ class STTClient:
         self.logger.info("STT Transcription started at: %s", time.strftime("%H:%M:%S", time.localtime(start_time)))
         
         audio_chunks = self._batch_chunks(audio)
-        output = self.model.transcribe_chunks(audio_chunks, batch_size=self.chunk_batch_size)
+        output, detected_lang = self.model.transcribe_chunks(audio_chunks, batch_size=self.chunk_batch_size)
         final_text = " ".join(output).strip()
-        self.logger.info("STT Transcription completed at: %s", time.strftime("%H:%M:%S", time.localtime(time.time())))
+        self.logger.info("STT Transcription completed at: %s, Detected Language: %s", time.strftime("%H:%M:%S", time.localtime(time.time())), detected_lang)
         self.logger.info("Total transcription time: %f", time.time() - start_time)
         self.logger.info("Segment Transcription: %s", final_text)
-        return final_text
+        return final_text, detected_lang
     
-    async def transcribe(self, audio_bytes: bytes) -> str:
+    async def transcribe(self, audio_bytes: bytes) -> tuple[str, str | None]:
         """
             ### Transcribe Audio Bytes to Text Asynchronously
             **Input**: Raw audio bytes - PCM (16-bit) \n
-            **Output**: Transcribed text - String \n
+            **Output**: Tuple of (Transcribed text, Detected language) \n
             **Key Features**: \n
             - Offloads the transcription work to a separate thread for performance effeciency.
             - Handles both short and long audio inputs with configurable chunking and batching strategies to optimize latency.

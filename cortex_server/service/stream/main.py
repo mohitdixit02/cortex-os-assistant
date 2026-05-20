@@ -57,11 +57,16 @@ class StreamClient:
             # Transcribe the current segment
             transcription_task = asyncio.create_task(self.voiceClient.stt_client.transcribe(wav_bytes))
             try:
-                query_segment = await asyncio.shield(transcription_task)
+                query_segment, detected_lang = await asyncio.shield(transcription_task)
+                if detected_lang:
+                    self.streamEvent.detected_language = detected_lang
+                print(f"Segment Detected Language: {detected_lang}")
             except asyncio.CancelledError:
                 # If cancelled during transcription, wait for it to finish and append to buffer
                 print("Transcription interrupted, waiting to preserve result...")
-                query_segment = await transcription_task
+                query_segment, detected_lang = await transcription_task
+                if detected_lang:
+                    self.streamEvent.detected_language = detected_lang
                 if query_segment:
                     self.streamEvent.appendTranscribedBuffer(query_segment)
                     print(f"Interrupted transcription preserved: {query_segment}")
@@ -108,6 +113,16 @@ class StreamClient:
             print("Finalizing listening and starting response...")
             await stream_event_response.send_response(ResponseKey.FINISH_LISTENING)
             
+            # Fallback for non-English language
+            if self.streamEvent.detected_language and self.streamEvent.detected_language != "en":
+                print(f"Non-English language detected ({self.streamEvent.detected_language}), sending fallback response.")
+                self.streamEvent.resetTranscribedBuffer()
+                await self.audioBridge.stream_audio_websocket(
+                    audio_chunk_generator=self.voiceClient.tts_client.get_audio_stream,
+                    text="Sorry! I can't understand what you said"
+                )
+                return
+
             final_query = query_completion_res.refined_query
             is_refined = query_completion_res.is_refined
             self.streamEvent.resetTranscribedBuffer()

@@ -25,6 +25,7 @@ class StreamEvent:
     current_stream_id: int
     user_id: str | None
     session_id: str | None
+    detected_language: str | None
 
     def __init__(self, user_id: str | None = None):
         self.audio_buffer = bytearray()
@@ -35,6 +36,7 @@ class StreamEvent:
         self.current_stream_id = 0
         self.user_id = user_id
         self.session_id = None
+        self.detected_language = None
 
     def increment_stream_id(self) -> int:
         """Generate a new unique ID for the next audio stream."""
