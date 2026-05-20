@@ -6,7 +6,6 @@ from cortex_server.controller.auth import router as auth_router
 from cortex_server.controller.chat_controller import router as chat_router
 from cortex_server.controller.task_controller import router as task_router
 from cortex_server.controller.event_controller import router as event_router
-from cortex_server.controller.user_controller import router as user_router
 from cortex_server.controller.config_controller import router as config_router
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -38,7 +37,6 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(chat_router, prefix="/api")
 app.include_router(task_router, prefix="/api")
 app.include_router(event_router, prefix="/api")
-app.include_router(user_router, prefix="/api")
 app.include_router(config_router, prefix="/api")
 
 if __name__ == "__main__":

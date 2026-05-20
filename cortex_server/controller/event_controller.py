@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Query
 from typing import List
-from service.auth.auth_dependency import get_current_user_id
-from service.event_service import event_service
-from controller.requestModels import EventResponse
+from cortex_server.service.auth.auth_dependency import get_current_user_id
+from cortex_server.service.event_service import event_service
+from cortex_server.controller.requestModels import EventResponse
 from uuid import UUID
 
 router = APIRouter(prefix="/v1/events", tags=["Events"])

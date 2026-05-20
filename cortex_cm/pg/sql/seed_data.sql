@@ -37,7 +37,6 @@ INSERT INTO messages (
     'USER',
     NULL,
     FALSE,
-    FALSE,
     NULL,
     NULL,
     NOW()
@@ -50,7 +49,7 @@ INSERT INTO messages (
     'AI',
     'VOICE_CLIENT',
     TRUE,
-    'send_whatsapp',
+    'event_tool_03',
     NULL,
     NOW()
 )
@@ -102,7 +101,6 @@ INSERT INTO user_knowledge_base (
 (
     '66666666-6666-6666-6666-666666666662',
     '11111111-1111-1111-1111-111111111111',
-    'DISLIKE',
     'MUST',
     'Does not like interruptions during focused work blocks.',
     TRUE,
@@ -112,36 +110,13 @@ INSERT INTO user_knowledge_base (
 )
 ON CONFLICT (trait_id) DO NOTHING;
 
-INSERT INTO tools (
-    tool_id, tool_name, tool_description, is_active, created_at, updated_at, deleted_at
-) VALUES
-(
-    '77777777-7777-7777-7777-777777777771',
-    'send_whatsapp',
-    'Send a WhatsApp notification to the user with a message payload.',
-    TRUE,
-    NOW(),
-    NOW(),
-    NULL
-),
-(
-    '77777777-7777-7777-7777-777777777772',
-    'create_reminder',
-    'Create a dated reminder item for the user calendar.',
-    TRUE,
-    NOW(),
-    NOW(),
-    NULL
-)
-ON CONFLICT (tool_id) DO NOTHING;
-
 INSERT INTO tasks (
     task_id, message_id, tool_id, task_name, task_description, status, payload, status_response, task_metadata, embedding, created_at, updated_at
 ) VALUES
 (
     '88888888-8888-8888-8888-888888888881',
     '33333333-3333-3333-3333-333333333332',
-    '77777777-7777-7777-7777-777777777772',
+    'event_tool_03',
     'TextResponseTask',
     'Create a reminder from the user query and provide confirmation output.',
     'COMPLETED',
@@ -155,7 +130,7 @@ INSERT INTO tasks (
 (
     '88888888-8888-8888-8888-888888888882',
     '33333333-3333-3333-3333-333333333332',
-    '77777777-7777-7777-7777-777777777771',
+    'web_search_01',
     'NotifyUserTask',
     'Notify the user via WhatsApp that the reminder has been created.',
     'QUEUED',

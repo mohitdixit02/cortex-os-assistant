@@ -46,7 +46,7 @@ role: Enum(RoleType)
 ai_client: Enum(AIClientType) (Nullable)
 is_summarized: Boolean (Default: False)
 is_tool_used: Boolean (Default: False)
-tool_id: String (Nullable)
+tool_id: String (Nullable) — Hardcoded tool slug (e.g., 'web_search_01')
 embedding: Vector — For pgvector search (variable dimensions)
 is_refined_query: Boolean (Default: False)
 refined_query: Text (Nullable)
@@ -83,20 +83,10 @@ embedding: Vector — Used for finding relevant preferences during a query (vari
 created_at: Timestamp
 updated_at: Timestamp
 
-### Tools Table (The Registry)
-tool_id: UUID (PK)
-tool_name: String (Unique, e.g., "send_whatsapp")
-tool_description: Text — The actual prompt description the LLM reads to understand how to use it.
-is_active: Boolean (Default: True)
-created_at: Timestamp
-updated_at: Timestamp
-deleted_at: Timestamp (Nullable for Soft Delete)
-
-
 ### Tasks Table (The Queue)
 task_id: UUID (PK)
 message_id: UUID (FK -> Messages.message_id) — Links the task to the specific user request.
-tool_id: UUID (FK -> Tools.tool_id, Nullable)
+tool_id: String (Nullable) — Hardcoded tool slug (e.g., 'event_tool_03')
 task_name: String
 task_description: Text (Nullable) — Canonical description used for embedding generation and retrieval.
 status: Enum(INITIALIZED, QUEUED, PROCESSING, COMPLETED, FAILED)
@@ -117,4 +107,3 @@ trigger_time: Timestamp (Indexed)
 status: Enum(EventStatus) (Default: CREATED)
 created_at: Timestamp
 updated_at: Timestamp
-

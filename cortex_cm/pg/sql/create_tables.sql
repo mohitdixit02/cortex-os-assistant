@@ -129,20 +129,10 @@ CREATE TABLE IF NOT EXISTS user_knowledge_base (
     updated_at TIMESTAMPTZ NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS tools (
-    tool_id UUID PRIMARY KEY,
-    tool_name VARCHAR(255) NOT NULL UNIQUE,
-    tool_description TEXT NOT NULL,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL,
-    deleted_at TIMESTAMPTZ
-);
-
 CREATE TABLE IF NOT EXISTS tasks (
     task_id UUID PRIMARY KEY,
     message_id UUID NOT NULL REFERENCES messages(message_id) ON DELETE CASCADE,
-    tool_id UUID REFERENCES tools(tool_id) ON DELETE RESTRICT,
+    tool_id VARCHAR(255),
     task_name VARCHAR(255) NOT NULL,
     task_description TEXT,
     status task_status NOT NULL,

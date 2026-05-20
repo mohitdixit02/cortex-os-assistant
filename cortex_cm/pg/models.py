@@ -191,23 +191,6 @@ class UserKnowledgeBase(SQLModel, table=True):
     user: "User" = Relationship(back_populates="knowledge_traits")
 
 
-class Tool(SQLModel, table=True):
-    __tablename__ = "tools"
-
-    tool_id: UUID = Field(
-        default_factory=uuid4,
-        sa_column=Column(PGUUID(as_uuid=True), primary_key=True, nullable=False),
-    )
-    tool_name: str = Field(sa_column=Column(String(255), unique=True, nullable=False, index=True))
-    tool_description: str = Field(sa_column=Column(Text, nullable=False))
-    is_active: bool = Field(default=True, sa_column=Column(Boolean, nullable=False, default=True, index=True))
-    created_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
-    updated_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
-    deleted_at: Optional[datetime] = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
-
-    tasks: List["Task"] = Relationship(back_populates="tool")
-
-
 class Task(SQLModel, table=True):
     __tablename__ = "tasks"
 
@@ -218,9 +201,9 @@ class Task(SQLModel, table=True):
     message_id: UUID = Field(
         sa_column=Column(PGUUID(as_uuid=True), ForeignKey("messages.message_id", ondelete="CASCADE"), nullable=False, index=True)
     )
-    tool_id: Optional[UUID] = Field(
+    tool_id: Optional[str] = Field(
         default=None,
-        sa_column=Column(PGUUID(as_uuid=True), ForeignKey("tools.tool_id", ondelete="RESTRICT"), nullable=True, index=True)
+        sa_column=Column(String(255), nullable=True, index=True)
     )
     task_name: str = Field(sa_column=Column(String(255), nullable=False))
     task_description: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
@@ -237,7 +220,6 @@ class Task(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=UTC_NOW, sa_column=Column(DateTime(timezone=True), nullable=False))
 
     message: "Message" = Relationship(back_populates="tasks")
-    tool: Optional["Tool"] = Relationship(back_populates="tasks")
 
 
 class UserEvent(SQLModel, table=True):

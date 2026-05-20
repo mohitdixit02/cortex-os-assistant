@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from uuid import UUID
 from typing import Dict, Any
-from service.config_service import config_service
+from cortex_server.service.config_service import config_service
 from cortex_cm.pg import UserConfig
 from pydantic import BaseModel
 

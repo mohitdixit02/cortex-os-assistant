@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Query, HTTPException
 from typing import List
-from service.auth.auth_dependency import get_current_user_id
-from service.chat_service import chat_service
-from controller.requestModels import ChatThreadResponse, MessageResponse
+from cortex_server.service.auth.auth_dependency import get_current_user_id
+from cortex_server.service.chat_service import chat_service
+from cortex_server.controller.requestModels import ChatThreadResponse, MessageResponse
 from uuid import UUID
 
 router = APIRouter(prefix="/v1/chat", tags=["Chat"])
