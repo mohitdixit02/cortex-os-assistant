@@ -112,8 +112,16 @@ async def submit_task_to_queue(request: TaskItem):
     task_owner = request.metadata.get("task_owner")
     logger.info(f"Submitting task: {request.task_name} (ID: {request.task_id}), Owner: {task_owner}, Status: {request.status}")
 
+    # Tools check
+    tool_ids_res = None
+    tool_ids = request.metadata.get("used_tools", [])
+    logger.info(f"Tools used for task {request.task_id}: {tool_ids}")
+    if tool_ids:
+        tool_ids_res = ", ".join(tool_ids)
+
     memory_saver.update_task(
         task_id=request.task_id,
+        tool_id=tool_ids_res,
         status=request.status,
         status_response={"result": request.result} if request.status == TaskStatus.COMPLETED else {"error": request.error}
     )

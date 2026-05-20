@@ -386,14 +386,32 @@ class MemoryClient:
             self.logger.info("No AI response found in the memory state. Skipping saving AI response.")
             return
         
+        is_tool_used = False
+        joined_tool_ids = None
+        executed_tools = []
+
+        if state.orchestration_state and state.orchestration_state.selected_tools:
+            tools_list = (
+                state.orchestration_state.selected_tools.root
+                if hasattr(state.orchestration_state.selected_tools, "root")
+                else state.orchestration_state.selected_tools
+            )
+            executed_tools = [t for t in tools_list if t.tool_exec_status == "completed"]
+            if executed_tools:
+                is_tool_used = True
+                joined_tool_ids = ", ".join([t.tool_id for t in executed_tools])
+
         final_response_text = self._extract_final_response_text(state.ai_response)
-        self.logger.info(f"Saving AI response to DB: {final_response_text}")
+        self.logger.info(f"Saving AI response to DB: {final_response_text}. Tool used: {is_tool_used}, IDs: {joined_tool_ids}")
+        
         self.memory_saver.save_message(
             session_id=state.session_id,
             user_id=state.user_id,
             content=final_response_text,
             role=RoleType.AI,
-            ai_client=AIClientType.CORTEX_MAIN_CLIENT
+            ai_client=AIClientType.CORTEX_MAIN_CLIENT,
+            is_tool_used=is_tool_used,
+            tool_id=joined_tool_ids
         )
 
     # ******************** Fetch Memory State Functions ********************

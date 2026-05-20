@@ -128,12 +128,7 @@ class ManagerClient():
             }
     
     # Pending:
-    # 2. Fix: Trigger time set, retrieve and execution require normalization to ensure timezone consistency.
-    # 3. Config for vc_delay, reminder_minutes_before_trigger_time, timezone, force_open_websocket, etc.**
-    # 4. Timezone fix is required in general query time pass also (other than event tool)
-    # 5. Fix tables data entry (specifically for tools)
     # 6. Fix UI to allow conversation name change, Pagination, layout, animation for ORB, listening, thinking, etc.
-    # 7. Check language translation (STT)
     
     def event_tool(self, state: ToolManagerState):
         try:

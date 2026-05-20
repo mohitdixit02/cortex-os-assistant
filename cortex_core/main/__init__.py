@@ -155,7 +155,8 @@ class MainClient:
             query_time=convState.query_time,
             short_term_memory=convState.short_term_memory,
             emotional_profile=emotional_profile,
-            older_knowledge_base=convState.knowledge_base
+            older_knowledge_base=convState.knowledge_base,
+            orchestration_state=convState.orchestration_state
         )
         
         self.logger.info("Initialized memory state: %s", memory_state)
@@ -277,6 +278,21 @@ class MainClient:
                 # Build memory
                 asyncio.create_task(self._build_memory_workflow(res))
                 
+                # Tool Execution check
+                tool_ids = []
+                # Use the orchestration state from the workflow result 'res'
+                res_orchestration = res.get("orchestration_state") if isinstance(res, dict) else getattr(res, "orchestration_state", None)
+                
+                if res_orchestration and res_orchestration.selected_tools:
+                    tools_list = (
+                        res_orchestration.selected_tools.root
+                        if hasattr(res_orchestration.selected_tools, "root")
+                        else res_orchestration.selected_tools
+                    )
+                    # Filter for tools that were successfully executed/completed
+                    tool_ids = [tool.tool_id for tool in tools_list if tool.tool_id and tool.tool_exec_status == "completed"]
+                    
+                taskItem.metadata["used_tools"] = tool_ids
                 taskItem.result = {
                     "response_type": "text_stream",
                     "response": final_response_text,
