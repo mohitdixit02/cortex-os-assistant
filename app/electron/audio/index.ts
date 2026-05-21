@@ -14,6 +14,8 @@ type MicStreamOptions = {
     errorRendererEndPoint: string;
 }
 
+const MAX_SPEECH_DURATION_MS = Number(process.env.MAX_SPEECH_DURATION_MS) || 35000;
+
 export class AudioManager {
     // Types
     micRecorder: typeof AudioRecorder | null;
@@ -21,6 +23,7 @@ export class AudioManager {
     micOwnerWebContents: Electron.WebContents | null;
     vad: any;
     isUserSpeaking: boolean;
+    maxSpeechTimer: NodeJS.Timeout | null;
 
     constructor() {
         this.micRecorder = null;
@@ -28,9 +31,15 @@ export class AudioManager {
         this.micOwnerWebContents = null;
         this.vad = new VAD();
         this.isUserSpeaking = false;
+        this.maxSpeechTimer = null;
     }
 
     async stopMicRecorder() {
+        if (this.maxSpeechTimer) {
+            clearTimeout(this.maxSpeechTimer);
+            this.maxSpeechTimer = null;
+        }
+
         if (this.micStream) {
             this.micStream.removeAllListeners("data");
             this.micStream.removeAllListeners("error");
@@ -64,19 +73,36 @@ export class AudioManager {
         }
 
         // Handlers for VAD events
-        const handleSpeechStart = () => {
-            this.isUserSpeaking = true;
-            console.log("[VAD] Detected speech start");
-            if (this.micOwnerWebContents && !this.micOwnerWebContents.isDestroyed()) {
-                this.micOwnerWebContents.send(streamRendererEndPoint, { event: "speech-start" });
-            }
-        }
-
         const handleSpeechEnd = () => {
+            if (this.maxSpeechTimer) {
+                clearTimeout(this.maxSpeechTimer);
+                this.maxSpeechTimer = null;
+            }
+
+            if (!this.isUserSpeaking) return;
+
             this.isUserSpeaking = false;
             console.log("[VAD] Detected speech end");
             if (this.micOwnerWebContents && !this.micOwnerWebContents.isDestroyed()) {
                 this.micOwnerWebContents.send(streamRendererEndPoint, { event: "speech-end" });
+            }
+        }
+
+        const handleSpeechStart = () => {
+            if (this.isUserSpeaking) return;
+
+            this.isUserSpeaking = true;
+            console.log("[VAD] Detected speech start");
+            
+            // Start safety timeout
+            if (this.maxSpeechTimer) clearTimeout(this.maxSpeechTimer);
+            this.maxSpeechTimer = setTimeout(() => {
+                console.warn("[AudioManager] Max speech duration reached (35s). Forcing speech end.");
+                handleSpeechEnd();
+            }, MAX_SPEECH_DURATION_MS);
+
+            if (this.micOwnerWebContents && !this.micOwnerWebContents.isDestroyed()) {
+                this.micOwnerWebContents.send(streamRendererEndPoint, { event: "speech-start" });
             }
         }
         

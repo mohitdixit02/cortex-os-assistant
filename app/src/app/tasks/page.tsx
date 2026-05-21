@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaCalendarAlt, FaTasks, FaCheckCircle, FaSpinner, FaTimesCircle, FaHistory, FaBell, FaClock } from 'react-icons/fa';
 import { useTasks, useEvents } from '../../hooks/useApi';
+import { ToolBadge } from '../../utility/toolConfig';
 
 export default function Tasks() {
   const [activeTab, setActiveTab] = useState<'automated' | 'reminders'>('automated');
@@ -81,6 +82,7 @@ export default function Tasks() {
                     <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'white', background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px' }}>
                       {getStatusIcon(task.status)} {task.status}
                     </span>
+                    <ToolBadge tool_id={task.tool_id} />
                   </div>
                 </div>
               </div>

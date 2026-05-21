@@ -4,6 +4,7 @@ import React, { useEffect, useRef, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaUser, FaRobot } from "react-icons/fa";
 import { Message } from "../hooks/useApi";
+import { ToolBadge } from "../utility/toolConfig";
 
 interface ChatHistoryProps {
   messages: Message[] | undefined;
@@ -71,6 +72,7 @@ const ChatHistory = ({ messages }: ChatHistoryProps) => {
               ) : (
                 msg.content
               )}
+              {msg.role !== "USER" && <ToolBadge tool_id={msg.tool_id} />}
             </div>
           </motion.div>
         ))}

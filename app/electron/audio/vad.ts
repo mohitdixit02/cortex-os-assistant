@@ -1,10 +1,10 @@
 const { RealTimeVAD } = require("@ericedouard/vad-node-realtime");
 
 const thresholdConfig = {
-    positiveSpeechThreshold: 0.6,
-    negativeSpeechThreshold: 0.3,
+    positiveSpeechThreshold: 0.5,
+    negativeSpeechThreshold: 0.45,
     sampleRate: 16000,
-    frameSize: 1600
+    frameSize: 1536
 };
 
 class VAD {

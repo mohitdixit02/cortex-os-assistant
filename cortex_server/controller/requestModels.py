@@ -26,6 +26,7 @@ class MessageResponse(BaseModel):
     role: str
     is_refined_query: bool = False
     refined_query: Optional[str] = None
+    tool_id: Optional[str] = None
     created_at: datetime
 
 class TaskResponse(BaseModel):
@@ -33,6 +34,7 @@ class TaskResponse(BaseModel):
     task_name: str
     task_description: Optional[str]
     status: str
+    tool_id: Optional[str] = None
     created_at: datetime
 
 class EventResponse(BaseModel):

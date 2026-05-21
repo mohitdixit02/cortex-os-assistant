@@ -18,6 +18,7 @@ export interface Message {
   role: string;
   is_refined_query?: boolean;
   refined_query?: string;
+  tool_id?: string;
   created_at: string;
 }
 
@@ -26,6 +27,7 @@ export interface Task {
   task_name: string;
   task_description?: string;
   status: string;
+  tool_id?: string;
   created_at: string;
 }
 
