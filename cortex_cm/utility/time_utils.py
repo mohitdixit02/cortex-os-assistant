@@ -52,3 +52,5 @@ def parse_iso_to_utc(iso_str: str, timezone_str: str) -> datetime:
         return get_utc_time(dt, timezone_str)
     except Exception:
         return datetime.now(timezone.utc)
+
+UTC_NOW = lambda: datetime.now(timezone.utc)

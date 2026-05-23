@@ -1,9 +1,6 @@
 from cortex_core.manager import ManagerClient
 from langgraph.graph import StateGraph, START, END
 from cortex_core.graph.state import ToolManagerState
-from cortex_cm.pg import engine
-from PIL import Image
-import io
 
 manager_client = ManagerClient()
 
@@ -32,13 +29,6 @@ tool_manager_graph.add_edge(["summarize_tool_results", "task_retriever_tool", "e
 tool_manager_graph.add_edge("tool_result_aggregator", END)
 
 tool_manager_workflow = tool_manager_graph.compile()
-
-# def display_workflow_graph(worflow):
-#     image_data = worflow.get_graph(xray=True).draw_mermaid_png()
-#     img = Image.open(io.BytesIO(image_data))
-#     img.show()
-    
-# display_workflow_graph(tool_manager_workflow)
 
 __all__ = [
     "tool_manager_workflow",

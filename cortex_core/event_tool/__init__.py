@@ -8,8 +8,8 @@ from cortex_cm.pg.req import get_by_id
 from typing import Optional
 
 from cortex_cm.utility.time_utils import get_local_time, get_time_of_day
-from datetime import datetime, timezone
-UTC_NOW = lambda: datetime.now(timezone.utc)
+from datetime import datetime
+from cortex_cm.utility.time_utils import UTC_NOW
 
 class EventToolClient():
     """
@@ -60,7 +60,7 @@ class EventToolClient():
             }
         except Exception as e:
             self.logger.error(f"Error in build_final_reminder: {e}")
-            # Fallback reminder message in case of any error
+            # Fallback reminder message - if error happens
             fallback_message = f"Hi, this is a reminder that '{state.event_name}' is coming up soon"
             return {
                 "final_reminder": fallback_message

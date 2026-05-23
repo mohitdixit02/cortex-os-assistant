@@ -22,7 +22,6 @@ def _hf_call_with_local_cache(callable_fn, *args, local_files_only: bool = False
         logger.error("Hugging Face load failed. Error: %s", e)
         raise
 
-
 _STT_MODEL = None
 _STT_PROCESSOR = None
 def get_stt_model():
@@ -63,7 +62,8 @@ def _load_chat_hf_model(config_key, display_name):
         repo_id=config.get("name"),
         task=config.get("task", "conversational"),
         max_new_tokens=config.get("max_new_tokens", 200),
-        temperature=config.get("temperature", 0.2)
+        temperature=config.get("temperature", 0.2),
+        huggingfacehub_api_token=env.HF_TOKEN
     ))
     logger.info(f"{display_name} loaded..")
     return model
@@ -142,3 +142,20 @@ def get_embedding_model():
         )
         logger.info("Embeddings model loaded..")
     return _EMBEDDING_MODEL
+
+def warmup_all_models():
+    """
+    Eagerly load all models into memory. 
+    This is intended to be called at application startup inside the event loop.
+    """
+    logger.info("Starting eager model loading (warmup)...")
+    get_stt_model()
+    get_tts_pipeline()
+    get_main_model()
+    get_planner_model()
+    get_main_orchestrator_model()
+    get_heavy_planner_model()
+    get_heavy_response_model()
+    get_voice_emotion_pipeline()
+    get_embedding_model()
+    logger.info("All models loaded successfully into memory.")

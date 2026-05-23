@@ -2,8 +2,6 @@ from cortex_core.memory import MemoryClient
 from langgraph.graph import StateGraph, START, END
 from cortex_core.graph.state import MemoryState
 from cortex_cm.pg import engine
-from PIL import Image
-import io
 
 memory_client = MemoryClient(engine=engine)
 
@@ -26,13 +24,6 @@ memory_graph.add_edge(["build_emotional_profile", "build_user_knowledge_base"], 
 memory_graph.add_edge("persist_memory_state", END)
 
 build_memory_workflow = memory_graph.compile()
-
-def display_workflow_graph(worflow):
-    image_data = worflow.get_graph(xray=True).draw_mermaid_png()
-    img = Image.open(io.BytesIO(image_data))
-    img.show()
-
-display_workflow_graph(build_memory_workflow)
 
 __all__ = [
     "memory_client",

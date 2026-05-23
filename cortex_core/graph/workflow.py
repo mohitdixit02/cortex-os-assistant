@@ -1,11 +1,7 @@
-from cortex_core.memory import MemoryClient
 from langgraph.graph import StateGraph, START, END
 from cortex_core.main.orchestrator import Orchestrator
-from cortex_core.graph.state import ConversationState, MemoryState, ToolManagerState
+from cortex_core.graph.state import ConversationState
 from cortex_core.graph.memory import memory_client
-from cortex_cm.pg import engine
-from PIL import Image
-import io
 
 orchestrator = Orchestrator()
 
@@ -31,16 +27,6 @@ main_graph.add_node("final_response_alignment", orchestrator.align_final_respons
 main_graph.add_edge(START, "fetch_stm")
 main_graph.add_edge(START, "fetch_emotional_profile")
 main_graph.add_edge(["fetch_stm", "fetch_emotional_profile"], "main_orchestration")
-# main_graph.add_conditional_edges(
-#     "main_orchestration",
-#     orchestrator.route_main_orchestration,
-#     {
-#         "build_knowledge_plan": "build_knowledge_plan",
-#         "build_messages_plan": "build_messages_plan",
-#         "build_tools_plan": "build_tools_plan",
-#         "route_execute_tools": "execute_tools_manager",
-#     },
-# )
 
 main_graph.add_edge("main_orchestration", "build_knowledge_plan")
 main_graph.add_edge("main_orchestration", "build_messages_plan")
@@ -91,28 +77,6 @@ main_graph.add_conditional_edges(
 
 main_workflow = main_graph.compile()
 
-# print(main_workflow.get_graph(xray=True).draw_ascii())
-def display_workflow_graph(worflow):
-    image_data = worflow.get_graph(xray=True).draw_mermaid_png()
-    img = Image.open(io.BytesIO(image_data))
-    img.show()
-
-display_workflow_graph(main_workflow)
-# display_workflow_graph(build_memory_workflow)
-
-# test workflow
-# test_graph = StateGraph(ConversationState)
-# test_graph_2 = StateGraph(MemoryState)
-
-# test_graph.add_node("execute_tools_manager", orchestrator.execute_tools)
-# test_graph.add_edge(START, "execute_tools_manager")
-# test_graph.add_edge("execute_tools_manager", END)
-
-# test_workflow = test_graph.compile()
-
 __all__ = [
     "main_workflow",
-    "test_workflow",
-    # "test_workflow_2",
 ]
-

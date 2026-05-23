@@ -1,13 +1,19 @@
 import asyncio
 import json
 
-from cortex_core.main import MainClient
 from cortex_queue.dto import TaskItem, TaskStatus
 from cortex_cm.redis.redis_client import RedisClient, RedisModeType
 from cortex_core.req import submit_task
+from cortex_cm.utility.models import warmup_all_models
 
 async def main():
+    # Eagerly load all models into memory at startup
+    warmup_all_models()
+    
+    # Deferred import to ensure global initializations happen inside the active event loop
+    from cortex_core.main import MainClient
     client = MainClient()    
+    
     print("Cortex Core Worker started. Listening to Redis DB 1...")
     redis_client = RedisClient.get_client(RedisModeType.TASK)
     

@@ -34,12 +34,8 @@ from cortex_cm.pg import (
     AIClientType,
     Task,
 )
-from datetime import datetime, timezone
-UTC_NOW = lambda: datetime.now(timezone.utc)
-
-# Recheck knowledge base retrival - update fetch effeciency and relevance imporvement
-# External Tools Integration
-# Qwen Model Intergration for Routing
+from cortex_cm.utility.time_utils import UTC_NOW
+from cortex_cm.utility.main import extract_final_response_text
 
 # Self reference: value x means x complete conversations (user query + ai response) in the message history
 MINIMUM_CONVERSATION_HISTORY_COUNT = 2 # Must be less than what is going to summarize
@@ -55,17 +51,6 @@ class MemoryClient:
         self.embd_model = EmbeddingModel()
         self.logger = get_logger("CORTEX_MEMORY")
         self.memory_saver = MemorySaver(engine=engine, model=self.embd_model)
-
-    def _extract_final_response_text(self, final_response) -> str:
-        """Normalize final response state/model/string into plain text."""
-        if final_response is None:
-            return ""
-        response_text = getattr(final_response, "response", None)
-        if isinstance(response_text, str):
-            return response_text
-        if isinstance(final_response, str):
-            return final_response
-        return str(final_response)
 
     def _get_recent_conversation_stm(
         self,
@@ -358,7 +343,7 @@ class MemoryClient:
                         select(Message)
                         .where(
                             Message.user_id == state.user_id,
-                            Message.session_id == state.session_id,
+                            Message.session_id == session_id,
                             Message.is_summarized == False,
                             Message.created_at >= state.stm_start_update_timestamp,
                             Message.created_at < state.stm_end_update_timestamp if state.stm_end_update_timestamp else True
@@ -401,7 +386,7 @@ class MemoryClient:
                 is_tool_used = True
                 joined_tool_ids = ", ".join([t.tool_id for t in executed_tools])
 
-        final_response_text = self._extract_final_response_text(state.ai_response)
+        final_response_text = extract_final_response_text(state.ai_response)
         self.logger.info(f"Saving AI response to DB: {final_response_text}. Tool used: {is_tool_used}, IDs: {joined_tool_ids}")
         
         self.memory_saver.save_message(

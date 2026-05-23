@@ -56,4 +56,18 @@ async def iterate_tokens_async(
             yield item
     finally:
         await producer_task
-    
+
+def extract_final_response_text(final_response, key="response") -> str:
+    """Normalize final response state/model/string into plain text."""
+    if final_response is None:
+        return ""
+    if isinstance(final_response, dict):
+        response_text = final_response.get(key)
+        if isinstance(response_text, str):
+            return response_text
+    response_text = getattr(final_response, key, None)
+    if isinstance(response_text, str):
+        return response_text
+    if isinstance(final_response, str):
+        return final_response
+    return str(final_response)

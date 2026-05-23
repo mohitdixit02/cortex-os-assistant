@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Annotated, Optional
-from cortex_core.graph.state import ConversationState, OrchestrationState, CortexToolList
+from cortex_core.graph.state import CortexToolList
 
 class InternalPlanKnowledge(BaseModel):
     reasoning: Annotated[str, Field(description="The reasoning behind the selection of keywords and acceptance threshold for user knowledge retrieval. It should be based on the user query, context and feedback from evaluator if any. Not more than 80 words.")]
@@ -178,4 +178,3 @@ f. You can select one tool, multiple tools or no tool at all based on the user q
 Follow the below format strictly and only respond with the format mentioned without any additional text or explanation. \n
 {format_instructions}
 """
-

@@ -124,8 +124,6 @@ class STTModel:
             input_features = self._normalize_input_features(input_features)
 
             with torch.inference_mode():
-                # For Whisper, we can get the language by looking at the first predicted token
-                # when forced_decoder_ids is not set to a specific language.
                 generation_outputs = self.model.generate(
                     input_features=input_features,
                     task=self.model_cfg.get("task"),
@@ -135,18 +133,11 @@ class STTModel:
                 )
                 generated_ids = generation_outputs.sequences
 
-            # Detect language from the first batch if not already detected
-            if detected_language is None and generated_ids.shape[0] > 0:
-                # In HuggingFace, generated_ids usually starts with the decoder_start_token_id
-                # The language token is the first token actually "generated" by the model
-                # if it's not forced.
-                
-                # Let's look at the generated sequence and decode everything including special tokens
+            if generated_ids.shape[0] > 0:
                 full_tokens = self.processor.tokenizer.convert_ids_to_tokens(generated_ids[0])
                 self.logger.info("Raw Whisper tokens: %s", full_tokens)
                 
                 for token in full_tokens:
-                    # Whisper language tokens are in the format '<|en|>', '<|fr|>', etc.
                     if token.startswith("<|") and token.endswith("|>") and len(token) == 6:
                         detected_language = token.strip("<|>")
                         break

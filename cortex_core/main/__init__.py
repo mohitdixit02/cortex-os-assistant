@@ -1,29 +1,16 @@
-from cortex_cm.pg.enums import TaskOwner
 from cortex_core.graph.state import (
     ConversationState,
     EventToolState, 
     MemoryState, 
-    MemoryEmotionalProfile, 
-    EmotionalProfile, 
-    FinalResponseGenerationState, 
-    OrchestrationState, 
-    CortexToolList, 
-    CortexTool,
+    MemoryEmotionalProfile,
 )
-from cortex_cm.utility.main import iterate_tokens_async
-from nltk.tokenize import sent_tokenize
-from typing import AsyncGenerator
-from cortex_core.graph.workflow import (
-    main_workflow, 
-    # test_workflow,
-    # test_workflow_2
-)
+from cortex_cm.utility.main import extract_final_response_text
+from cortex_core.graph.workflow import main_workflow
 from cortex_core.graph.memory import build_memory_workflow
 from cortex_core.graph.event import event_tool_workflow
 from cortex_queue.dto import TaskStatus, TaskItem
 from cortex_cm.utility.logger import get_logger
-from cortex_cm.pg import TimeOfDay, engine, Session
-from cortex_cm.pg.models import Message, User
+from cortex_cm.pg import TimeOfDay, engine, Session, TaskOwner, Message
 from cortex_cm.pg.req import crud
 from cortex_cm.redis.config_helper import get_user_config_from_redis
 from cortex_cm.utility.time_utils import get_local_time, get_time_of_day
@@ -42,21 +29,6 @@ class MainClient:
     
     def __init__(self):
         self.logger = get_logger("CORTEX_MAIN")
-
-    def _extract_final_response_text(self, final_response) -> str:
-        """Normalize final response state/model/string into plain text."""
-        if final_response is None:
-            return ""
-        if isinstance(final_response, dict):
-            response_text = final_response.get("response")
-            if isinstance(response_text, str):
-                return response_text
-        response_text = getattr(final_response, "response", None)
-        if isinstance(response_text, str):
-            return response_text
-        if isinstance(final_response, str):
-            return final_response
-        return str(final_response)
         
     def initialize_conversation_state(
         self,
@@ -136,7 +108,7 @@ class MainClient:
             self.logger.error("Final response in conversation state is None. Can't initialize memory state without AI response.")
             raise ValueError("Final response in conversation state is None. Can't initialize memory state without AI response.")
         
-        ai_response = self._extract_final_response_text(convState.final_response)
+        ai_response = extract_final_response_text(convState.final_response)
         
         emotional_profile = MemoryEmotionalProfile(
             emotional_level=convState.emotional_profile.emotional_level,
@@ -224,51 +196,11 @@ class MainClient:
             query = payload.get("query", "")
             self.logger.info("Processing task with query: %s", query)
             
-            # Orchestrator code
             state = self.initialize_conversation_state(taskItem)
-            
-            # state.final_response = FinalResponseGenerationState(
-            #     response="Yes, I know that you like tea and are in a good mood."
-            # )
-            # state.emotional_profile = EmotionalProfile(
-            #     time_behavior=TimeOfDay.AFTERNOON,
-            #     mood_type=state.query_emotion,
-            #     emotional_level=5,
-            #     logical_level=7,
-            #     social_level=6,
-            #     context_summary="User seems to be in a good mood and is talking about tea."
-            # )
-            # test workflow for memory building
-            
-            # selected_tools=CortexToolList(root=[CortexTool(tool_id='web_search_01', instructions="Search for popular pizza types, toppings, and recipes. Consider Mohit's neutral mood and casual tone preference.", tool_result=None, tool_exec_status='failed')])
-            
-            # web_tool = CortexTool(
-            #     tool_id="web_search_01",
-            #     instructions=""
-            # )
-            
-            # state.orchestration_state = OrchestrationState(
-            #     user_knowledge_retrieval_keywords=['drinking preference', 'favorite beverages', 'likes and dislikes'],
-            #     is_message_referred=True,
-            #     referred_message_keywords="drinking preference, favorite beverages, likes and dislikes",
-            #     is_tool_required=False,
-            #     # selected_tools=CortexToolList(root=[web_tool]),
-            #     user_knowledge_acceptance_threshold=0.6
-            # )
-            
-            # state1 = test_workflow.invoke(state)
-            # memory_state = self.initialize_memory_state(state1)
-            # res = test_workflow_2.invoke(memory_state)
-            # res = test_workflow.invoke(state)
-            # self.logger.info("Test workflow result: %s", res)
-            
-            # final_response_text = "Dummy response for query: " + query
-            
-            # ************** original flow *****************
             res = main_workflow.invoke(state)
 
             workflow_final_response = res.get("final_response") if isinstance(res, dict) else getattr(res, "final_response", None)
-            final_response_text = self._extract_final_response_text(workflow_final_response)
+            final_response_text = extract_final_response_text(workflow_final_response)
 
             self.logger.info("Final response generated: %s", res)
             self.logger.info("Response from main workflow >> %s", final_response_text if final_response_text else "No final response generated")
@@ -314,7 +246,7 @@ class MainClient:
         event_state = self.initialize_event_tool_state(taskItem)
         try:
             res = event_tool_workflow.invoke(event_state)
-            final_response = res.get("final_reminder") if isinstance(res, dict) else getattr(res, "final_reminder", None)
+            final_response = extract_final_response_text(res, key="final_reminder")
             self.logger.info("Event tool workflow result: %s", res)
             taskItem.result = {
                 "response_type": "text_stream",

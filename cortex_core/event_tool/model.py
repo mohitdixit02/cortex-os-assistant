@@ -3,9 +3,6 @@ from cortex_cm.utility.logger import get_logger
 from cortex_cm.utility.models import get_main_model
 from cortex_core.event_tool.prompts import EventReminderOutput, get_event_tool_prompt
 
-from datetime import datetime, timezone
-UTC_NOW = lambda: datetime.now(timezone.utc)
-
 class EventToolModel:
     def __init__(self):
         self.logger = get_logger("CORTEX_EVENT_TOOL")

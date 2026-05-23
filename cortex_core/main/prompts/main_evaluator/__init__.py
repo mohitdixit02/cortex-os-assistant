@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
 from typing import Annotated, Optional
-from cortex_core.graph.state import ConversationState, OrchestrationState
 
 class InternalFeedbackKnowledge(BaseModel):
     reasoning: Annotated[str, Field(description="The reasoning behind the feedback provided for user knowledge retrieval plan. Not more than 80 words.")]

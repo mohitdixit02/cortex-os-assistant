@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Annotated
 
-
 class MainOrchestrationDecision(BaseModel):
     """Controls which independent branches should execute in the next iteration."""
     reasoning: Annotated[str, Field(description="A detailed reasoning of why you have decided to stop or continue execution of each service based on the above provided information and feedback. Limit 120 words.")]

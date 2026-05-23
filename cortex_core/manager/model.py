@@ -14,8 +14,7 @@ import json
 from cortex_cm.utility.models import get_planner_model
 
 from cortex_cm.utility.time_utils import get_local_time
-from datetime import datetime, timezone
-UTC_NOW = lambda: datetime.now(timezone.utc)
+from cortex_cm.utility.time_utils import UTC_NOW
 
 class ManagerModel:
     def __init__(self):
