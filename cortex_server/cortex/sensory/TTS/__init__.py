@@ -3,7 +3,7 @@ from kokoro import KPipeline
 from cortex_cm.utility.logger import get_logger
 from cortex_cm.utility.sensory.config import TTS_CONFIG
 from cortex_cm.utility.main import iterate_tokens_async
-from cortex_cm.utility.models import get_tts_pipeline
+from cortex_cm.utility.cortex import get_tts_pipeline
 
 class TTSClient:
     """

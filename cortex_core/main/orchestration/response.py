@@ -5,7 +5,7 @@ from cortex_cm.utility.logger import get_logger
 from cortex_core.main.models.response import CortexResponseModel
 from cortex_core.graph.state import ConversationState
 from cortex_cm.utility.logger import get_logger
-from cortex_cm.utility.models import get_heavy_response_model
+from cortex_cm.utility.cortex import get_heavy_response_model
 
 class ResponseOrchestrator:
     def __init__(self):

@@ -1,7 +1,7 @@
 from cortex_core.graph.state import ConversationState
 from cortex_cm.utility.logger import get_logger
 import json
-from cortex_cm.utility.models import get_heavy_response_model
+from cortex_cm.utility.cortex import get_heavy_response_model
 from cortex_core.main.prompts import get_main_orchestrator_res_prompt
 from .utility import serialize_tool_results
 

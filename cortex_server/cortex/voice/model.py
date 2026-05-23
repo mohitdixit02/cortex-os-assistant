@@ -6,12 +6,10 @@ import numpy as np
 from numpy import dot
 from numpy.linalg import norm
 from cortex_cm.utility.logger import get_logger
-from cortex_cm.utility.huggingface.config import models
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
-from cortex_cm.utility.huggingface.request import HuggingFaceRequest
 from cortex.voice.prompts import VoiceClientRouteQuery, VoiceClientQueryConfidence, get_voice_client_prompts
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
-from cortex_cm.utility.models import get_main_model, get_planner_model, get_voice_emotion_pipeline
+from cortex_cm.utility.cortex import get_main_model, get_planner_model, get_voice_emotion_pipeline
 
 # ... (keep other imports)
 

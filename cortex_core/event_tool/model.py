@@ -1,6 +1,6 @@
 from cortex_core.graph.state import EventToolState
 from cortex_cm.utility.logger import get_logger
-from cortex_cm.utility.models import get_main_model
+from cortex_cm.utility.cortex import get_main_model
 from cortex_core.event_tool.prompts import EventReminderOutput, get_event_tool_prompt
 
 class EventToolModel:

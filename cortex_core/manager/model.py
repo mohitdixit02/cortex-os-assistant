@@ -1,50 +1,18 @@
-from langchain_huggingface import HuggingFacePipeline, HuggingFaceEmbeddings, HuggingFaceEndpoint, ChatHuggingFace, HuggingFaceEndpointEmbeddings
-from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
-from pydantic import BaseModel, Field
-from cortex_core.graph.state import CortexTool, OrchestrationState, ToolManagerState
+from cortex_core.graph.state import ToolManagerState
 from cortex_core.manager.prompts import get_manager_client_prompts, WebQueryPlanResult, TaskPlanResult, EventToolPlanResult
-from typing import TypedDict, Annotated, Literal, Optional, Dict, Any
-import numpy as np
-from numpy import dot
-from numpy.linalg import norm
 from cortex_cm.utility.logger import get_logger
-from cortex_cm.utility.huggingface.config import models
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate
-import json
-from cortex_cm.utility.models import get_planner_model
-
+from cortex_cm.utility.cortex import get_planner_model
 from cortex_cm.utility.time_utils import get_local_time
 from cortex_cm.utility.time_utils import UTC_NOW
+from cortex_cm.utility.main import chunk_to_text
 
 class ManagerModel:
     def __init__(self):
         self.logger = get_logger("CORTEX_MANAGER")
         self.model = get_planner_model()
-        # self.template_provider = TemplateProvider()
-        # self.str_parser = StrOutputParser()
         
     def get_model(self):
         return self.model
-    
-    def _chunk_to_text(self, chunk: Any) -> str:
-        if chunk is None:
-            return ""
-        if isinstance(chunk, str):
-            return chunk
-        content = getattr(chunk, "content", "")
-        if isinstance(content, str):
-            return content
-        if isinstance(content, list):
-            parts = []
-            for item in content:
-                if isinstance(item, str):
-                    parts.append(item)
-                elif isinstance(item, dict):
-                    text = item.get("text")
-                    if isinstance(text, str):
-                        parts.append(text)
-            return "".join(parts)
-        return str(content) if content else ""
                 
     def build_web_search_plan(
         self,
@@ -95,7 +63,7 @@ class ManagerModel:
             "user_query": query,
             "tool_type": tool_type,
         })
-        summary = self._chunk_to_text(res)
+        summary = chunk_to_text(res)
         return summary
     
     def build_task_retrieval_plan(

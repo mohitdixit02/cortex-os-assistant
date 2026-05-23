@@ -1,12 +1,10 @@
 import asyncio
 from datetime import datetime
-from typing import Type, Optional, Annotated, Literal
+from typing import Type, Literal
 from pydantic import BaseModel, Field
-import json
 from langchain_core.tools import BaseTool
 from uuid import UUID
 from cortex_event_tool.main import create_event
-from cortex_cm.pg.req import crud
 
 class EventToolInput(BaseModel):
     """Input schema for event tool."""

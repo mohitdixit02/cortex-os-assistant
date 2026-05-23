@@ -1,5 +1,5 @@
 import asyncio
-from typing import AsyncIterable, Awaitable, Callable, Optional, Iterator
+from typing import Any, AsyncIterable, Awaitable, Callable, Optional, Iterator
 
 async def iterate_tokens_async(
     generator_callback: Callable[..., Iterator[str]],
@@ -71,3 +71,23 @@ def extract_final_response_text(final_response, key="response") -> str:
     if isinstance(final_response, str):
         return final_response
     return str(final_response)
+
+def chunk_to_text(chunk: Any) -> str:
+    if chunk is None:
+        return ""
+    if isinstance(chunk, str):
+        return chunk
+    content = getattr(chunk, "content", "")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                text = item.get("text")
+                if isinstance(text, str):
+                    parts.append(text)
+        return "".join(parts)
+    return str(content) if content else ""

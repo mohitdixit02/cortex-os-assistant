@@ -11,7 +11,7 @@ from cortex_core.graph.state import (
     PlanEvaluationState,
 )
 from cortex_cm.utility.logger import get_logger
-from cortex_cm.utility.models import get_heavy_planner_model
+from cortex_cm.utility.cortex import get_heavy_planner_model
 
 class EvaluationOrchestrator:
     def __init__(self):

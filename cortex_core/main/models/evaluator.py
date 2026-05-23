@@ -1,7 +1,7 @@
 from cortex_core.graph.state import ConversationState, OrchestrationState
 from cortex_cm.utility.logger import get_logger
 from cortex_core.manager.tools import AVAILABLE_TOOLS
-from cortex_cm.utility.models import get_heavy_planner_model
+from cortex_cm.utility.cortex import get_heavy_planner_model
 from cortex_core.main.prompts import get_main_orchestrator_evaluate_prompt
 from cortex_core.main.prompts.main_evaluator import (
     InternalFeedbackKnowledge,

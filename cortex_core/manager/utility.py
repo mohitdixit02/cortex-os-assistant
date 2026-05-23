@@ -1,17 +1,13 @@
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from cortex_core.memory.embedding import EmbeddingModel
-
-# Max word limit
-MAX_WORD_LIMIT = 750
-
-# Chunking configuration for large documents
-CHUNK_SIZE = 600
-CHUNK_OVERLAP = 100
-
-# Embedding throughput tuning
-EMBED_BATCH_SIZE = 32
-EMBED_MAX_WORKERS = 4
+from cortex_cm.utility.cortex.config import (
+    MAX_WORD_LIMIT,
+    CHUNK_SIZE, 
+    CHUNK_OVERLAP, 
+    EMBED_BATCH_SIZE, 
+    EMBED_MAX_WORKERS
+)
 
 def retrieve_relevant_docs_utility(
     target_query: str,

@@ -1,8 +1,7 @@
 from cortex_core.graph.state import ConversationState
 from cortex_cm.utility.logger import get_logger
 from typing import Literal
-
-MAX_ITERATIONS_LIMIT = 3
+from cortex_cm.utility.cortex.config import ORCHESTRATION_MAX_ITERATIONS_LIMIT
 
 class OrchestrationRoutes:
     def __init__(self):
@@ -34,7 +33,7 @@ class OrchestrationRoutes:
             self.logger.info("No orchestration state or plan feedback found. Routing to default response generation.")
             return "route_execute_tools"
 
-        if feedback.iteration_count > MAX_ITERATIONS_LIMIT:
+        if feedback.iteration_count > ORCHESTRATION_MAX_ITERATIONS_LIMIT:
             self.logger.info("Maximum iteration count reached for plan evaluation. Routing to default response generation.")
             return "route_execute_tools"
 
@@ -89,7 +88,7 @@ class OrchestrationRoutes:
             self.logger.info("No final response feedback found. Routing to workflow termination.")
             return "terminate"
 
-        if feedback.iteration_count > MAX_ITERATIONS_LIMIT:
+        if feedback.iteration_count > ORCHESTRATION_MAX_ITERATIONS_LIMIT:
             self.logger.info("Maximum iteration count reached for final response evaluation. Routing to workflow termination.")
             return "terminate"
         

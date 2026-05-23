@@ -1,4 +1,4 @@
-from cortex_cm.utility.huggingface.config import models
+from cortex_cm.utility.cortex.models import models
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor
 from langchain_huggingface import HuggingFacePipeline, HuggingFaceEmbeddings, HuggingFaceEndpoint, ChatHuggingFace, HuggingFaceEndpointEmbeddings
 from cortex_cm.utility.logger import get_logger

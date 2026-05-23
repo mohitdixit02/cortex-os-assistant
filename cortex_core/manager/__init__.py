@@ -1,12 +1,12 @@
-from cortex_core.manager.tools import AvailableToolsType, WebSearchTool, WebSearchInput, TaskRetrieverTool, TaskRetrieverInput, TaskRetrieverResult, EventToolInput, EventTool
-from cortex_core.graph.state import CortexTool, ToolManagerState, ToolExecutionState
+from cortex_core.manager.tools import AvailableToolsType, WebSearchTool, WebSearchInput, TaskRetrieverTool, TaskRetrieverInput, EventToolInput, EventTool
+from cortex_core.graph.state import ToolManagerState, ToolExecutionState
 from cortex_core.manager.model import ManagerModel
 from cortex_cm.utility.logger import get_logger
 from cortex_cm.utility.time_utils import parse_iso_to_utc
 from langchain_core.documents import Document
 from cortex_core.manager.utility import retrieve_relevant_docs_utility
 from cortex_core.memory.embedding import EmbeddingModel
-from typing import Literal, Optional
+from typing import Literal
 import json
 
 class ManagerClient():

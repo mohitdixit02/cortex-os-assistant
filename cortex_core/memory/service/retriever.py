@@ -27,13 +27,14 @@ from cortex_cm.pg import (
     Task,
 )
 from cortex_cm.utility.time_utils import UTC_NOW
+from cortex_cm.utility.cortex.config import (
+    MINIMUM_CONVERSATION_HISTORY_COUNT,
+    CONVERSATION_HISTORY_SUMMARIZATION_THRESHOLD,
+    MESSAGES_REJECTION_THRESHOLD,
+    MESSAGES_MAX_LIMIT,
+)
 
 # Self reference: value 'x' means 'x' complete conversations (user query + ai response) in the message history
-MINIMUM_CONVERSATION_HISTORY_COUNT = 2 # Must be less than what is going to summarize
-CONVERSATION_HISTORY_SUMMARIZATION_THRESHOLD = 5 # Can't be zero as summarization is must (>= 1)
-
-MESSAGES_REJECTION_THRESHOLD = 0.1 # Messages only similar more than 10% will be kept.
-MESSAGES_MAX_LIMIT = 15 # Max messages to send to Cortex
 
 class MemoryRetriever:
     def __init__(

@@ -1,6 +1,6 @@
 from cortex_core.memory.prompts import get_memory_client_prompts
 from cortex_core.graph.state import UserSTM, MemoryState
-from cortex_cm.utility.models import get_main_model, get_heavy_planner_model
+from cortex_cm.utility.cortex import get_main_model, get_heavy_planner_model
 
 class MemoryModel:
     def __init__(self):

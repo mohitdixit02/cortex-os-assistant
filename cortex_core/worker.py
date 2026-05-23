@@ -4,7 +4,7 @@ import json
 from cortex_queue.dto import TaskItem, TaskStatus
 from cortex_cm.redis.redis_client import RedisClient, RedisModeType
 from cortex_core.req import submit_task
-from cortex_cm.utility.models import warmup_all_models
+from cortex_cm.utility.cortex import warmup_all_models
 
 async def main():
     # Eagerly load all models into memory at startup

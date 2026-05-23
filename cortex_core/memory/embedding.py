@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import numpy as np
 from numpy import dot
 from numpy.linalg import norm
-from cortex_cm.utility.models import get_embedding_model
+from cortex_cm.utility.cortex import get_embedding_model
 
 class EmbeddingModel:
     def __init__(self):

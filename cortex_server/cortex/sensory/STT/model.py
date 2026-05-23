@@ -1,8 +1,8 @@
 from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor
 from cortex_cm.utility.logger import get_logger
-from cortex_cm.utility.huggingface.config import models
+from cortex_cm.utility.cortex.models import models
 from cortex_cm.utility.sensory.config import STT_CONFIG
-from cortex_cm.utility.models import get_stt_model
+from cortex_cm.utility.cortex import get_stt_model
 import io
 import soundfile as sf
 import numpy as np
@@ -12,7 +12,7 @@ from typing import List
 
 # For Self Reference
 # https://huggingface.co/docs/transformers/model_doc/whisper?usage=AutoModel
-from cortex_cm.utility.models import get_stt_model
+from cortex_cm.utility.cortex import get_stt_model
 
 class STTModel:
     """
