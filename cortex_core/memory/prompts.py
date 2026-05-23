@@ -1,8 +1,6 @@
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate, HumanMessagePromptTemplate, PromptTemplate
-from pydantic import BaseModel, Field
-from typing import Annotated, Literal, Any, Dict
-from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
-from cortex_core.graph.state import ConversationState, UserSTM, MemoryEmotionalProfile, UserKnowledge, MemoryUserKnowledge, MemoryUserKnowledgeList
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import PydanticOutputParser
+from cortex_core.graph.state import UserSTM, MemoryEmotionalProfile, MemoryUserKnowledgeList
 
 MEMORY_CLIENT_BUILD_STM = """
 You are a Short Term Memory (STM) builder for a conversational AI system. Your task is to create a concise summary of the recent interactions and context of the user, which can be used by the AI system to generate more relevant and context-aware responses. \n

@@ -23,10 +23,8 @@ os.environ["REDIS_PORT"] = os.getenv("REDIS_PORT", "6379")
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
+from typing import Optional, Dict, Any
 from uuid import UUID, uuid4
-from datetime import datetime
-from dataclasses import asdict
 
 from cortex_queue.dto import TaskItem, TaskStatus
 from cortex_cm.pg.enums import TaskOwner

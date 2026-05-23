@@ -1,8 +1,7 @@
 import os
 from dataclasses import asdict
 import httpx
-from typing import Any, Dict, Optional
-from cortex_cm.pg.enums import TaskStatus
+from typing import Any, Dict
 from cortex_queue.dto import TaskItem
 
 QUEUE_URL = os.getenv("CORTEX_QUEUE_URL")

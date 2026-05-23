@@ -13,7 +13,7 @@ def _get_model():
 def _get_memory_saver():
     global _memory_saver, _model
     if _memory_saver is None:
-        from cortex_core.memory.saver import MemorySaver
+        from cortex_core.memory.service.saver import MemorySaver
         if _model is None:
             _model = _get_model()
         _memory_saver = MemorySaver(engine=engine, model=_model)

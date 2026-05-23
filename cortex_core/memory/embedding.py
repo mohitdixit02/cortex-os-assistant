@@ -1,8 +1,4 @@
-from langchain_huggingface import HuggingFaceEmbeddings, HuggingFaceEndpointEmbeddings, ChatHuggingFace, HuggingFaceEndpoint
-from typing import Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from cortex_cm.utility.huggingface.config import models
-from cortex_cm.utility.config import env
 import numpy as np
 from numpy import dot
 from numpy.linalg import norm
@@ -10,11 +6,6 @@ from cortex_cm.utility.models import get_embedding_model
 
 class EmbeddingModel:
     def __init__(self):
-        # self.embd_model = HuggingFaceEndpointEmbeddings(
-        #     model="sentence-transformers/all-MiniLM-L6-v2",
-        #     task="feature-extraction",
-        #     huggingfacehub_api_token=env.HF_TOKEN
-        # )
         self.embd_model = get_embedding_model()
         
     def generate_embeddings(self, text: str) -> list[float]:
