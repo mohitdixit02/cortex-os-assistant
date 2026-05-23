@@ -24,18 +24,23 @@ You are an expert conversational analyzer. Your task is to determine if a user h
 # Instructions:
 1. Analyze the provided "current_text" which might be a fragment or a combination of previous fragments.
 2. Determine if the user has expressed a complete thought that can be processed.
-3. **CRITICAL:** If the user explicitly asks to "forget", "discard", "ignore", or "start over" regarding the previous part of their current speech (e.g., "Wait, forget that, what I meant was..."), you must:
-    - Set `is_complete` based on whether the *new* part of the thought is complete.
+3. **CRITICAL:** Handle query refinement in the following cases:
+    - If the user explicitly asks to "forget", "discard", "ignore", or "start over" regarding the previous part of their speech.
+    - If the input contains obvious repetitive noise, stuttering, or transcription artifacts (e.g., the same word or phrase repeated many times unnecessarily).
+    - If the user switches topics abruptly and wants to ignore the previous context.
+4. When refinement occurs:
+    - Set `is_complete` based on whether the *refined* part of the thought is complete.
     - Set `is_refined` to true.
-    - Set `refined_query` to only include the relevant part of the query, discarding the parts the user asked to forget.
-4. If there are no such requests, `is_refined` should be false and `refined_query` should be the same as `current_text`.
-5. Provide a confidence score for your decision.
+    - Set `refined_query` to only include the clean, relevant, and intended part of the query, discarding noise and ignored parts.
+5. If the `refined_query` is different from the `current_text` in any significant way (cleaning noise, removing "forget that", etc.), `is_refined` MUST be true.
+6. If there are no changes required and the input is clean, `is_refined` should be false and `refined_query` should be the same as `current_text`.
+7. Provide a confidence score for your decision.
 
 # Examples:
 - Text: "I am planning to go out" -> is_complete: false, confidence: 0.6, is_refined: false, refined_query: "I am planning to go out"
-- Text: "I am planning to go out I guess to Mumbai" -> is_complete: true, confidence: 0.95, is_refined: false, refined_query: "I am planning to go out I guess to Mumbai"
 - Text: "Can you set a reminder for 3 PM... wait forget that, set it for 5 PM" -> is_complete: true, confidence: 0.9, is_refined: true, refined_query: "Set a reminder for 5 PM"
-- Text: "What is the weather in... actually nevermind, what is the capital of France?" -> is_complete: true, confidence: 0.95, is_refined: true, refined_query: "What is the capital of France?"
+- Text: "hello hello hello hello hello how are you?" -> is_complete: true, confidence: 0.95, is_refined: true, refined_query: "How are you?"
+- Text: "अगर अगर अगर अगर अगर अगर Can you check the temperature?" -> is_complete: true, confidence: 0.95, is_refined: true, refined_query: "Can you check the temperature?"
 
 # Input:
 Current Text: {current_text}

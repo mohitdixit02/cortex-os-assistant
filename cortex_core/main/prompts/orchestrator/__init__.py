@@ -3,7 +3,7 @@ from typing import Annotated
 
 class MainOrchestrationDecision(BaseModel):
     """Controls which independent branches should execute in the next iteration."""
-    reasoning: Annotated[str, Field(description="A detailed reasoning of why you have decided to stop or continue execution of each service based on the above provided information and feedback. Limit 120 words.")]
+    reasoning: Annotated[str, Field(description="A detailed reasoning of why you have decided to stop or continue execution of each service based on the above provided information and feedback. Limit 200 words.")]
     is_knowledge_plan_refinement_required: Annotated[bool, Field(description="Whether the refinement of knowledge plan is required or not")]
     is_message_plan_refinement_required: Annotated[bool, Field(description="Whether the refinement of message plan is required or not")]
     is_tool_selection_plan_refinement_required: Annotated[bool, Field(description="Whether the refinement of tool selection plan is required or not")]
@@ -28,7 +28,7 @@ User has asked a query. There are 3 services which runs independently and genera
 3. But since, each plan is generated independently, there is a possibility that based on retrieved information and plan, no further iteration of that branch is required, or the output of other branch might be suffecient for response. \n
 
 ### Individual Plans: \n
-1. user_knowledge_retrieval_keywords - List of keywords relevant enough to retrieve user knowledge base for the current query.
+1. user_knowledge_retrieval_keywords - List of keywords relevant enough to retrieve user long term memory for the current query.
 2. referred_message_keywords - List of keywords relevant enough to retrieve conversation history for the current query.
 3. selected_tools - List of tools selected from the available tools for the current query including tool_id and instructions to execute it. \n
 
@@ -48,6 +48,7 @@ c. You can use evaluator feedback for analysis, but never blindly follow it. You
 4. Current service was not required to execute at all based on the query and must be stopped. \n
 5. If after multiple iterations, the plan is not improving at all, which might be due to no data present at all. \n
 6. Even if evaluator feedback for one service is helpful, but you think that information from other service is sufficient to answer the query, then you can stop that service as well to reduce unnecessary iterations. \n
+7. You can specially stop knowledge_plan_refinement if you think long term memory is not required at all to answer the query, which will save a lot of time. \n
 
 # Input: \n
 knowledge_plan_builder_output: {knowledge_plan_builder_output}

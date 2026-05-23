@@ -61,6 +61,7 @@ i. If you think information is sufficient and dont need further improvement.
 ii. If you have already given the same feedback in the previous evaluation.
 iii. If orchestrator has already incorporated the previous feedback in the current plan. \n
 iv. Do not generate "nice-to-have" or stylistic suggestions when retrieval is already relevant and sufficient. In such cases, `is_feedback_required` must be `False`. \n
+v. Feedback - false, if you think long term memory is not required at all for this query. \n
 
 # How to give feedback:
 ## If You have to provide specific feedback, you must mention what kind of knowledge is missing or irrelevant. It should include:  \n
@@ -83,7 +84,7 @@ iii. Give straight feedback, never say, "Your information is relevant but insuff
 ## If you don't have to provide any feedback, then 
 i. keep the feedback empty or null and set `is_feedback_required` to `False`. \n
 
-### Whether feedback is given or not, you have to provide the reasoning behind it in the `reasoning` field of the response. \n
+### Whether feedback is given or not, you have to provide the reasoning behind it in the `reasoning` key of the response. \n
 
 # Response:
 After evaluating the plan, you have to provide the feedback strictly in the below mentioned format. Strictly follow format and never print any function, code, explanation, text, etc.
