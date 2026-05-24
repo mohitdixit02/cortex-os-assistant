@@ -106,7 +106,11 @@ class ResultStreamWorker:
         # Handle Event/Reminder Notification via Event Socket
         if task_owner == TaskOwner.EVENT_TOOL.value and state.event_socket:
             logger.info("Sending reminder notification to user %s via event socket", user_id)
-            event_response = StreamEventResponse(websocket=state.event_socket, streamEvent=StreamEvent(user_id=user_id))
+            
+            stream_event = state.stream_event or StreamEvent(user_id=user_id)
+            state.stream_event = stream_event
+            
+            event_response = StreamEventResponse(websocket=state.event_socket, streamEvent=stream_event)
             
             # Extract actual response text if result is a dict
             message_text = task_item.result

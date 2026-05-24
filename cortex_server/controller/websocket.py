@@ -39,6 +39,8 @@ async def ws_event(websocket: WebSocket, user_id: str = Query(...)):
                 continue
                 
     except WebSocketDisconnect:
+        pass
+    finally:
         state.event_socket = None
 
 @router.websocket("/audio")
@@ -139,8 +141,9 @@ async def ws_audio(websocket: WebSocket, user_id: str = Query(...)):
                         print(f"Ignoring stale AIStopSpeakingEvent (expected {streamEvent.current_stream_id}, got {stream_id})")
 
     except WebSocketDisconnect:
-        state.audio_socket = None
+        pass
     finally:
+        state.audio_socket = None
         state.is_user_speaking = False
         state.is_ai_speaking = False
         if state.stream_client:

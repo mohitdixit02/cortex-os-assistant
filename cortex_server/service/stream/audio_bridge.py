@@ -6,6 +6,7 @@ from service.stream.event import StreamEvent
 from fastapi import WebSocket
 from typing import AsyncGenerator
 from logger import logger
+from starlette.websockets import WebSocketState
 
 from .state_manager import voice_state_manager
 
@@ -35,24 +36,32 @@ class AudioStreamBridge:
     async def send_json(self, payload: dict):
         """Helper function to send JSON responses through the Audio WebSocket connection."""
         state = self.user_state
-        if state and state.audio_socket:
+        websocket = state.audio_socket if state and state.audio_socket else self.websocket
+
+        if not websocket or websocket.client_state != WebSocketState.CONNECTED:
+            print(f"Skipping send_json: WebSocket not connected (Type: {payload.get('type')})")
+            return
+
+        try:
             async with self.streamEvent.getLock():
-                await state.audio_socket.send_json(payload)
-        else:
-            # Fallback to the websocket passed in constructor
-            async with self.streamEvent.getLock():
-                await self.websocket.send_json(payload)
+                await websocket.send_json(payload)
+        except Exception as e:
+            print(f"Failed to send JSON over audio socket: {e}")
             
     async def send_bytes(self, payload: bytes):
         """Helper function to send binary audio data over the Audio websocket with proper locking."""
         state = self.user_state
-        if state and state.audio_socket:
+        websocket = state.audio_socket if state and state.audio_socket else self.websocket
+
+        if not websocket or websocket.client_state != WebSocketState.CONNECTED:
+            print("Skipping send_bytes: WebSocket not connected.")
+            return
+
+        try:
             async with self.streamEvent.getLock():
-                await state.audio_socket.send_bytes(payload)
-        else:
-            # Fallback to the websocket passed in constructor
-            async with self.streamEvent.getLock():
-                await self.websocket.send_bytes(payload)
+                await websocket.send_bytes(payload)
+        except Exception as e:
+            print(f"Failed to send bytes over audio socket: {e}")
     
     def pcm16le_to_wav_bytes(self, pcm_bytes: bytes) -> bytes:
         """

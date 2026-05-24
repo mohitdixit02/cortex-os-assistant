@@ -2,6 +2,7 @@ import asyncio
 from fastapi import WebSocket
 from enum import Enum
 from typing import Awaitable, Callable
+from starlette.websockets import WebSocketState
 
 from .state_manager import voice_state_manager
 
@@ -237,6 +238,10 @@ class StreamEventResponse:
     
     async def send_response(self, response: ResponseKey, message: str | None = None, stage: str | None = None):
         """Send a standardized JSON response based on the provided response key (thread-safe) \n"""
+        if not self.websocket or self.websocket.client_state != WebSocketState.CONNECTED:
+            print(f"Skipping send_response ({response}): WebSocket not connected.")
+            return
+
         if response not in EVENT_RESPONSE_MAP:
             raise ValueError(f"Invalid response key: {response}")
         
@@ -246,5 +251,8 @@ class StreamEventResponse:
         if stage:
             payload["stage"] = stage
 
-        async with self.streamEvent.getLock():
-            await self.websocket.send_json(payload)
+        try:
+            async with self.streamEvent.getLock():
+                await self.websocket.send_json(payload)
+        except Exception as e:
+            print(f"Failed to send JSON response ({response}): {e}")
