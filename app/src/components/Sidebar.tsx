@@ -2,158 +2,174 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter, usePathname } from 'next/navigation';
-import { FaHome, FaHistory, FaCog, FaUser, FaSignOutAlt, FaChevronLeft, FaChevronRight, FaTasks } from 'react-icons/fa';
+import { FaHome, FaHistory, FaCog, FaUser, FaSignOutAlt, FaTasks } from 'react-icons/fa';
 import { useAppContext } from './AppContext';
 
 const navItems = [
-  { name: 'Home', icon: <FaHome />, path: '/' },
-  { name: 'Conversations', icon: <FaHistory />, path: '/history' },
-  { name: 'Tasks', icon: <FaTasks />, path: '/tasks' },
-  { name: 'Settings', icon: <FaCog />, path: '/settings' },
-  { name: 'Profile', icon: <FaUser />, path: '/profile' },
+  { name: 'Home', icon: <FaHome />, overlay: null },
+  { name: 'Conversations', icon: <FaHistory />, overlay: 'history' },
+  { name: 'Tasks', icon: <FaTasks />, overlay: 'tasks' },
+  { name: 'Settings', icon: <FaCog />, overlay: 'settings' },
+  { name: 'Profile', icon: <FaUser />, overlay: 'profile' },
 ];
 
 export default function Sidebar() {
-  const router = useRouter();
-  const pathname = usePathname();
-  const { isSidebarCollapsed, setIsSidebarCollapsed, logout } = useAppContext();
+  const { activeOverlay, setActiveOverlay, logout } = useAppContext();
+  const [hoveredItem, setHoveredItem] = React.useState<string | null>(null);
 
   return (
     <div
       style={{
-        height: '100vh',
-        background: 'var(--sidebar-bg)',
-        borderRight: '1px solid rgba(255,255,255,0.05)',
+        position: 'absolute',
+        left: '25px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        zIndex: 2000,
         display: 'flex',
         flexDirection: 'column',
-        padding: isSidebarCollapsed ? '30px 10px' : '30px 20px',
-        width: '100%', // Take full width of parent container
-        overflow: 'hidden'
+        alignItems: 'center',
+        padding: '20px 10px',
+        gap: '20px',
+        width: '70px',
+        borderRadius: '35px'
       }}
+      className="glass-card"
     >
       <div style={{ 
-        marginBottom: '50px', 
+        marginBottom: '10px', 
         display: 'flex', 
         alignItems: 'center', 
-        justifyContent: isSidebarCollapsed ? 'center' : 'space-between',
-        paddingLeft: isSidebarCollapsed ? '0' : '10px' 
+        justifyContent: 'center'
       }}>
-        {!isSidebarCollapsed && (
-          <motion.h2 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            style={{ 
-              fontSize: '22px', 
-              fontWeight: 'bold', 
-              background: 'var(--primary-gradient)', 
-              WebkitBackgroundClip: 'text', 
-              WebkitTextFillColor: 'transparent',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            Cortex
-          </motion.h2>
-        )}
-        <button 
-          onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          style={{
-            color: 'var(--text-muted)',
-            padding: '8px',
-            borderRadius: '8px',
-            background: 'rgba(255,255,255,0.03)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer'
-          }}
-        >
-          {isSidebarCollapsed ? <FaChevronRight /> : <FaChevronLeft />}
-        </button>
+        <div style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          background: 'var(--primary-gradient)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: 'bold',
+          fontSize: '12px',
+          color: 'white',
+          boxShadow: '0 5px 15px rgba(0,242,255,0.3)'
+        }}>
+          CX
+        </div>
       </div>
 
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+      <nav style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {navItems.map((item) => {
-          const isActive = pathname === item.path;
+          const isActive = activeOverlay === item.overlay;
           return (
-            <button
-              key={item.name}
-              onClick={() => router.push(item.path)}
-              title={isSidebarCollapsed ? item.name : ""}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '15px',
-                padding: '12px',
-                borderRadius: '12px',
-                color: isActive ? 'white' : 'var(--text-muted)',
-                background: isActive ? 'rgba(255,255,255,0.05)' : 'transparent',
-                transition: 'all 0.2s',
-                fontSize: '15px',
-                fontWeight: isActive ? '600' : '400',
-                border: isActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
-                justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
-                cursor: 'pointer'
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                  e.currentTarget.style.color = 'white';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = 'var(--text-muted)';
-                }
-              }}
-            >
-              <span style={{ fontSize: '18px', minWidth: '24px', display: 'flex', justifyContent: 'center' }}>
+            <div key={item.name} style={{ position: 'relative' }}>
+              <button
+                onClick={() => setActiveOverlay(item.overlay as any)}
+                onMouseEnter={() => setHoveredItem(item.name)}
+                onMouseLeave={() => setHoveredItem(null)}
+                style={{
+                  width: '45px',
+                  height: '45px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '15px',
+                  color: isActive ? 'white' : 'var(--text-muted)',
+                  background: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
+                  transition: 'all 0.3s',
+                  fontSize: '20px',
+                  border: isActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
+                  cursor: 'pointer'
+                }}
+              >
                 {item.icon}
-              </span>
-              {!isSidebarCollapsed && (
-                <motion.span
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  style={{ whiteSpace: 'nowrap' }}
-                >
-                  {item.name}
-                </motion.span>
-              )}
-            </button>
+              </button>
+
+              <AnimatePresence>
+                {hoveredItem === item.name && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    style={{
+                      position: 'absolute',
+                      left: '60px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'rgba(20, 20, 20, 0.95)',
+                      backdropFilter: 'blur(15px)',
+                      padding: '10px 20px',
+                      borderRadius: '10px',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      color: 'white',
+                      fontSize: '15px',
+                      fontWeight: '700',
+                      whiteSpace: 'nowrap',
+                      pointerEvents: 'none',
+                      boxShadow: '0 8px 25px rgba(0,0,0,0.5)',
+                      zIndex: 2001
+                    }}
+                  >
+                    {item.name}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           );
         })}
       </nav>
 
-      <button
-        onClick={() => logout()}
-        title={isSidebarCollapsed ? "Logout" : ""}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '15px',
-          padding: '12px',
-          borderRadius: '12px',
-          color: 'var(--accent-primary)',
-          transition: 'all 0.2s',
-          fontSize: '15px',
-          marginTop: 'auto',
-          justifyContent: isSidebarCollapsed ? 'center' : 'flex-start',
-          cursor: 'pointer'
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,242,255,0.05)'}
-        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-      >
-        <FaSignOutAlt size={18} />
-        {!isSidebarCollapsed && (
-          <motion.span
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-          >
-            Logout
-          </motion.span>
-        )}
-      </button>
+      <div style={{ position: 'relative', marginTop: 'auto' }}>
+        <button
+          onClick={() => logout()}
+          onMouseEnter={() => setHoveredItem('Logout')}
+          onMouseLeave={() => setHoveredItem(null)}
+          style={{
+            width: '45px',
+            height: '45px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '15px',
+            color: 'var(--accent-primary)',
+            transition: 'all 0.3s',
+            fontSize: '20px',
+            cursor: 'pointer'
+          }}
+        >
+          <FaSignOutAlt />
+        </button>
+
+        <AnimatePresence>
+          {hoveredItem === 'Logout' && (
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              style={{
+                position: 'absolute',
+                left: '60px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'rgba(20, 20, 20, 0.95)',
+                backdropFilter: 'blur(15px)',
+                padding: '10px 20px',
+                borderRadius: '10px',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: 'var(--accent-primary)',
+                fontSize: '15px',
+                fontWeight: '700',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+                boxShadow: '0 8px 25px rgba(0,0,0,0.5)',
+                zIndex: 2001
+              }}
+            >
+              Logout
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

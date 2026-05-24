@@ -9,8 +9,8 @@ interface AppContextType {
   setIsOnboarded: (val: boolean) => void;
   isLoggedIn: boolean;
   setIsLoggedIn: (val: boolean) => void;
-  isSidebarCollapsed: boolean;
-  setIsSidebarCollapsed: (val: boolean) => void;
+  activeOverlay: 'history' | 'tasks' | 'settings' | 'profile' | null;
+  setActiveOverlay: (val: 'history' | 'tasks' | 'settings' | 'profile' | null) => void;
   user: any;
   setUser: (user: any) => void;
   token: string | null;
@@ -54,7 +54,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [isLoggedIn, setIsLoggedIn] = useState(!!token);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [activeOverlay, setActiveOverlay] = useState<'history' | 'tasks' | 'settings' | 'profile' | null>(null);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('activeThreadId');
@@ -209,8 +209,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setIsOnboarded: updateOnboarded, 
       isLoggedIn, 
       setIsLoggedIn,
-      isSidebarCollapsed,
-      setIsSidebarCollapsed,
+      activeOverlay,
+      setActiveOverlay,
       user,
       setUser,
       token,

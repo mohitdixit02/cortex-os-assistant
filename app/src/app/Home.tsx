@@ -9,6 +9,10 @@ import ChatHistory from "../components/ChatHistory";
 import { useAppContext } from "../components/AppContext";
 import { useMessages } from "../hooks/useApi";
 
+import ThreadSelector from "../components/ThreadSelector";
+
+import Sidebar from "../components/Sidebar";
+
 export default function Home() {
   const { user, activeThreadId } = useAppContext();
   const { messages, mutate: mutateMessages, isLoading: messagesLoading } = useMessages(activeThreadId);
@@ -51,18 +55,25 @@ export default function Home() {
       height: '100%',
       display: 'flex',
       overflow: 'hidden',
-      background: 'var(--background)'
+      padding: '25px',
+      gap: '25px',
+      position: 'relative'
     }}>
-      {/* Left Area: Assistant Orb - Always Centered in its space */}
-      <div style={{
+      {/* Left Area: Assistant Orb Section - Now contains the NavDock */}
+      <div className="glass-card" style={{
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '40px',
-        position: 'relative'
+        position: 'relative',
+        height: '100%',
+        overflow: 'hidden'
       }}>
+        {/* Floating Nav Dock - Integrated into this section */}
+        <Sidebar />
+
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
           <motion.h1 
             initial={{ opacity: 0, y: -10 }}
@@ -71,14 +82,6 @@ export default function Home() {
           >
             Hello, <span className="gradient-text">{`I'm Cortex`}</span>
           </motion.h1>
-          {/* <motion.p 
-            key={isSpeaking ? "sp" : isListening ? "li" : "id"}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            style={{ color: 'var(--text-muted)', fontSize: '18px', marginTop: '10px' }}
-          >
-            {isSpeaking ? "Speaking..." : isListening ? "Listening..." : "How can I help you today?"}
-          </motion.p> */}
         </div>
 
         <div style={{
@@ -113,7 +116,7 @@ export default function Home() {
                 color: 'white',
                 fontSize: '17px',
                 fontWeight: '600',
-                boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+                boxShadow: '0 10px 25px rgba(0,242,255,0.3)',
                 cursor: 'pointer'
               }}
             >
@@ -145,45 +148,63 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Right Area: Persistent History Window */}
+      {/* Right Area: Stacked Contextual Cards */}
       <div style={{
-        width: '400px',
-        background: 'rgba(255, 255, 255, 0.01)',
-        borderLeft: '1px solid rgba(255, 255, 255, 0.05)',
+        width: '420px',
         display: 'flex',
         flexDirection: 'column',
-        height: '100%',
+        gap: '20px',
+        height: '100%'
       }}>
-        <div style={{
-          padding: '25px 20px',
-          borderBottom: '1px solid rgba(255,255,255,0.05)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <span style={{ fontWeight: '800', fontSize: '20px', letterSpacing: '-0.5px' }}>Conversation</span>
-          <button 
-            onClick={() => mutateMessages()}
-            disabled={messagesLoading}
-            style={{ 
-              color: 'white', 
-              background: 'rgba(255,255,255,0.03)', 
-              padding: '10px', 
-              borderRadius: '10px',
-              display: 'flex',
-              cursor: 'pointer',
-              opacity: messagesLoading ? 0.5 : 1,
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => !messagesLoading && (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
-            onMouseLeave={(e) => !messagesLoading && (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
-          >
-            <FaSync size={14} className={messagesLoading ? 'spin' : ''} />
-          </button>
+        {/* Header Card: Thread Management */}
+        <div className="glass-card" style={{ padding: '20px', zIndex: 50, position: 'relative' }}>
+          <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontWeight: '800', fontSize: '14px', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+              Current Session
+            </span>
+            <div style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
+              {new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            </div>
+          </div>
+          <ThreadSelector />
         </div>
 
-        <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <ChatHistory messages={messages} />
+        {/* Chat Card: Conversation History */}
+        <div className="glass-card" style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}>
+          <div style={{
+            padding: '20px 25px',
+            borderBottom: '1px solid rgba(255,255,255,0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: 'rgba(255,255,255,0.01)'
+          }}>
+            <span style={{ fontWeight: '800', fontSize: '18px', letterSpacing: '-0.5px' }}>Conversation</span>
+            <button 
+              onClick={() => mutateMessages()}
+              disabled={messagesLoading}
+              style={{ 
+                color: 'white', 
+                background: 'rgba(255,255,255,0.03)', 
+                padding: '8px', 
+                borderRadius: '8px',
+                display: 'flex',
+                cursor: 'pointer',
+                opacity: messagesLoading ? 0.5 : 1
+              }}
+            >
+              <FaSync size={12} className={messagesLoading ? 'spin' : ''} />
+            </button>
+          </div>
+
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <ChatHistory messages={messages} />
+          </div>
         </div>
       </div>
 
