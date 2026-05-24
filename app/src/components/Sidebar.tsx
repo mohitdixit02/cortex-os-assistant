@@ -20,7 +20,7 @@ export default function Sidebar() {
   return (
     <div
       style={{
-        position: 'absolute',
+        position: 'fixed',
         left: '25px',
         top: '50%',
         transform: 'translateY(-50%)',

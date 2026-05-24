@@ -11,8 +11,6 @@ import { useMessages } from "../hooks/useApi";
 
 import ThreadSelector from "../components/ThreadSelector";
 
-import Sidebar from "../components/Sidebar";
-
 export default function Home() {
   const { user, activeThreadId } = useAppContext();
   const { messages, mutate: mutateMessages, isLoading: messagesLoading } = useMessages(activeThreadId);
@@ -40,15 +38,6 @@ export default function Home() {
     }
   }, [isListening, isSpeaking, isConversationActive]);
 
-  // Refresh messages when speech ends
-  // const wasSpeaking = useRef(false);
-  // useEffect(() => {
-  //   if (wasSpeaking.current && !isSpeaking) {
-  //     setTimeout(() => mutateMessages(), 500);
-  //   }
-  //   wasSpeaking.current = isSpeaking;
-  // }, [isSpeaking, mutateMessages]);
-
   return (
     <div style={{
       width: '100%',
@@ -59,7 +48,7 @@ export default function Home() {
       gap: '25px',
       position: 'relative'
     }}>
-      {/* Left Area: Assistant Orb Section - Now contains the NavDock */}
+      {/* Left Area: Assistant Orb Section */}
       <div className="glass-card" style={{
         flex: 1,
         display: 'flex',
@@ -71,9 +60,6 @@ export default function Home() {
         height: '100%',
         overflow: 'hidden'
       }}>
-        {/* Floating Nav Dock - Integrated into this section */}
-        <Sidebar />
-
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
           <motion.h1 
             initial={{ opacity: 0, y: -10 }}

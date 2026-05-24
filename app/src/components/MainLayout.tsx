@@ -20,6 +20,17 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     setMounted(true);
   }, []);
 
+  // Close overlay on ESC key
+  useEffect(() => {
+    const handleEsc = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActiveOverlay(null);
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [setActiveOverlay]);
+
   if (!mounted) {
     return <div style={{ background: 'var(--background)', minHeight: '100vh' }} />;
   }
@@ -51,12 +62,16 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       overflow: 'hidden',
       position: 'relative'
     }}>
+      {/* Global Navigation Dock */}
+      <Sidebar />
+
       {/* Main Content Area */}
       <main style={{ 
         flex: 1,
         overflow: 'hidden',
         background: 'var(--background)',
-        position: 'relative'
+        position: 'relative',
+        paddingLeft: '110px'
       }}>
         {children}
       </main>
@@ -76,7 +91,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               alignItems: 'center',
               justifyContent: 'center',
               padding: '40px',
-              background: 'rgba(0,0,0,0.4)',
+              background: 'rgba(8, 8, 18, 0.73)',
               backdropFilter: 'blur(8px)'
             }}
           >
@@ -111,7 +126,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                background: 'rgba(255,255,255,0.02)'
+                background: 'rgba(70, 70, 70, 0.19)'
               }}>
                 <span style={{ 
                   fontSize: '18px', 
