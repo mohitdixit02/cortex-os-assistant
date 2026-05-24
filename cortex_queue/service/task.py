@@ -3,6 +3,7 @@ from fastapi import HTTPException
 import time
 from cortex_queue.dto import AddTaskRequest, TaskItem
 from cortex_queue.service.event import add_event_tool_task_to_queue, update_submit_event_task_status
+from cortex_queue.service.saver import save_conversation_messages
 from cortex_cm.pg import TaskStatus, TaskOwner
 from cortex_cm.redis.redis_client import RedisClient, RedisModeType
 from cortex_cm.pg import RoleType, AIClientType
@@ -18,44 +19,9 @@ result_redis_client = RedisClient.get_client(RedisModeType.RESULT)
 async def _add_vc_task_to_queue(request: AddTaskRequest) -> TaskItem:
     memory_saver = _get_memory_saver()
     model = _get_model()
-    user_id = request.metadata.get("user_id")
-    session_id = request.metadata.get("session_id")
-    voice_client_response = request.metadata.get("voice_client_response")
-    
-    if not user_id or not session_id:
-        raise HTTPException(status_code=400, detail="Missing User ID or Session ID in task metadata")
-    
-    query = request.payload.get("query", "")
-    original_query = request.payload.get("original_query")
-    is_refined_query = request.payload.get("is_refined_query", False)
-    
-    # - - - Self Note - - -
-    # If refined, content is the original spoken text, refined_query is the AI-refined version.
-    # If not refined, content is just the query.
-    content_to_save = original_query if is_refined_query and original_query else query
-    refined_query_to_save = query if is_refined_query else None
 
-    user_msg = memory_saver.save_message(
-        session_id=session_id,
-        user_id=user_id,
-        content=content_to_save,
-        role=RoleType.USER,
-        ai_client=None,
-        is_tool_used=False,
-        tool_id=None,
-        is_refined_query=is_refined_query,
-        refined_query=refined_query_to_save
-    )
-    
-    memory_saver.save_message(
-        session_id=session_id,
-        user_id=user_id,
-        content=voice_client_response if voice_client_response else "",
-        role=RoleType.AI,
-        ai_client=AIClientType.VOICE_CLIENT,
-        is_tool_used=False,
-        tool_id=None
-    )
+    # Save user and AI messages
+    user_msg = save_conversation_messages(request)
     
     task_obj = memory_saver.add_new_task(
         message_id=user_msg.message_id,

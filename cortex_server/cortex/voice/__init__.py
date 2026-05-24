@@ -5,7 +5,7 @@ from cortex_server.cortex.voice.model import VoiceMainModel, EmotionDetectionMod
 from cortex_cm.utility.main import iterate_tokens_async
 from typing import AsyncGenerator, Optional, Any
 from cortex_cm.utility.logger import get_logger
-from .req import add_voice_task
+from .req import add_voice_task, save_casual_response
 from .utility import generate_audio_stream
 from cortex_cm.pg import TaskOwner
 from fastapi import WebSocket
@@ -154,6 +154,16 @@ class VoiceClient:
                 response_text = self.model.stream_text_tokens(query)
                 print("Is search query:", route_res.search_required)
                 print("Casual response:", response_text)
+
+                # Save casual conversation to DB
+                asyncio.create_task(save_casual_response(
+                    query=query,
+                    user_id=user_id,
+                    session_id=session_id,
+                    voice_client_response=response_text,
+                    original_query=original_query,
+                    is_refined_query=is_refined_query
+                ))
             else:
                 self.streamEvent.is_depth = True
                 emotion = self.emotion_model.get_emotion(query)

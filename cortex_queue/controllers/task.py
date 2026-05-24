@@ -9,6 +9,7 @@ from cortex_queue.service.task import (
     add_task_to_queue,
     submit_task_to_queue
 )
+from cortex_queue.service.saver import save_conversation_messages
 
 task_router = APIRouter()
 
@@ -28,6 +29,14 @@ async def submit_task(request: TaskItem):
     if request.status not in [TaskStatus.COMPLETED, TaskStatus.FAILED]:
         raise HTTPException(status_code=400, detail="Status must be either 'completed' or 'failed'")
     return await submit_task_to_queue(request)
+
+@task_router.post("/save_messages")
+async def save_messages(request: AddTaskRequest):
+    try:
+        save_conversation_messages(request)
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @task_router.get("/get_task")
 async def get_task(timeout: int = 10):
