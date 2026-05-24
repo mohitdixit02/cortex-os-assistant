@@ -5,6 +5,7 @@ import { handleAudioMessage } from "./handlers";
 import { configureWebSocket } from "./utility";
 import {
     AudioStreamSession,
+    AIState,
 } from "./types";
 import Emitter from "./emitter";
 
@@ -18,8 +19,7 @@ export const useAudioWebSocket = (
     }
     const audioSocketRef = useRef<WebSocket | null>(null);
     const AUDIO_SOCKET_ENDPOINT = `${BASE_URL}/audio?user_id=${streamSession.userId}`;
-    const [isListening, setIsListening] = useState(false);
-    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [aiState, setAiState] = useState<AIState>(AIState.STANDBY);
     const playbackDrainTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const streamPlaybackRef = useRef({
         streamId: null as number | null,
@@ -54,8 +54,7 @@ export const useAudioWebSocket = (
                 playbackDrainTimerRef,
                 playAudio,
                 configAudioSpec,
-                setIsSpeaking,
-                setIsListening,
+                setAiState,
                 onFinishSpeaking
             );
         };
@@ -75,8 +74,7 @@ export const useAudioWebSocket = (
             playbackDrainTimerRef.current = null;
         }
         closeAudioPlayer();
-        // setIsListening(false);
-        // setIsSpeaking(false);
+        setAiState(AIState.STANDBY);
 
         audioSocketRef.current?.close();
         audioSocketRef.current = null;
@@ -95,10 +93,9 @@ export const useAudioWebSocket = (
 
             const interruptionHandler = (res: MicStreamRes) => {
                 if (res.event === "speech-start") {
-                    setIsListening(true);
-                    setIsSpeaking(false);
+                    setAiState(AIState.LISTENING);
                 } else if (res.event === "speech-end") {
-                    setIsListening(false);
+                    // Stay in LISTENING or wait for ANALYZING/PROCESSING from backend
                 }
                 const eventType: typeof Emitter.EventType[keyof typeof Emitter.EventType] = res.event === "speech-start"
                     ? Emitter.EventType.USER_START_SPEAKING
@@ -115,20 +112,17 @@ export const useAudioWebSocket = (
                 }
             );
 
-            // setIsListening(true);
-            // setIsSpeaking(false);
-
             startRecording(chunkHandler, (err) => console.error(err), interruptionHandler);
         } catch (error) {
             console.error("Failed to start streaming:", error);
             await stopRecording();
+            setAiState(AIState.STANDBY);
         }
     }, [binaryType, startRecording, stopRecording, audioSocketRef, AUDIO_SOCKET_ENDPOINT]);
 
     const stopAudioStreaming = useCallback(async () => {
         await closeAudioPlayer();
-        // setIsListening(false);
-        // setIsSpeaking(false);
+        setAiState(AIState.STANDBY);
         Emitter.emitAudioSocket(audioSocketRef.current, Emitter.EventType.CONVERSATION_END);
     }, [closeAudioPlayer]);
 
@@ -137,7 +131,6 @@ export const useAudioWebSocket = (
         stopAudioStreaming,
         attachAudioListener,
         closeAudioSocket,
-        isListening,
-        isSpeaking
+        aiState
     }
 };

@@ -2,31 +2,43 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import { AIState } from "./socket/types";
 
 interface AssistantOrbProps {
-  isListening: boolean;
-  isSpeaking: boolean;
-  isThinking?: boolean;
+  aiState: AIState;
 }
 
-export default function AssistantOrb3D({ isListening, isSpeaking, isThinking = false }: AssistantOrbProps) {
+export default function AssistantOrb3D({ aiState }: AssistantOrbProps) {
   // Speed and scale based on assistant state
-  // Idle: 12s, Listening: 6s, Thinking: 1.5s (Rapid), Speaking: 3s
-  const rotationDuration = isThinking ? 1.5 : isSpeaking ? 3 : isListening ? 6 : 12;
+  // STANDBY: 12s, LISTENING: 6s, SPEAKING: 3s, ANALYZING/PROCESSING: 1.5s
+  const rotationDuration = 
+    aiState === AIState.STANDBY ? 12 :
+    aiState === AIState.LISTENING ? 6 :
+    aiState === AIState.SPEAKING ? 3 : 1.5;
   
   // Pulsing scale
-  const pulseScale = isSpeaking ? [1, 1.15, 1] : isThinking ? [1, 1.04, 1] : isListening ? [1, 1.08, 1] : [1, 1.02, 1];
-  const pulseDuration = isSpeaking ? 0.4 : isThinking ? 0.8 : isListening ? 1.2 : 2.5;
+  const pulseScale = 
+    aiState === AIState.SPEAKING ? [1, 1.15, 1] :
+    (aiState === AIState.ANALYZING || aiState === AIState.PROCESSING) ? [1, 1.04, 1] :
+    aiState === AIState.LISTENING ? [1, 1.08, 1] : [1, 1.02, 1];
+
+  const pulseDuration = 
+    aiState === AIState.SPEAKING ? 0.4 :
+    (aiState === AIState.ANALYZING || aiState === AIState.PROCESSING) ? 0.8 :
+    aiState === AIState.LISTENING ? 1.2 : 2.5;
 
   // Distortion animation (blob effect) speed
-  const distortionDuration = isSpeaking || isThinking ? 2 : isListening ? 4 : 6;
+  const distortionDuration = 
+    (aiState === AIState.SPEAKING || aiState === AIState.ANALYZING || aiState === AIState.PROCESSING) ? 2 :
+    aiState === AIState.LISTENING ? 4 : 6;
 
-  // Color shift: Listening -> more Cyan, Speaking -> more Pink, Thinking -> Mix
-  const gradientColors = isListening 
-    ? "#00f2ff, #7950c7, #00f2ff, #7950c7, #00f2ff" 
-    : isSpeaking 
-    ? "#ff00e5, #7950c7, #ff00e5, #7950c7, #ff00e5" 
-    : "#00f2ff, #ff00e5, #00f2ff, #ff00e5, #00f2ff";
+  // Color shift: Listening -> Cyan, Speaking -> Pink, Others -> Mix
+  const gradientColors = 
+    aiState === AIState.LISTENING 
+      ? "#00f2ff, #7950c7, #00f2ff, #7950c7, #00f2ff" 
+      : aiState === AIState.SPEAKING 
+      ? "#ff00e5, #7950c7, #ff00e5, #7950c7, #ff00e5" 
+      : "#00f2ff, #ff00e5, #00f2ff, #ff00e5, #00f2ff";
 
   const distortion = [
     "50% 50% 50% 50% / 50% 50% 50% 50%",
@@ -76,9 +88,9 @@ export default function AssistantOrb3D({ isListening, isSpeaking, isThinking = f
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          boxShadow: isListening 
+          boxShadow: aiState === AIState.LISTENING 
             ? "0 0 40px rgba(0, 242, 255, 0.5)" 
-            : isSpeaking 
+            : aiState === AIState.SPEAKING 
             ? "0 0 40px rgba(255, 0, 229, 0.5)" 
             : "0 0 30px rgba(255, 255, 255, 0.1)",
           position: "relative",

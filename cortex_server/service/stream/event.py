@@ -26,6 +26,7 @@ class StreamEvent:
     user_id: str | None
     session_id: str | None
     detected_language: str | None
+    is_depth: bool
 
     def __init__(self, user_id: str | None = None):
         self.audio_buffer = bytearray()
@@ -37,6 +38,7 @@ class StreamEvent:
         self.user_id = user_id
         self.session_id = None
         self.detected_language = None
+        self.is_depth = False
 
     def increment_stream_id(self) -> int:
         """Generate a new unique ID for the next audio stream."""
@@ -233,7 +235,7 @@ class StreamEventResponse:
         self.websocket = websocket
         self.streamEvent = streamEvent
     
-    async def send_response(self, response: ResponseKey, message: str | None = None):
+    async def send_response(self, response: ResponseKey, message: str | None = None, stage: str | None = None):
         """Send a standardized JSON response based on the provided response key (thread-safe) \n"""
         if response not in EVENT_RESPONSE_MAP:
             raise ValueError(f"Invalid response key: {response}")
@@ -241,6 +243,8 @@ class StreamEventResponse:
         payload = EVENT_RESPONSE_MAP[response].copy()
         if message:
             payload["message"] = message
+        if stage:
+            payload["stage"] = stage
 
         async with self.streamEvent.getLock():
             await self.websocket.send_json(payload)

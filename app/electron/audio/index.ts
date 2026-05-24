@@ -54,6 +54,7 @@ export class AudioManager {
             }
             this.micRecorder = null;
         }
+        this.isUserSpeaking = false;
         this.micOwnerWebContents = null;
         this.vad.pause();
     }

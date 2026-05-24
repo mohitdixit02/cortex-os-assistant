@@ -96,6 +96,7 @@ class StreamClient:
 
             # Either complete, or VC timed out waiting
             print("Finalizing listening and starting response...")
+            print("Sending ResponseKey.FINISH_LISTENING to UI")
             await stream_event_response.send_response(ResponseKey.FINISH_LISTENING)
             
             # Fallback for non-English language
@@ -159,6 +160,7 @@ class StreamClient:
             )
 
             try:
+                self.streamEvent.is_depth = False
                 # Notify UI that a stream is starting
                 await event_response.send_response(ResponseKey.AI_AUDIO_STREAM_START)
                 
@@ -176,7 +178,7 @@ class StreamClient:
                     )
                 
                 # Notify UI that server finished sending audio
-                await event_response.send_response(ResponseKey.AI_AUDIO_STREAM_END)
+                await event_response.send_response(ResponseKey.AI_AUDIO_STREAM_END, stage="ended")
                 
             except Exception as e:
                 print(f"Failed to stream task {task_item.task_id}: {e}")

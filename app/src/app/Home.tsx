@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWebSocket } from "../components/socket/WebSocket";
+import { AIState } from "../components/socket/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaStop, FaPlay, FaSync } from "react-icons/fa";
 import AssistantOrb3D from "../components/AssistantOrb3D";
@@ -21,22 +22,8 @@ export default function Home() {
     startAudioStream,
     endAudioStream,
     isConversationActive,
-    isListening,
-    isSpeaking
+    aiState
   } = useWebSocket(backendUrl.replace(/^http/, "ws") + "/ws");
-
-  const [isThinking, setIsThinking] = useState(false);
-
-  // Derive thinking state: User stopped speaking but assistant hasn't started yet
-  useEffect(() => {
-    if (!isListening && isConversationActive && !isSpeaking) {
-      // Small delay to avoid flickering between states
-      const timer = setTimeout(() => setIsThinking(true), 500);
-      return () => clearTimeout(timer);
-    } else {
-      setIsThinking(false);
-    }
-  }, [isListening, isSpeaking, isConversationActive]);
 
   return (
     <div style={{
@@ -68,6 +55,25 @@ export default function Home() {
           >
             Hello, <span className="gradient-text">{`I'm Cortex`}</span>
           </motion.h1>
+          <motion.p
+            key={aiState}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{ 
+              fontSize: '18px', 
+              fontWeight: '500', 
+              color: 'var(--text-muted)',
+              marginTop: '8px',
+              textTransform: 'uppercase',
+              letterSpacing: '2px'
+            }}
+          >
+            {aiState === AIState.LISTENING && "Listening..."}
+            {aiState === AIState.SPEAKING && "Speaking..."}
+            {aiState === AIState.ANALYZING && "Analyzing..."}
+            {aiState === AIState.PROCESSING && "Thinking..."}
+            {aiState === AIState.STANDBY && "Standby"}
+          </motion.p>
         </div>
 
         <div style={{
@@ -80,9 +86,7 @@ export default function Home() {
           position: 'relative'
         }}>
           <AssistantOrb3D 
-            isListening={isListening} 
-            isSpeaking={isSpeaking} 
-            isThinking={isThinking} 
+            aiState={aiState}
           />
         </div>
 

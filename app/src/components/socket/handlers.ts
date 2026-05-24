@@ -3,6 +3,11 @@ import {
     AudioMetaData,
     META_DATA_KEY,
     AUDIO_END_KEY,
+    AIState,
+    EVENT_TYPE_INTERRUPTION,
+    EVENT_STAGE_WAITING,
+    EVENT_STAGE_FINISHED,
+    EVENT_STAGE_PENDING,
 } from "./types";
 
 import {
@@ -36,19 +41,27 @@ export const handleAudioMessage = async (
     playbackDrainTimerRef: React.RefObject<ReturnType<typeof setTimeout> | null>,
     playAudio: (data: Blob | ArrayBuffer) => Promise<void>,
     configAudioSpec: (spec: AudioConfig) => void,
-    setIsSpeaking: (val: boolean) => void,
-    setIsListening: (val: boolean) => void,
+    setAiState: (state: AIState) => void,
     onFinishSpeaking?: () => void,
 ) => {
-    console.log("Received event message:", event.data);
+    console.log("Received audio socket message:", event.data);
 
     if (typeof event.data === "string") {
         const data = JSON.parse(event.data) as AudioMetaData;
+        
+        // Handle Interruption States
+        if (data.type === EVENT_TYPE_INTERRUPTION) {
+            if (data.stage === EVENT_STAGE_WAITING) {
+                setAiState(AIState.ANALYZING);
+                return;
+            }
+            if (data.stage === EVENT_STAGE_FINISHED) {
+                setAiState(AIState.PROCESSING);
+                return;
+            }
+        }
+
         if (data.type === META_DATA_KEY) {
-            setIsSpeaking(true);
-            setIsListening(false);
-            // Report to backend
-            Emitter.emitAudioSocket(audioSocket.current, Emitter.EventType.AI_START_SPEAKING);
             const isInt16 = (data.format || "f32le").toLowerCase().includes("16");
             configAudioSpec({
                 codec: isInt16 ? "Int16" : "Float32",
@@ -93,8 +106,12 @@ export const handleAudioMessage = async (
             }
 
             playbackDrainTimerRef.current = setTimeout(() => {
-                setIsSpeaking(false);
-                // setIsListening(isStreamingRef.current); // Assuming we stay active for now
+                if (data.stage === EVENT_STAGE_PENDING) {
+                    setAiState(AIState.PROCESSING);
+                } else {
+                    setAiState(AIState.STANDBY);
+                }
+                
                 Emitter.emitAudioSocket(
                     audioSocket.current, 
                     Emitter.EventType.AI_STOP_SPEAKING, 
@@ -117,6 +134,8 @@ export const handleAudioMessage = async (
         const chunkSamples = denominator > 0 ? chunkByteLength / denominator : 0;
         if (playbackState.firstChunkAtMs === 0) {
             playbackState.firstChunkAtMs = Date.now();
+            setAiState(AIState.SPEAKING);
+            Emitter.emitAudioSocket(audioSocket.current, Emitter.EventType.AI_START_SPEAKING);
         }
         playbackState.totalSamples += chunkSamples;
         await playAudio(event.data);

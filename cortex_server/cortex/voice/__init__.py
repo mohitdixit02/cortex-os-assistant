@@ -149,11 +149,13 @@ class VoiceClient:
             
             response_text = ""
             if route_res.request_type == "casual":
+                self.streamEvent.is_depth = False
                 # immediate casual response
                 response_text = self.model.stream_text_tokens(query)
                 print("Is search query:", route_res.search_required)
                 print("Casual response:", response_text)
             else:
+                self.streamEvent.is_depth = True
                 emotion = self.emotion_model.get_emotion(query)
                 response_text = self.model.stream_fallback_response(query)
                 

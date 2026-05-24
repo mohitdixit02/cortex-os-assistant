@@ -78,7 +78,10 @@ async def ws_audio(websocket: WebSocket, user_id: str = Query(...)):
 
             # Handle Binary Data (Audio Chunks)
             if res.get("bytes") is not None:
-                streamEvent.appendAudioBuffer(res.get("bytes"))
+                if state.is_user_speaking:
+                    streamEvent.appendAudioBuffer(res.get("bytes"))
+                else:
+                    print(f"Ignoring audio chunk from user_id={user_id} because user is not marked as speaking")
                 continue
             
             # Handle Text Data (JSON Events)
@@ -138,5 +141,7 @@ async def ws_audio(websocket: WebSocket, user_id: str = Query(...)):
     except WebSocketDisconnect:
         state.audio_socket = None
     finally:
+        state.is_user_speaking = False
+        state.is_ai_speaking = False
         if state.stream_client:
             await state.stream_client.shutdown()

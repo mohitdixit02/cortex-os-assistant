@@ -133,7 +133,8 @@ class AudioStreamBridge:
 
                 logger.info("[Audio Bridge] Audio streaming completed successfully: %s", audio_chunk_generator.__name__)
                 if not self.streamEvent.isCancelEventSet():
-                    await self.send_json({"type": "done", "streamId": stream_id})
+                    stage = "pending" if self.streamEvent.is_depth else "ended"
+                    await self.send_json({"type": "done", "streamId": stream_id, "stage": stage})
             except asyncio.CancelledError:
                 print("Response task cancelled")
                 raise
