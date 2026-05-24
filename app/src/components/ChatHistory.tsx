@@ -51,22 +51,14 @@ const ChatHistory = ({ messages }: ChatHistoryProps) => {
             }}>
               {msg.role === "USER" ? <><FaUser size={10} /> You</> : <><FaRobot size={10} /> Cortex</>}
             </div>
-            <div style={{
-              padding: "12px 16px",
-              borderRadius: msg.role === "USER" ? "18px 18px 2px 18px" : "18px 18px 18px 2px",
-              background: msg.role === "USER" ? "var(--primary-gradient)" : "rgba(255,255,255,0.05)",
-              color: 'white',
-              fontSize: '14px',
-              lineHeight: '1.5',
-              boxShadow: msg.role === "USER" ? '0 4px 15px rgba(255,0,229,0.2)' : 'none'
-              }}>
+            <div className={`msg-bubble ${msg.role === "USER" ? "msg-user-glass" : "msg-ai-glass"}`}>
               {msg.is_refined_query ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ opacity: 0.8, fontSize: '13px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px' }}>
-                    <span style={{ fontWeight: 'bold' }}>Original:</span> {msg.content}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ opacity: 0.5, fontSize: '11px', fontStyle: 'italic' }}>
+                    Original: "{msg.content}"
                   </div>
-                  <div>
-                    <span style={{ fontWeight: 'bold' }}>Refined:</span> {msg.refined_query}
+                  <div style={{ color: 'white' }}>
+                    {msg.refined_query}
                   </div>
                 </div>
               ) : (
