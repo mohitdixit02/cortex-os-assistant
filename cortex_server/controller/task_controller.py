@@ -11,9 +11,10 @@ async def list_tasks(
     user_id: str = Depends(get_current_user_id),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    task_type: Optional[str] = Query(None)
+    task_type: Optional[str] = Query(None),
+    session_id: Optional[str] = Query(None)
 ):
     """Retrieve all executed tasks/tools with pagination."""
     offset = (page - 1) * limit
-    tasks = task_service.list_tasks(offset=offset, limit=limit, task_type=task_type)
+    tasks = task_service.list_tasks(user_id=user_id, offset=offset, limit=limit, task_type=task_type, session_id=session_id)
     return tasks

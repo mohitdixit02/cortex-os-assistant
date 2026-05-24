@@ -71,7 +71,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         overflow: 'hidden',
         background: 'var(--background)',
         position: 'relative',
-        paddingLeft: '110px'
+        paddingLeft: '100px'
       }}>
         {children}
       </main>

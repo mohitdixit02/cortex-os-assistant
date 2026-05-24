@@ -5,21 +5,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaCalendarAlt, FaTasks, FaCheckCircle, FaSpinner, FaTimesCircle, FaHistory, FaBell, FaClock } from 'react-icons/fa';
 import { useTasks, useEvents } from '../../hooks/useApi';
 import { ToolBadge } from '../../utility/toolConfig';
+import { useAppContext } from '../../components/AppContext';
 
 export default function Tasks() {
+  const { activeThreadId } = useAppContext();
   const [activeTab, setActiveTab] = useState<'automated' | 'reminders'>('automated');
   const [taskPage, setTaskPage] = useState(1);
   const [eventPage, setEventPage] = useState(1);
-  
-  const { tasks, isLoading: tasksLoading } = useTasks(taskPage);
-  const { events, isLoading: eventsLoading } = useEvents(eventPage);
+
+  const { tasks, isLoading: tasksLoading } = useTasks(taskPage, 8, activeThreadId);
+  const { events, isLoading: eventsLoading } = useEvents(eventPage, 8, activeThreadId);
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'completed': 
+      case 'completed':
       case 'done':
         return <FaCheckCircle color="#10b981" />;
-      case 'processing': 
+      case 'processing':
       case 'queued':
         return <FaSpinner className="spin" color="var(--accent-secondary)" />;
       case 'created':
@@ -59,13 +61,13 @@ export default function Tasks() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1 }}>
-                <div style={{ 
-                  width: '50px', 
-                  height: '50px', 
-                  borderRadius: '12px', 
-                  background: 'rgba(255,255,255,0.05)', 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                <div style={{
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '12px',
+                  background: 'rgba(255,255,255,0.05)',
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '16px',
                   border: '1px solid rgba(255,255,255,0.1)'
@@ -82,47 +84,93 @@ export default function Tasks() {
                     <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'white', background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px' }}>
                       {getStatusIcon(task.status)} {task.status}
                     </span>
-                    <ToolBadge tool_id={task.tool_id} />
+                    <div style={{ marginTop: '-8px' }}>
+                      <ToolBadge tool_id={task.tool_id} />
+                    </div>
                   </div>
                 </div>
               </div>
             </motion.div>
           ))}
-          
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px' }}>
+
+          {/* Pagination Controls */}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            gap: '15px', 
+            marginTop: '30px',
+            padding: '10px'
+          }}>
             <button 
               disabled={taskPage === 1}
-              onClick={() => setTaskPage(p => p - 1)}
+              onClick={() => {
+                setTaskPage(p => p - 1);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="btn-glass"
               style={{ 
-                padding: '8px 16px', 
-                borderRadius: '8px', 
-                background: 'rgba(255,255,255,0.05)', 
-                color: 'white', 
-                opacity: taskPage === 1 ? 0.5 : 1,
-                cursor: taskPage === 1 ? 'not-allowed' : 'pointer'
+                padding: '10px 20px', 
+                borderRadius: '10px', 
+                background: taskPage === 1 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)', 
+                color: taskPage === 1 ? 'rgba(255,255,255,0.2)' : 'white', 
+                cursor: taskPage === 1 ? 'not-allowed' : 'pointer',
+                border: '1px solid rgba(255,255,255,0.1)',
+                fontSize: '14px',
+                fontWeight: '500',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}
             >
-              Previous
+              <span>←</span> Previous
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', color: 'white' }}>Page {taskPage}</div>
+
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: 'white',
+              fontWeight: 'bold',
+              boxShadow: '0 0 15px rgba(255,255,255,0.05)',
+              fontSize: '14px'
+            }}>
+              {taskPage}
+            </div>
+
             <button 
-              disabled={tasks && tasks.length < 20}
-              onClick={() => setTaskPage(p => p + 1)}
+              disabled={tasks && tasks.length < 8}
+              onClick={() => {
+                setTaskPage(p => p + 1);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="btn-glass"
               style={{ 
-                padding: '8px 16px', 
-                borderRadius: '8px', 
-                background: 'rgba(255,255,255,0.05)', 
-                color: 'white', 
-                opacity: (tasks && tasks.length < 20) ? 0.5 : 1,
-                cursor: (tasks && tasks.length < 20) ? 'not-allowed' : 'pointer'
+                padding: '10px 20px', 
+                borderRadius: '10px', 
+                background: (tasks && tasks.length < 8) ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)', 
+                color: (tasks && tasks.length < 8) ? 'rgba(255,255,255,0.2)' : 'white', 
+                cursor: (tasks && tasks.length < 8) ? 'not-allowed' : 'pointer',
+                border: '1px solid rgba(255,255,255,0.1)',
+                fontSize: '14px',
+                fontWeight: '500',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}
             >
-              Next
+              Next <span>→</span>
             </button>
           </div>
-        </>
-      )}
-    </motion.div>
+          </>
+          )}    </motion.div>
   );
 
   const renderReminders = () => (
@@ -155,13 +203,13 @@ export default function Tasks() {
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1 }}>
-                <div style={{ 
-                  width: '50px', 
-                  height: '50px', 
-                  borderRadius: '12px', 
-                  background: 'rgba(255,255,255,0.05)', 
-                  display: 'flex', 
-                  alignItems: 'center', 
+                <div style={{
+                  width: '50px',
+                  height: '50px',
+                  borderRadius: '12px',
+                  background: 'rgba(255,255,255,0.05)',
+                  display: 'flex',
+                  alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '16px',
                   border: '1px solid rgba(255,255,255,0.1)'
@@ -186,36 +234,81 @@ export default function Tasks() {
               </div>
             </motion.div>
           ))}
-          
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', marginTop: '20px' }}>
+
+          {/* Pagination Controls */}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            gap: '15px', 
+            marginTop: '30px',
+            padding: '10px'
+          }}>
             <button 
               disabled={eventPage === 1}
-              onClick={() => setEventPage(p => p - 1)}
+              onClick={() => {
+                setEventPage(p => p - 1);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="btn-glass"
               style={{ 
-                padding: '8px 16px', 
-                borderRadius: '8px', 
-                background: 'rgba(255,255,255,0.05)', 
-                color: 'white', 
-                opacity: eventPage === 1 ? 0.5 : 1,
-                cursor: eventPage === 1 ? 'not-allowed' : 'pointer'
+                padding: '10px 20px', 
+                borderRadius: '10px', 
+                background: eventPage === 1 ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)', 
+                color: eventPage === 1 ? 'rgba(255,255,255,0.2)' : 'white', 
+                cursor: eventPage === 1 ? 'not-allowed' : 'pointer',
+                border: '1px solid rgba(255,255,255,0.1)',
+                fontSize: '14px',
+                fontWeight: '500',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}
             >
-              Previous
+              <span>←</span> Previous
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', color: 'white' }}>Page {eventPage}</div>
+
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: 'white',
+              fontWeight: 'bold',
+              boxShadow: '0 0 15px rgba(255,255,255,0.05)',
+              fontSize: '14px'
+            }}>
+              {eventPage}
+            </div>
+
             <button 
-              disabled={events && events.length < 20}
-              onClick={() => setEventPage(p => p + 1)}
+              disabled={events && events.length < 8}
+              onClick={() => {
+                setEventPage(p => p + 1);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="btn-glass"
               style={{ 
-                padding: '8px 16px', 
-                borderRadius: '8px', 
-                background: 'rgba(255,255,255,0.05)', 
-                color: 'white', 
-                opacity: (events && events.length < 20) ? 0.5 : 1,
-                cursor: (events && events.length < 20) ? 'not-allowed' : 'pointer'
+                padding: '10px 20px', 
+                borderRadius: '10px', 
+                background: (events && events.length < 8) ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)', 
+                color: (events && events.length < 8) ? 'rgba(255,255,255,0.2)' : 'white', 
+                cursor: (events && events.length < 8) ? 'not-allowed' : 'pointer',
+                border: '1px solid rgba(255,255,255,0.1)',
+                fontSize: '14px',
+                fontWeight: '500',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
               }}
             >
-              Next
+              Next <span>→</span>
             </button>
           </div>
         </>
@@ -240,16 +333,16 @@ export default function Tasks() {
             <span className="gradient-text">{activeTab === 'automated' ? 'Tasks' : 'Events'}</span>
           </h1>
           <p style={{ color: 'var(--text-muted)' }}>
-            {activeTab === 'automated' 
-              ? 'Review the automated background tasks performed by Cortex.' 
+            {activeTab === 'automated'
+              ? 'Review the automated background tasks performed by Cortex.'
               : 'View and manage your scheduled reminders and events.'}
           </p>
         </div>
 
         {/* Tab Switcher */}
-        <div style={{ 
-          display: 'flex', 
-          gap: '10px', 
+        <div style={{
+          display: 'flex',
+          gap: '10px',
           marginBottom: '30px',
           background: 'rgba(255,255,255,0.03)',
           padding: '5px',

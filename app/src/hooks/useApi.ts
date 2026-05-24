@@ -65,10 +65,14 @@ export function useMessages(threadId: string | null) {
   };
 }
 
-export function useTasks(page = 1, limit = 20) {
+export function useTasks(page = 1, limit = 8, sessionId?: string | null) {
   const { data, error, mutate } = useSWR<Task[]>(
-    [`/api/v1/tasks`, page, limit],
-    ([url, p, l]) => apiClient(url as string, { params: { page: p as number, limit: l as number } })
+    [`/api/v1/tasks`, page, limit, sessionId],
+    ([url, p, l, s]) => {
+      const params: any = { page: p as number, limit: l as number };
+      if (s) params.session_id = s;
+      return apiClient(url as string, { params });
+    }
   );
 
   return {
@@ -79,10 +83,14 @@ export function useTasks(page = 1, limit = 20) {
   };
 }
 
-export function useEvents(page = 1, limit = 20) {
+export function useEvents(page = 1, limit = 8, sessionId?: string | null) {
   const { data, error, mutate } = useSWR<UserEvent[]>(
-    [`/api/v1/events`, page, limit],
-    ([url, p, l]) => apiClient(url as string, { params: { page: p as number, limit: l as number } })
+    [`/api/v1/events`, page, limit, sessionId],
+    ([url, p, l, s]) => {
+      const params: any = { page: p as number, limit: l as number };
+      if (s) params.session_id = s;
+      return apiClient(url as string, { params });
+    }
   );
 
   return {
