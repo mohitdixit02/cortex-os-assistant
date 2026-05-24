@@ -49,7 +49,7 @@ export default function Home() {
       position: 'relative'
     }}>
       {/* Left Area: Assistant Orb Section */}
-      <div className="glass-card" style={{
+      <div className="orb-parent-card" style={{
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
@@ -92,19 +92,7 @@ export default function Home() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => startAudioStream(activeThreadId)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '16px 36px',
-                borderRadius: '50px',
-                background: 'var(--primary-gradient)',
-                color: 'white',
-                fontSize: '17px',
-                fontWeight: '600',
-                boxShadow: '0 10px 25px rgba(0,242,255,0.3)',
-                cursor: 'pointer'
-              }}
+              className="btn-neon-purple-gradient"
             >
               <FaPlay size={14} /> Start Conversation
             </motion.button>
@@ -143,7 +131,7 @@ export default function Home() {
         height: '100%'
       }}>
         {/* Header Card: Thread Management */}
-        <div className="glass-card" style={{ padding: '20px', zIndex: 50, position: 'relative' }}>
+        <div className="glass-parent" style={{ padding: '20px', zIndex: 50, position: 'relative' }}>
           <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontWeight: '800', fontSize: '14px', letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
               Current Session
@@ -156,7 +144,7 @@ export default function Home() {
         </div>
 
         {/* Chat Card: Conversation History */}
-        <div className="glass-card" style={{
+        <div className="glass-parent" style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',

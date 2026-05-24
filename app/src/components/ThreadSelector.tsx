@@ -120,21 +120,12 @@ export default function ThreadSelector() {
               {/* Sleek New Thread Button */}
               <button
                 onClick={handleCreateThread}
+                className="btn-neon-primary"
                 style={{
                   width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
                   padding: '14px 20px',
                   borderRadius: '14px',
-                  color: 'white',
-                  background: 'var(--primary-gradient)',
-                  fontWeight: '700',
-                  fontSize: '14px',
-                  marginBottom: '15px',
-                  cursor: 'pointer',
-                  border: 'none',
-                  boxShadow: '0 5px 15px rgba(0,242,255,0.2)'
+                  marginBottom: '15px'
                 }}
               >
                 <FaPlus size={14} />

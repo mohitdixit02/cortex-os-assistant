@@ -108,8 +108,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               className="glass-card"
               style={{
                 width: '100%',
-                maxWidth: '900px',
-                maxHeight: '80vh',
+                maxWidth: '1080px',
+                maxHeight: '90vh',
                 position: 'relative',
                 zIndex: 1001,
                 overflow: 'hidden',

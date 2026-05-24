@@ -33,7 +33,7 @@ export default function Sidebar() {
         width: '70px',
         borderRadius: '35px'
       }}
-      className="glass-card"
+      className="glass-parent"
     >
       <div style={{ 
         marginBottom: '10px', 
@@ -41,20 +41,18 @@ export default function Sidebar() {
         alignItems: 'center', 
         justifyContent: 'center'
       }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          borderRadius: '50%',
-          background: 'var(--primary-gradient)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: 'bold',
-          fontSize: '12px',
-          color: 'white',
-          boxShadow: '0 5px 15px rgba(0,242,255,0.3)'
-        }}>
-          CX
+        <div 
+          className="icon-glass-container"
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            fontWeight: 'bold',
+            fontSize: '12px',
+            boxShadow: '0 5px 15px rgba(0,242,255,0.1)'
+          }}
+        >
+          <span className="gradient-text">CX</span>
         </div>
       </div>
 

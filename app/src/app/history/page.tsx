@@ -65,17 +65,15 @@ export default function Conversations() {
                   onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                    <div style={{ 
-                      width: '45px', 
-                      height: '45px', 
-                      borderRadius: '12px', 
-                      background: 'var(--primary-gradient)', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      fontSize: '16px'
-                    }}>
-                      <FaHistory color="white" />
+                    <div 
+                      className="icon-glass-container"
+                      style={{ 
+                        width: '45px', 
+                        height: '45px', 
+                        fontSize: '16px'
+                      }}
+                    >
+                      <FaHistory color="var(--accent-primary)" />
                     </div>
                     <div>
                       <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>{thread.summary || "New Conversation"}</h3>
