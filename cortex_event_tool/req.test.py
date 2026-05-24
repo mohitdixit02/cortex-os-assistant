@@ -21,7 +21,7 @@ os.environ["REDIS_PORT"] = os.getenv("REDIS_PORT", "6379")
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 from datetime import datetime
 

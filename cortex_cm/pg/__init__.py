@@ -1,4 +1,4 @@
-from sqlmodel import create_engine, Session
+from sqlmodel import create_engine
 from cortex_cm.utility.config import env
 
 from .enums import (

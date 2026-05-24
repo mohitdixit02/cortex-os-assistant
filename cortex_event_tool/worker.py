@@ -1,6 +1,5 @@
 import asyncio
 import httpx
-from uuid import UUID
 from cortex_cm.utility.config import env
 from cortex_event_tool.main import get_due_events, remove_event
 from cortex_cm.pg import EventStatus, TaskOwner
@@ -8,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from dateutil import tz
 from crontab import CronTab
 
+from cortex_cm.utility.cortex.config import TIME_WINDOW_MINUTES
 from cortex_cm.utility.logger import get_logger
 logger = get_logger("EVENT_TOOL_WORKER")
 
@@ -19,7 +19,7 @@ async def check_and_process_events(client: httpx.AsyncClient):
     Core logic to check for due events and submit them to the queue.
     """
     try:
-        # Logging with explicit UTC and Local distinction
+        # Logging - UTC and Local
         now_utc = datetime.now(timezone.utc)
         local_tz = tz.tzlocal()
         now_local = datetime.now(local_tz)
@@ -32,7 +32,7 @@ async def check_and_process_events(client: httpx.AsyncClient):
         
         logger.info(f"Worker run at: {timestamp_str} - Checking for events due within the next {TIME_WINDOW_MINUTES} minutes.")
         
-        # Check for events due within the next 5 minutes using Redis ZSET
+        # Check for events due within the next TIME_WINDOW_MINUTES
         due_events = get_due_events(time_window_minutes=TIME_WINDOW_MINUTES)
         
         if not due_events:
@@ -50,7 +50,7 @@ async def check_and_process_events(client: httpx.AsyncClient):
                 "name": event['name'],
                 "event_description": event.get('event_description'),
                 "trigger_time": event['trigger_time'],
-                "reminder_window": event.get('reminder_window', 5)
+                "reminder_window": event.get('reminder_window', TIME_WINDOW_MINUTES)
             }
             
             metadata = {

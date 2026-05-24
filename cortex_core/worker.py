@@ -10,7 +10,6 @@ async def main():
     # Eagerly load all models into memory at startup
     warmup_all_models()
     
-    # Deferred import to ensure global initializations happen inside the active event loop
     from cortex_core.main import MainClient
     client = MainClient()    
     

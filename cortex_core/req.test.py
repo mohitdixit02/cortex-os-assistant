@@ -102,7 +102,7 @@ async def mock_voice_submission(request: MockVoiceTaskRequest):
     )
     
     try:
-        # Submit to Task Queue (which pushes to Redis DB:2)
+        # Submit to Task Queue (- Redis DB:2)
         response = await submit_task(task_item=task_item)
         return {
             "status": "success",

@@ -29,6 +29,7 @@ async def _add_vc_task_to_queue(request: AddTaskRequest) -> TaskItem:
     original_query = request.payload.get("original_query")
     is_refined_query = request.payload.get("is_refined_query", False)
     
+    # - - - Self Note - - -
     # If refined, content is the original spoken text, refined_query is the AI-refined version.
     # If not refined, content is just the query.
     content_to_save = original_query if is_refined_query and original_query else query
@@ -89,10 +90,9 @@ async def add_task_to_queue(request: AddTaskRequest):
         status=TaskStatus.QUEUED
     )
     
-    # Message ID - metadata (Use the actual message_id from the task record)
     item.metadata["message_id"] = str(task_obj.message_id)
     
-    # Push to Redis DB 1
+    # Push - Redis DB 1
     task_redis_client.lpush("pending_tasks", json.dumps({
         "task_id": str(item.task_id),
         "payload": item.payload,

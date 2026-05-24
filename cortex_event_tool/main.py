@@ -32,16 +32,14 @@ def create_event(
         )
         db_event = crud.create_one(session, event)
         
-        # Fetch user_id from message to get reminder window
         message = crud.get_by_id(session, Message, message_id)
         user_id = message.user_id if message else None
         
-        # Calculate Effective Trigger Time (Actual - Window)
+        # Effective Trigger Time (Actual - Window)
         reminder_window = get_reminder_window_minutes(user_id) if user_id else 5
         effective_trigger_time = trigger_time - timedelta(minutes=reminder_window)
         print(f"Event {db_event.id} will be triggered at {effective_trigger_time} (reminder window: {reminder_window} minutes)")
 
-        # Save to Redis for fast retrieval and worker to track
         redis_data = {
             "id": str(db_event.id),
             "message_id": str(db_event.message_id),

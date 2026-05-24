@@ -1,6 +1,5 @@
 import json
 from fastapi import HTTPException
-import time
 
 from cortex_queue.dto import TaskItem, AddTaskRequest
 from cortex_cm.pg import TaskStatus, engine

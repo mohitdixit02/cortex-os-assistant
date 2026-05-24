@@ -29,3 +29,9 @@ CONVERSATION_HISTORY_SUMMARIZATION_THRESHOLD = 5 # Can't be zero as summarizatio
 
 MESSAGES_REJECTION_THRESHOLD = 0.1 # Messages only similar more than 10% will be kept.
 MESSAGES_MAX_LIMIT = 15 # Max messages to send to Cortex
+
+"""
+Configuration for Event Tool Worker
+"""
+TIME_WINDOW_MINUTES = 1
+
