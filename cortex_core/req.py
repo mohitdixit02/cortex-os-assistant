@@ -14,11 +14,15 @@ async def submit_task(
 
 	Returns the parsed JSON response from the queue service.
 	"""
-	async with httpx.AsyncClient(timeout=30.0) as client:
-		resp = await client.post(
-			SUBMIT_QUEUE_URL,
-			json=asdict(task_item)
-		)
-		resp.raise_for_status()
-		return resp.json()
+	try:
+		async with httpx.AsyncClient(timeout=30.0) as client:
+			resp = await client.post(
+				SUBMIT_QUEUE_URL,
+				json=asdict(task_item)
+			)
+			resp.raise_for_status()
+			return resp.json()
+	except Exception as e:
+		print(f"[CORTEX_CORE] Failed to submit task {task_item.task_id} to queue: {e}")
+		return {"status": "error", "message": str(e)}
 
