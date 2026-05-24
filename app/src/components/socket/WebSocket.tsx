@@ -15,9 +15,8 @@ export const useWebSocket = (
         throw new Error("WebSocket base URL is required");
     }
 
-    const { user, activeThreadId } = useAppContext();
+    const { user, activeThreadId, isConversationActive, setIsConversationActive } = useAppContext();
     const userId = user?.id || user?.user_id;
-    const [isConversationActive, setIsConversationActive] = useState(false);
     
     const audioStreamSession: AudioStreamSession = useMemo(() => ({
         baseUrl,
@@ -51,7 +50,7 @@ export const useWebSocket = (
             detachAudioRef.current = null;
         }
         closeAudioSocket();
-    }, [stopAudioStreaming, closeAudioSocket]);
+    }, [stopAudioStreaming, closeAudioSocket, setIsConversationActive]);
 
     // Set isConversationActive based on streaming ref changes
     const startAudioStream = useCallback(async (sessionId: string) => {
@@ -72,7 +71,7 @@ export const useWebSocket = (
             }
         });
         detachAudioRef.current = detach;
-    }, [userId, startAudioStreaming, attachAudioListener, endAudioStream]);
+    }, [userId, startAudioStreaming, attachAudioListener, endAudioStream, setIsConversationActive]);
 
     const onEventMessage = useCallback(async (event: MessageEvent) => {
         if (typeof event.data !== "string") return;

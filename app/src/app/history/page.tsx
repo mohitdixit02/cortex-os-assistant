@@ -6,14 +6,20 @@ import { FaHistory, FaCalendarAlt, FaChevronRight } from 'react-icons/fa';
 import { useThreads } from '../../hooks/useApi';
 import { useAppContext } from '../../components/AppContext';
 import { useRouter } from 'next/navigation';
+import { toast } from 'react-toastify';
 
 export default function Conversations() {
   const { threads, isLoading: threadsLoading } = useThreads();
-  const { setActiveThreadId } = useAppContext();
+  const { setActiveThreadId, isConversationActive, setActiveOverlay } = useAppContext();
   const router = useRouter();
 
   const handleThreadClick = (id: string) => {
+    if (isConversationActive) {
+      toast.warn("Please stop the current conversation before switching sessions.");
+      return;
+    }
     setActiveThreadId(id);
+    setActiveOverlay(null);
     router.push('/');
   };
 

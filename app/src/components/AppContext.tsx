@@ -25,6 +25,8 @@ interface AppContextType {
   setUserConfig: (config: any) => void;
   refreshUserConfig: () => Promise<void>;
   logout: () => void;
+  isConversationActive: boolean;
+  setIsConversationActive: (val: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -75,6 +77,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     return null;
   });
+
+  const [isConversationActive, setIsConversationActive] = useState(false);
 
   const setToken = (newToken: string | null) => {
     setTokenState(newToken);
@@ -224,7 +228,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       logout,
       userConfig,
       setUserConfig,
-      refreshUserConfig
+      refreshUserConfig,
+      isConversationActive,
+      setIsConversationActive
     }}>
       {children}
     </AppContext.Provider>

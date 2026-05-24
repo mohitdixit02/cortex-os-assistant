@@ -6,15 +6,20 @@ import { FaPlus, FaChevronDown, FaCommentAlt } from 'react-icons/fa';
 import { useAppContext } from './AppContext';
 import { useThreads, ChatThread } from '../hooks/useApi';
 import { apiClient } from '../utility/apiClient';
+import { toast } from 'react-toastify';
 
 export default function ThreadSelector() {
-  const { activeThreadId, setActiveThreadId } = useAppContext();
+  const { activeThreadId, setActiveThreadId, isConversationActive } = useAppContext();
   const { threads, mutate } = useThreads();
   const [isOpen, setIsOpen] = React.useState(false);
 
   const activeThread = threads?.find(t => t.session_id === activeThreadId);
 
   const handleCreateThread = async () => {
+    if (isConversationActive) {
+      toast.warn("Please stop the current conversation before switching sessions.");
+      return;
+    }
     try {
       const newThread = await apiClient<ChatThread>('/api/v1/chat/threads', { method: 'POST' });
       mutate([...(threads || []), newThread]);
@@ -26,6 +31,10 @@ export default function ThreadSelector() {
   };
 
   const handleSelectThread = (id: string) => {
+    if (isConversationActive) {
+      toast.warn("Please stop the current conversation before switching sessions.");
+      return;
+    }
     setActiveThreadId(id);
     setIsOpen(false);
   };
