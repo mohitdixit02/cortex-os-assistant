@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional, Any
+from pydantic import BaseModel
+from typing import List, Optional
 from datetime import datetime
 from uuid import UUID
 
@@ -8,7 +8,6 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 class ChatThreadCreate(BaseModel):
-    # Optional initial message or just empty
     pass
 
 class ChatThreadResponse(BaseModel):

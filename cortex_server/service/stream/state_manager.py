@@ -1,16 +1,21 @@
 import asyncio
-from typing import Dict
+from typing import Dict, TYPE_CHECKING
 from dataclasses import dataclass, field
+
+if TYPE_CHECKING:
+    from fastapi import WebSocket
+    from service.stream.event import StreamEvent
+    from .main import StreamClient
 
 @dataclass
 class UserVoiceState:
     is_user_speaking: bool = False
     is_ai_speaking: bool = False
     stream_lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-    event_socket: any = None  # Store WebSocket object for event stream
-    audio_socket: any = None  # Store WebSocket object for audio stream
-    stream_event: any = None  # Store active StreamEvent object
-    stream_client: any = None # Store active StreamClient object
+    event_socket: 'WebSocket | None' = None  # Store WebSocket object for event stream
+    audio_socket: 'WebSocket | None' = None  # Store WebSocket object for audio stream
+    stream_event: 'StreamEvent | None' = None  # Store active StreamEvent object
+    stream_client: 'StreamClient | None' = None # Store active StreamClient object
     audio_ws_opened_event: asyncio.Event = field(default_factory=asyncio.Event)
     audio_ws_success: bool = False
 

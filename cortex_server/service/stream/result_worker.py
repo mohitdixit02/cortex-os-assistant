@@ -5,7 +5,6 @@ from cortex_cm.utility.logger import get_logger
 from cortex_queue.dto import TaskItem, TaskStatus
 from cortex_cm.pg.enums import TaskOwner
 from .state_manager import voice_state_manager
-from cortex_server.cortex.voice import VoiceClient
 from service.stream.event import StreamEvent, ResponseKey, StreamEventResponse
 from cortex_server.service.config_service import config_service
 from uuid import UUID
@@ -86,7 +85,7 @@ class ResultStreamWorker:
                     logger.warning("Received task result without user_id in metadata: %s", data.get("task_id"))
                     continue
 
-                # CRUCIAL: Only process if the user is connected to THIS server instance
+                # Only process if the user is connected to THIS server instance
                 state = voice_state_manager.get_state(user_id)
                 if not state.audio_socket and not state.event_socket:
                     logger.info("Ignoring result for user %s: No active sockets (audio: %s, event: %s)", 
@@ -104,7 +103,7 @@ class ResultStreamWorker:
         state = voice_state_manager.get_state(user_id)
         task_owner = task_item.metadata.get("task_owner")
 
-        # 1. Handle Event/Reminder Notification via Event Socket
+        # Handle Event/Reminder Notification via Event Socket
         if task_owner == TaskOwner.EVENT_TOOL.value and state.event_socket:
             logger.info("Sending reminder notification to user %s via event socket", user_id)
             event_response = StreamEventResponse(websocket=state.event_socket, streamEvent=StreamEvent(user_id=user_id))
@@ -114,7 +113,6 @@ class ResultStreamWorker:
             if isinstance(message_text, dict):
                 message_text = message_text.get("response") or message_text.get("message") or str(message_text)
             
-            # Send the actual result from the task to the UI using standardized response
             await event_response.send_response(ResponseKey.REMINDER_TRIGGERED, message=message_text)
 
             # Check if we need to force open the audio websocket
@@ -136,50 +134,9 @@ class ResultStreamWorker:
                         logger.warning("Timed out waiting for UI to open audio socket for user %s", user_id)
                         return
 
-        # 2. Wait for Channel Clear (No one is speaking)
-        while state.is_user_speaking or state.is_ai_speaking:
-            await asyncio.sleep(0.2)
-
-        # 3. Acquire Lock and Set AI Speaking State
-        async with state.stream_lock:
-            # Re-fetch state and verify sockets
-            state = voice_state_manager.get_state(user_id)
-            stream_client = state.stream_client
-            if not stream_client or not state.audio_socket:
-                logger.warning("User %s active context vanished or audio socket missing, dropping task result.", user_id)
-                return
-
-            stream_event = stream_client.get_stream_event()
-            task_session_id = task_item.metadata.get("session_id")
-            
-            # Verify the session ID matches the currently active session
-            if task_session_id and stream_event.session_id and str(stream_event.session_id) != str(task_session_id):
-                logger.warning("Ignoring task result %s: Session mismatch (Task: %s, Active: %s)", 
-                            task_item.task_id, task_session_id, stream_event.session_id)
-                return
-
-            logger.info("Streaming result for task %s to user %s (owner: %s)", task_item.task_id, user_id, task_owner)
-            state.is_ai_speaking = True
-            voice_client = stream_client.voiceClient
-            
-            event_response = StreamEventResponse(
-                websocket=state.audio_socket,
-                streamEvent=stream_event
-            )
-
-            try:
-                # Notify UI that a stream is starting
-                await event_response.send_response(ResponseKey.AI_AUDIO_STREAM_START)
-                
-                # Stream the audio
-                await voice_client._handle_task_queue(task_item)
-                
-                # Notify UI that server finished sending audio
-                await event_response.send_response(ResponseKey.AI_AUDIO_STREAM_END)
-                
-            except Exception as e:
-                logger.error("Failed to stream task %s: %s", task_item.task_id, str(e))
-            finally:
-                state.is_ai_speaking = False
+        if state.stream_client:
+            await state.stream_client.handle_task_result(task_item)
+        else:
+            logger.warning("Ignoring task result for user %s: No active stream client.", user_id)
 
 result_stream_worker = ResultStreamWorker()

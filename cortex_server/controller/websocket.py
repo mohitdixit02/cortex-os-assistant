@@ -4,7 +4,6 @@ from cortex_server.service.stream.event import StreamEvent, ResponseKey, StreamE
 from cortex_server.service.stream.main import StreamClient
 from cortex_server.service.stream.state_manager import voice_state_manager
 import json
-import asyncio
 
 router = APIRouter()
 
@@ -20,7 +19,6 @@ async def ws_event(websocket: WebSocket, user_id: str = Query(...)):
     state.event_socket = websocket
     
     try:
-        # Keep the connection alive and wait for disconnect
         while True:
             res = await websocket.receive_text()
             print(f"Received on /event socket (user_id={user_id}): {res}")
@@ -53,12 +51,11 @@ async def ws_audio(websocket: WebSocket, user_id: str = Query(...)):
     state = voice_state_manager.get_state(user_id)
     state.audio_socket = websocket
     
-    # Use the existing stream_event from state if available
     streamEvent = state.stream_event or StreamEvent(user_id=user_id)
     state.stream_event = streamEvent
     
     streamEventResponse = StreamEventResponse(
-        websocket=websocket, # Now sending responses back through the audio socket
+        websocket=websocket,
         streamEvent=streamEvent
     )
     
@@ -72,7 +69,6 @@ async def ws_audio(websocket: WebSocket, user_id: str = Query(...)):
         while True:
             res = await websocket.receive()
             
-            # Handle Disconnect cleanly
             if res.get("type") == "websocket.disconnect":
                 break
 
@@ -95,7 +91,7 @@ async def ws_audio(websocket: WebSocket, user_id: str = Query(...)):
                     
                 msg_type = payload.get("type")
                 
-                # 1. Conversation Lifecycle
+                # Conversation Lifecycle
                 if msg_type == "ConversationStart":
                     streamEvent.resetAudioBuffer()
                     streamEvent.session_id = payload.get("session_id")
@@ -103,13 +99,11 @@ async def ws_audio(websocket: WebSocket, user_id: str = Query(...)):
                     await streamEventResponse.send_response(response=ResponseKey.CONVERSATION_START)
                 
                 elif msg_type == "ConversationEnd":
-                    # For end_conversation, we might want to trigger one last process if buffer is full,
-                    # or just cleanup.
                     streamEvent.resetAudioBuffer()
                     print(f"Sending response key: {ResponseKey.CONVERSATION_END} to user_id={user_id}")
                     await streamEventResponse.send_response(response=ResponseKey.CONVERSATION_END)
 
-                # 2. VAD & Interruption Events (Migrated from /event)
+                # VAD & Interruption Events
                 elif msg_type == "UserSpeechStartEvent":
                     state.is_user_speaking = True
                     print(f"Sending response key: {ResponseKey.START_LISTENING} to user_id={user_id}")
@@ -120,7 +114,6 @@ async def ws_audio(websocket: WebSocket, user_id: str = Query(...)):
                     state.is_user_speaking = False
                     print(f"Sending response key: {ResponseKey.WAITING_FOR_FURTHER_AUDIO} to user_id={user_id}")
                     await streamEventResponse.send_response(response=ResponseKey.WAITING_FOR_FURTHER_AUDIO)
-                    # Trigger processing automatically when user stops speaking
                     audio_snapshot = streamEvent.getAudioBufferBytes()
                     streamEvent.resetAudioBuffer()
                     streamEvent.startStreamResponse(
@@ -128,7 +121,7 @@ async def ws_audio(websocket: WebSocket, user_id: str = Query(...)):
                         audio_bytes=audio_snapshot,
                     )
 
-                # 3. AI State Tracking
+                # AI State Tracking
                 elif msg_type == "AIStartSpeakingEvent":
                     state.is_ai_speaking = True
                 
@@ -136,7 +129,7 @@ async def ws_audio(websocket: WebSocket, user_id: str = Query(...)):
                     stream_id = payload.get("streamId")
                     print(f"Received AIStopSpeakingEvent for user_id={user_id}, streamId={stream_id}")
                     
-                    # Validate streamId to prevent stale timeouts from unlocking the stream
+                    # Validate streamId before unlocking the stream
                     if stream_id is None or stream_id == streamEvent.current_stream_id:
                         state.is_ai_speaking = False
                     else:

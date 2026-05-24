@@ -10,7 +10,8 @@ from cortex_core.graph.memory import build_memory_workflow
 from cortex_core.graph.event import event_tool_workflow
 from cortex_queue.dto import TaskStatus, TaskItem
 from cortex_cm.utility.logger import get_logger
-from cortex_cm.pg import TimeOfDay, engine, Session, TaskOwner, Message
+from cortex_cm.pg import TimeOfDay, engine, TaskOwner, Message
+from sqlmodel import Session
 from cortex_cm.pg.req import crud
 from cortex_cm.redis.config_helper import get_user_config_from_redis
 from cortex_cm.utility.time_utils import get_local_time, get_time_of_day

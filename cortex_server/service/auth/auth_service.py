@@ -1,5 +1,4 @@
 import jwt
-import os
 from datetime import datetime, timedelta, timezone
 
 from typing import Optional, Dict, Any
@@ -20,8 +19,8 @@ class AuthService:
             "web": {
                 "client_id": env.GOOGLE_CLIENT_ID,
                 "client_secret": env.GOOGLE_CLIENT_SECRET,
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_uri": env.GOOGLE_AUTH_URI,
+                "token_uri": env.GOOGLE_TOKEN_URI,
                 "redirect_uris": [env.GOOGLE_REDIRECT_URI],
             }
         }
@@ -29,8 +28,6 @@ class AuthService:
             "openid",
             "https://www.googleapis.com/auth/userinfo.email",
             "https://www.googleapis.com/auth/userinfo.profile",
-            # "https://www.googleapis.com/auth/calendar",
-            # "https://www.googleapis.com/auth/tasks",
         ]
         self.redis_client = RedisClient.get_client(RedisModeType.TOKEN)
 

@@ -1,8 +1,7 @@
 from cortex_cm.pg.models import UserEvent, Message
-from cortex_cm.pg.req import crud
 from sqlmodel import Session, select
 from cortex_cm.pg import engine
-from typing import List, Optional
+from typing import List
 from uuid import UUID
 
 class EventService:

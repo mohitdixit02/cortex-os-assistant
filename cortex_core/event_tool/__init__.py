@@ -2,7 +2,8 @@ from cortex_core.graph.state import EventToolState
 from cortex_core.event_tool.model import EventToolModel
 from cortex_cm.utility.logger import get_logger
 from cortex_cm.pg.enums import TimeOfDay
-from cortex_cm.pg import engine, Session
+from cortex_cm.pg import engine
+from sqlmodel import Session
 from cortex_cm.pg.models import Message, User
 from cortex_cm.pg.req import get_by_id
 from typing import Optional

@@ -4,7 +4,7 @@ from cortex_cm.pg import engine, UserConfig
 from cortex_cm.pg.req.crud import get_by_id, create_one, update_one
 from cortex_cm.redis.redis_client import RedisClient, RedisModeType
 from sqlmodel import Session
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 class ConfigService:
     def get_user_config(self, user_id: UUID) -> UserConfig:

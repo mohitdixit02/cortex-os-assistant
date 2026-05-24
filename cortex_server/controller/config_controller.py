@@ -1,8 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from uuid import UUID
-from typing import Dict, Any
 from cortex_server.service.config_service import config_service
-from cortex_cm.pg import UserConfig
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/v1/user/config", tags=["Config"])

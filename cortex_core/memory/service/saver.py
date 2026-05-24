@@ -2,7 +2,7 @@ from sqlalchemy.engine import Engine
 from cortex_core.memory.model import MemoryModel
 from cortex_core.graph import state
 from cortex_cm.utility.logger import get_logger
-from cortex_cm.pg import Message, TaskStatus, Task, RoleType, AIClientType
+from cortex_cm.pg import Message, TaskStatus, Task
 from enum import Enum
 from cortex_cm.pg.req import (
     create_one,

@@ -1,5 +1,3 @@
-import asyncio
-
 from fastapi.routing import APIRouter
 from pydantic import BaseModel
 from service.stream.main import StreamClient

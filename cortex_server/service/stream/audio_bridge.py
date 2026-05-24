@@ -17,25 +17,20 @@ class AudioStreamBridge:
     **`__init__()`** requires:
     - The current `Websocket object` on which AudioStreamBridge will send responses back to the client.
     - The corresponding `StreamEvent object` for handling streaming events.
+    - The `user_id` for state management.
     """
     
-    def __init__(self, stream_client: any):
-        self.stream_client = stream_client
+    def __init__(self, websocket: WebSocket, streamEvent: StreamEvent, user_id: str | None = None):
+        self.websocket = websocket
+        self.streamEvent = streamEvent
+        self.user_id = user_id
         self._stream_lock = asyncio.Lock()
 
     @property
-    def websocket(self):
-        return self.stream_client.get_websocket() if self.stream_client else None
-
-    @property
-    def streamEvent(self):
-        return self.stream_client.get_stream_event() if self.stream_client else None
-
-    @property
     def user_state(self):
-        if not self.streamEvent or not self.streamEvent.user_id:
+        if not self.user_id:
             return None
-        return voice_state_manager.get_state(self.streamEvent.user_id)
+        return voice_state_manager.get_state(self.user_id)
     
     async def send_json(self, payload: dict):
         """Helper function to send JSON responses through the Audio WebSocket connection."""
@@ -44,7 +39,7 @@ class AudioStreamBridge:
             async with self.streamEvent.getLock():
                 await state.audio_socket.send_json(payload)
         else:
-            # Fallback to the websocket passed in constructor (usually the audio socket)
+            # Fallback to the websocket passed in constructor
             async with self.streamEvent.getLock():
                 await self.websocket.send_json(payload)
             
@@ -55,7 +50,7 @@ class AudioStreamBridge:
             async with self.streamEvent.getLock():
                 await state.audio_socket.send_bytes(payload)
         else:
-            # Fallback to the websocket passed in constructor if state manager is not ready
+            # Fallback to the websocket passed in constructor
             async with self.streamEvent.getLock():
                 await self.websocket.send_bytes(payload)
     
@@ -135,12 +130,6 @@ class AudioStreamBridge:
                         raise TypeError(f"Unsupported audio chunk type: {type(audio_chunk)!r}")
 
                     await self.send_bytes(payload)
-                    # await self.send_json({
-                    #     "source": audio_chunk_generator.__name__,
-                    #     "info": audio_chunk_generator.__doc__[0:10],
-                    #     "type": "audio_chunk",
-                    #     "size": len(payload)
-                    # })
 
                 logger.info("[Audio Bridge] Audio streaming completed successfully: %s", audio_chunk_generator.__name__)
                 if not self.streamEvent.isCancelEventSet():

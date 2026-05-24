@@ -1,5 +1,5 @@
 import cortex_cm.utility.config
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI
 from cortex_server.controller.websocket import router as ws_router
 from cortex_server.controller.main import router as main_router
 from cortex_server.controller.auth import router as auth_router
