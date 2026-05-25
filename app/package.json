@@ -31,7 +31,9 @@
         "repo": "cortex-os-assistant"
       }
     ],
-    "releaseNotesFile": "RELEASE_NOTES.md",
+    "releaseInfo": {
+      "releaseNotesFile": "RELEASE_NOTES.md"
+    },
     "files": [
       "dist-electron/**/*",
       "out/**/*"
