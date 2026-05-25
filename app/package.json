@@ -4,7 +4,7 @@
   "private": true,
   "description": "Your personal AI assistant for managing day-to-day tasks, scheduling, and more. Powered by Cortex AI.",
   "author": "Mohit Sharma",
-  "homepage": "https://github.com/MemoryAwareAi/MemoryAwareAi",
+  "homepage": "https://github.com/mohitdixit02/cortex-os-assistant",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "concurrently -k \"npm:dev:web\" \"npm:dev:electron:watch\" \"npm:dev:electron\"",
@@ -27,7 +27,7 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "MemoryAwareAi",
+        "owner": "mohitdixit02",
         "repo": "cortex-os-assistant"
       }
     ],
