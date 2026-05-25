@@ -1,9 +1,17 @@
-import { app, BrowserWindow, shell } from "electron";
+import { app, BrowserWindow, shell, protocol, net } from "electron";
 import * as path from "path";
+import { pathToFileURL } from "url";
 import { registerIpcHandlers, audioManager } from "./api";
 
 const isDev = !!process.env.ELECTRON_START_URL;
 const startUrl = process.env.ELECTRON_START_URL || "http://localhost:3000";
+
+// Register custom protocol scheme
+if (!isDev) {
+  protocol.registerSchemesAsPrivileged([
+    { scheme: "app", privileges: { secure: true, standard: true, supportFetchAPI: true } },
+  ]);
+}
 
 // Hot Reload (Development only)
 if (isDev) {
@@ -50,7 +58,7 @@ function createWindow() {
     mainWindow.loadURL(startUrl);
     mainWindow.webContents.openDevTools({ mode: "detach" });
   } else {
-    mainWindow.loadFile(path.join(__dirname, "../out/index.html"));
+    mainWindow.loadURL("app://./index.html");
   }
 
   mainWindow.on("closed", () => {
@@ -95,6 +103,23 @@ if (!gotTheLock) {
   });
 
   app.whenReady().then(() => {
+    if (!isDev) {
+      protocol.handle("app", (request) => {
+        let url = request.url.replace("app://", "");
+        if (url === "" || url === "/") {
+          url = "index.html";
+        }
+
+        const extension = path.extname(url);
+        if (!extension) {
+          url = path.join(url, "index.html");
+        }
+
+        const filePath = path.join(__dirname, "../out", url);
+        return net.fetch(pathToFileURL(filePath).toString());
+      });
+    }
+
     registerIpcHandlers();
     createWindow();
 
