@@ -28,10 +28,10 @@
       {
         "provider": "github",
         "owner": "MemoryAwareAi",
-        "repo": "MemoryAwareAi",
-        "releaseNotesFile": "RELEASE_NOTES.md"
+        "repo": "cortex-os-assistant"
       }
     ],
+    "releaseNotesFile": "RELEASE_NOTES.md",
     "files": [
       "dist-electron/**/*",
       "out/**/*"
