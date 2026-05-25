@@ -334,8 +334,8 @@ export default function Tasks() {
           </h1>
           <p style={{ color: 'var(--text-muted)' }}>
             {activeTab === 'automated'
-              ? 'Review the automated background tasks performed by Cortex.'
-              : 'View and manage your scheduled reminders and events.'}
+              ? 'Review the automated background tasks performed by Cortex, based on the active (current) session.'
+              : 'View and manage your scheduled reminders and events in the active (current) session.'}
           </p>
         </div>
 

@@ -4,6 +4,9 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useAppContext } from '../../components/AppContext';
 import { FaEnvelope, FaChartBar, FaCalendarCheck, FaEdit } from 'react-icons/fa';
+import Image from 'next/image';
+
+const DEFAULT_IMG_URL = "https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png";
 
 export default function Profile() {
   const { user } = useAppContext();
@@ -43,10 +46,12 @@ export default function Profile() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
           <section className="glass-card" style={{ padding: '30px', gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '30px' }}>
-            <img 
-              src={user?.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.name || "Demo"}`} 
-              alt="Profile" 
-              style={{ width: '100px', height: '100px', borderRadius: '50%', border: '4px solid var(--accent-secondary)' }}
+            <Image 
+              src={user?.image || DEFAULT_IMG_URL}
+              alt="Profile"
+              width={100}
+              height={100}
+              style={{borderRadius: '50%', border: '3px solid var(--accent-primary)' }}
             />
             <div>
               <h2 style={{ fontSize: '24px', fontWeight: 'bold' }}>{user?.name || "User"}</h2>

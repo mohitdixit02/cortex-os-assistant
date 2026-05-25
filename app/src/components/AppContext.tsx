@@ -147,10 +147,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [userConfig, setUserConfig] = useState<any>(null);
 
   const refreshUserConfig = React.useCallback(async () => {
-    const userId = user?.id || user?.user_id;
-    if (!isLoggedIn || !userId) return;
+    let userId = user?.id || user?.user_id;
+    if (!userId && typeof window !== 'undefined') {
+      const savedUser = JSON.parse(localStorage.getItem('user') || 'null');
+      userId = savedUser?.id || savedUser?.user_id;
+    }
+
+    if (!isLoggedIn || !userId) {
+      console.warn("Skipping config sync: user not logged in or ID missing.");
+      return;
+    }
 
     try {
+      console.log(`Refreshing config for user: ${userId}`);
       let config = await apiClient<any>(`/api/v1/user/config/${userId}`);
 
       // Automatic Timezone Sync - Handle before setting state to avoid double render
