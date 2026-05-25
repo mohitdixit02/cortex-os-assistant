@@ -34,6 +34,7 @@ function createWindow() {
     height: 800,
     minWidth: 560,
     minHeight: 320,
+    icon: path.join(__dirname, "../public/assets/icon.png"),
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -41,10 +42,11 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadURL(startUrl);
-
   if (isDev) {
+    mainWindow.loadURL(startUrl);
     mainWindow.webContents.openDevTools({ mode: "detach" });
+  } else {
+    mainWindow.loadFile(path.join(__dirname, "../out/index.html"));
   }
 
   mainWindow.on("closed", () => {

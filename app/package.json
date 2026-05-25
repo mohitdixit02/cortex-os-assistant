@@ -2,6 +2,9 @@
   "name": "app",
   "version": "0.1.0",
   "private": true,
+  "description": "Your personal AI assistant for managing day-to-day tasks, scheduling, and more. Powered by Cortex AI.",
+  "author": "Mohit Sharma",
+  "homepage": "https://github.com/MemoryAwareAi/MemoryAwareAi",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "concurrently -k \"npm:dev:web\" \"npm:dev:electron:watch\" \"npm:dev:electron\"",
@@ -12,7 +15,41 @@
     "build:electron": "tsc -p tsconfig.electron.json",
     "start": "next start",
     "lint": "eslint",
-    "start:electron": "npm run build:electron && cross-env ELECTRON_START_URL=http://localhost:3000 electron ."
+    "start:electron": "npm run build:electron && cross-env ELECTRON_START_URL=http://localhost:3000 electron .",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:linux": "npm run build && electron-builder --linux"
+  },
+  "build": {
+    "appId": "com.memoryawareai.app",
+    "productName": "Cortex AI",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "MemoryAwareAi",
+        "repo": "MemoryAwareAi"
+      }
+    ],
+    "files": [
+      "dist-electron/**/*",
+      "out/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "public/assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "public/assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "public/assets/icon.png"
+    }
   },
   "dependencies": {
     "@ericedouard/vad-node-realtime": "^0.2.0",
@@ -36,6 +73,7 @@
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "electron": "^41.0.3",
+    "electron-builder": "^26.8.1",
     "electron-reload": "^2.0.0-alpha.1",
     "electron-reloader": "^1.2.3",
     "eslint": "^9",

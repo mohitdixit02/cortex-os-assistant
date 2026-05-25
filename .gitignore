@@ -11,9 +11,11 @@ __pycache__/
 .next/
 node_modules/
 package-lock.json
+out/
 
 # electron
 dist-electron/
+dist/
 
 # test jupyter notebook + temp files
 *.ipynb
