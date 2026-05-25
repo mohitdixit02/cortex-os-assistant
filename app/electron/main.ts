@@ -2,7 +2,7 @@ import { app, BrowserWindow, shell } from "electron";
 import * as path from "path";
 import { registerIpcHandlers, audioManager } from "./api";
 
-const isDev = !app.isPackaged;
+const isDev = !!process.env.ELECTRON_START_URL;
 const startUrl = process.env.ELECTRON_START_URL || "http://localhost:3000";
 
 // Hot Reload (Development only)
@@ -15,7 +15,8 @@ if (isDev) {
   );
 
   try {
-    require("electron-reload")(__dirname, {
+    const reloadModule = "electron-reload";
+    require(reloadModule)(__dirname, {
       electron: electronBinary,
       hardResetMethod: "exit",
     });
