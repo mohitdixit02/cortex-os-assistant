@@ -1,15 +1,19 @@
-# 🚀 Cortex AI Release
+# Cortex AI Release
 
 Thank you for downloading Cortex AI! Below you will find OS-specific installation instructions and security notes.
 
-## 📥 Installation Guide
+## Windows
+**Installer:** `Cortex-AI-Windows-Setup-xxx.exe`
 
-### 🪟 Windows
 1. Download the `.exe` installer.
 2. Run the installer. 
-3. **Security Note:** If Windows SmartScreen blocks the app, click **"More info"** and then **"Run anyway"**. This occurs because the app is newly published.
+3. **Security Note:** If Windows SmartScreen blocks the app, click **"More info"** and then **"Run anyway"**. This occurs because the app is newly published and has not yet established a reputation.
 
-### 🍎 macOS
+---
+
+## macOS
+**Installer:** `Cortex-AI-Mac-xxx.dmg`
+
 1. Download the `.dmg` file.
 2. Drag **Cortex AI** to your **Applications** folder.
 3. **Security Note:** If the app won't open because it's from an "unidentified developer":
@@ -17,7 +21,11 @@ Thank you for downloading Cortex AI! Below you will find OS-specific installatio
    - Select **Open**.
    - Click **Open** again in the warning dialog.
 
-### 🐧 Linux
+---
+
+## Linux
+**Installer:** `Cortex-AI-Linux-xxx.AppImage`
+
 1. Download the `.AppImage`.
 2. Right-click the file and go to **Properties > Permissions**.
 3. Check **"Allow executing file as program"**.

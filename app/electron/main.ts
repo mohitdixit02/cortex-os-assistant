@@ -4,10 +4,9 @@ import { registerIpcHandlers, audioManager } from "./api";
 
 const isDev = !app.isPackaged;
 const startUrl = process.env.ELECTRON_START_URL || "http://localhost:3000";
-const env = process.env.NODE_ENV || 'development';
 
-// Hot Reload
-if (env.toLowerCase() === "development") {
+// Hot Reload (Development only)
+if (isDev) {
   const electronBinary = path.join(
     process.cwd(),
     "node_modules",
@@ -15,10 +14,14 @@ if (env.toLowerCase() === "development") {
     process.platform === "win32" ? "electron.cmd" : "electron"
   );
 
-  require("electron-reload")(__dirname, {
-    electron: electronBinary,
-    hardResetMethod: "exit",
-  });
+  try {
+    require("electron-reload")(__dirname, {
+      electron: electronBinary,
+      hardResetMethod: "exit",
+    });
+  } catch (err) {
+    console.log("electron-reload not available, skipping.");
+  }
 }
 
 // Set App ID for Windows Notifications
