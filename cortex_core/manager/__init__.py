@@ -127,9 +127,6 @@ class ManagerClient():
                 "task_retriever_tool": state.task_retriever_tool,
             }
     
-    # Pending:
-    # 6. Fix UI to allow conversation name change, Pagination, layout, animation for ORB, listening, thinking, etc.
-    
     def event_tool(self, state: ToolManagerState):
         try:
             message_id = state.message_id

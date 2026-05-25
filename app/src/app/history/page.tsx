@@ -82,7 +82,7 @@ export default function Conversations() {
                       <FaHistory color="var(--accent-primary)" />
                     </div>
                     <div>
-                      <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>{thread.summary || "New Conversation"}</h3>
+                      <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>{thread.display_title || "New Conversation"}</h3>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: 'var(--text-muted)' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                           <FaCalendarAlt size={12} /> {new Date(thread.created_at).toLocaleString()}

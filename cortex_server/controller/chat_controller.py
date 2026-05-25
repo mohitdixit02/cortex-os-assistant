@@ -33,6 +33,21 @@ async def get_messages(
     messages = chat_service.get_messages(thread_id)
     return messages
 
+@router.put("/threads/{thread_id}/summary", response_model=ChatThreadResponse)
+async def update_thread_summary(
+    thread_id: str,
+    payload: dict,
+    user_id: str = Depends(get_current_user_id)
+):
+    """Update the summary of a specific thread."""
+    summary = payload.get("summary")
+    if summary is None:
+        raise HTTPException(status_code=400, detail="Summary is required")
+    thread = chat_service.update_thread_summary(thread_id, summary)
+    if not thread:
+        raise HTTPException(status_code=404, detail="Thread not found")
+    return thread
+
 @router.delete("/threads/{thread_id}")
 async def delete_thread(
     thread_id: str,

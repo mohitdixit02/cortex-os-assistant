@@ -14,6 +14,7 @@ class ChatThreadResponse(BaseModel):
     session_id: UUID
     user_id: UUID
     summary: Optional[str]
+    display_title: str
     created_at: datetime
     updated_at: datetime
 

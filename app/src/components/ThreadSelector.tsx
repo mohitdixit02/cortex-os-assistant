@@ -91,7 +91,7 @@ export default function ThreadSelector() {
             <FaCommentAlt size={14} color="var(--accent-primary)" />
           </div>
           <span style={{ maxWidth: '220px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {activeThread?.summary || "New Conversation"}
+            {activeThread?.display_title || "New Conversation"}
           </span>
         </div>
         <FaChevronDown size={12} style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', opacity: 0.5 }} />
@@ -179,7 +179,7 @@ export default function ThreadSelector() {
                     }}
                   >
                     <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {thread.summary || "Conversation Session"}
+                      {thread.display_title || "Conversation Session"}
                     </div>
                     <div style={{ fontSize: '11px', opacity: 0.6 }}>
                       {new Date(thread.created_at).toLocaleDateString(undefined, { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}

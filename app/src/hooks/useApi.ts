@@ -6,6 +6,7 @@ export interface ChatThread {
   session_id: string;
   user_id: string;
   summary?: string;
+  display_title: string;
   created_at: string;
   updated_at: string;
 }
