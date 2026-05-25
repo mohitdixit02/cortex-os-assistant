@@ -163,22 +163,10 @@ export default function Settings() {
         alignItems: 'center',
         height: '100%',
         color: 'var(--text-muted)',
-        gap: '20px'
+        gap: '20px',
+        padding: '30px 0'
       }}>
-        <div className="spin" style={{ fontSize: '24px' }}>
-          <FaSync />
-        </div>
         <span>Loading settings...</span>
-
-        <style jsx>{`
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-          .spin {
-            animation: spin 1s linear infinite;
-          }
-        `}</style>
       </div>
     );
   }
