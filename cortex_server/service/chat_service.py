@@ -79,4 +79,10 @@ class ChatService:
             thread_data["display_title"] = summary
             return thread_data
 
+    def get_session_count(self, user_id: str) -> int:
+        from sqlalchemy import func
+        with Session(engine) as session:
+            statement = select(func.count(ChatSession.session_id)).where(ChatSession.user_id == UUID(user_id))
+            return session.exec(statement).one()
+
 chat_service = ChatService()

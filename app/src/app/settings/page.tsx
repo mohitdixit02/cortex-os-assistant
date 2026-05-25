@@ -9,18 +9,20 @@ import { toast } from 'react-toastify';
 import TimezoneSelect from 'react-timezone-select';
 import { AnimatePresence } from 'framer-motion';
 
-function CustomSelect({ 
-  options, 
-  value, 
-  onChange, 
-  width = '100%', 
-  disabled = false 
-}: { 
-  options: { value: string, label: string }[], 
-  value: string, 
+function CustomSelect({
+  options,
+  value,
+  onChange,
+  trimmedHeight = false,
+  width = '100%',
+  disabled = false
+}: {
+  options: { value: string, label: string }[],
+  value: string,
   onChange: (val: string) => void,
+  trimmedHeight?: boolean 
   width?: string,
-  disabled?: boolean
+  disabled?: boolean,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -58,10 +60,10 @@ function CustomSelect({
 
   return (
     <div ref={containerRef} style={{ position: 'relative', width }}>
-      <button 
+      <button
         type="button"
         disabled={disabled}
-        onClick={() => setIsOpen(!isOpen)} 
+        onClick={() => setIsOpen(!isOpen)}
         style={triggerStyle}
         onMouseEnter={(e) => {
           if (!disabled) {
@@ -79,8 +81,8 @@ function CustomSelect({
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {selectedOption?.label}
         </span>
-        <FaChevronDown size={10} style={{ 
-          opacity: 0.5, 
+        <FaChevronDown size={10} style={{
+          opacity: 0.5,
           transform: isOpen ? 'rotate(180deg)' : 'none',
           transition: 'transform 0.2s'
         }} />
@@ -104,7 +106,7 @@ function CustomSelect({
               padding: '6px',
               zIndex: 1000,
               boxShadow: '0 15px 40px rgba(0,0,0,0.6)',
-              maxHeight: '250px',
+              maxHeight: `${trimmedHeight ? '120px' : '250px'}`,
               overflowY: 'auto'
             }}
           >
@@ -154,12 +156,12 @@ export default function Settings() {
 
   if (!userConfig) {
     return (
-      <div style={{ 
-        display: 'flex', 
+      <div style={{
+        display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100%', 
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100%',
         color: 'var(--text-muted)',
         gap: '20px'
       }}>
@@ -167,7 +169,7 @@ export default function Settings() {
           <FaSync />
         </div>
         <span>Loading settings...</span>
-        
+
         <style jsx>{`
           @keyframes spin {
             from { transform: rotate(0deg); }
@@ -182,9 +184,9 @@ export default function Settings() {
   }
 
   return (
-    <SettingsForm 
-      initialConfig={userConfig} 
-      refreshUserConfig={refreshUserConfig} 
+    <SettingsForm
+      initialConfig={userConfig}
+      refreshUserConfig={refreshUserConfig}
     />
   );
 }
@@ -384,7 +386,7 @@ function SettingsForm({ initialConfig, refreshUserConfig }: { initialConfig: any
               </div>
               Cortex Interaction
             </h2>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}>
                 <div>
@@ -392,7 +394,7 @@ function SettingsForm({ initialConfig, refreshUserConfig }: { initialConfig: any
                   <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>The amount of seconds Cortex should wait for voice input before responding. Cortex will wait in case it thought your speech or thought is not finished yet. Setting this to 0 will make Cortex respond immediately after it thinks you are done talking.
                   </div>
                 </div>
-                <input 
+                <input
                   type="number"
                   min="0"
                   max="30"
@@ -415,7 +417,7 @@ function SettingsForm({ initialConfig, refreshUserConfig }: { initialConfig: any
                     If enabled, Cortex will turn on the conversation (in case it was off) and respond with audio for the reminder notification. If disabled, you will only get notification in case conversation is stopped.
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setForceOpenWebsocket(!forceOpenWebsocket)}
                   style={{
                     fontSize: '36px',
@@ -442,7 +444,7 @@ function SettingsForm({ initialConfig, refreshUserConfig }: { initialConfig: any
               </div>
               Scheduler Configs
             </h2>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px' }}>
                 <div>
@@ -451,7 +453,7 @@ function SettingsForm({ initialConfig, refreshUserConfig }: { initialConfig: any
                     The amount of minutes before the actual requested time that Cortex should start reminding you about the event. Setting this to 0 will make Cortex remind you exactly at the time requested.
                   </div>
                 </div>
-                <input 
+                <input
                   type="number"
                   min="0"
                   max="30"
@@ -477,15 +479,15 @@ function SettingsForm({ initialConfig, refreshUserConfig }: { initialConfig: any
               </div>
               Regional Settings
             </h2>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontWeight: '600' }}>Timezone Mode</div>
                   <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Automatic or Manual timezone detection</div>
                 </div>
-                <CustomSelect 
-                  value={timezoneMode} 
+                <CustomSelect
+                  value={timezoneMode}
                   onChange={(val) => handleTimezoneModeChange(val)}
                   options={[
                     { value: 'AUTO', label: 'AUTO' },
@@ -568,21 +570,22 @@ function SettingsForm({ initialConfig, refreshUserConfig }: { initialConfig: any
               </div>
               Audio Devices
             </h2>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontWeight: '600' }}>Microphone</div>
                   <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Select input device</div>
                 </div>
-                <CustomSelect 
-                  value={selectedMic || 'default'} 
+                <CustomSelect
+                  value={selectedMic || 'default'}
                   onChange={(val) => setSelectedMic(val)}
                   options={[
                     { value: 'default', label: 'System Default' },
                     ...micDevices.map(d => ({ value: d.label, label: d.label || `Device ${d.deviceId.slice(0, 5)}` }))
                   ]}
                   width="300px"
+                  trimmedHeight={true}
                 />
               </div>
 
@@ -591,20 +594,24 @@ function SettingsForm({ initialConfig, refreshUserConfig }: { initialConfig: any
                   <div style={{ fontWeight: '600' }}>Speaker</div>
                   <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Select output device</div>
                 </div>
-                <CustomSelect 
-                  value={selectedSpeaker || 'default'} 
+                <CustomSelect
+                  value={selectedSpeaker || 'default'}
                   onChange={(val) => setSelectedSpeaker(val)}
                   options={[
                     { value: 'default', label: 'System Default' },
                     ...speakerDevices.map(d => ({ value: d.deviceId, label: d.label || `Device ${d.deviceId.slice(0, 5)}` }))
                   ]}
                   width="300px"
+                  trimmedHeight={true}
                 />
               </div>
             </div>
           </section>
         </div>
       </motion.div>
+      <div style={{ display: "flex", justifyContent: "center", "paddingTop":"30px", color:"rgb(134, 134, 134)" }}>
+        @Cortex AI | {new Date().getFullYear()}
+      </div>
     </div>
   );
 }

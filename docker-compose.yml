@@ -69,6 +69,7 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
       - GOOGLE_AUTH_URI=${GOOGLE_AUTH_URI}
+      - GOOGLE_TOKEN_URI=${GOOGLE_TOKEN_URI}
     command: python cortex_server/server.py
     depends_on:
       - redis

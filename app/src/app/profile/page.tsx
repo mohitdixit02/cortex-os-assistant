@@ -1,15 +1,63 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAppContext } from '../../components/AppContext';
-import { FaEnvelope, FaChartBar, FaCalendarCheck, FaEdit } from 'react-icons/fa';
+import { FaEnvelope, FaChartBar, FaCalendarCheck, FaGlobe } from 'react-icons/fa';
 import Image from 'next/image';
+import { apiClient } from '../../utility/apiClient';
 
 const DEFAULT_IMG_URL = "https://images.icon-icons.com/1378/PNG/512/avatardefault_92824.png";
 
+interface Stats {
+  total_sessions: number;
+  total_reminders: number;
+  upcoming_reminders: number;
+}
+
 export default function Profile() {
-  const { user } = useAppContext();
+  const { user, userConfig, refreshUserConfig, setUser } = useAppContext();
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      // Refresh User Info (for created_at)
+      const userData = await apiClient<any>('/api/v1/auth/me');
+      setUser({
+        id: userData.user_id,
+        name: userData.full_name,
+        email: userData.email,
+        image: userData.profile_picture,
+        created_at: userData.created_at
+      });
+
+      // Refresh Stats
+      const statsData = await apiClient<Stats>('/api/v1/auth/stats');
+      setStats(statsData);
+
+      // Refresh Config (for timezone)
+      await refreshUserConfig();
+    } catch (err) {
+      console.error("Failed to fetch profile data", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
   return (
     <div style={{
@@ -25,34 +73,20 @@ export default function Profile() {
         <div style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <div>
             <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '10px' }}>Your <span className="gradient-text">Profile</span></h1>
-            <p style={{ color: 'var(--text-muted)' }}>Manage your account and view your assistant usage.</p>
+            <p style={{ color: 'var(--text-muted)' }}>View your account details and assistant usage statistics.</p>
           </div>
-          <button style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            padding: '10px 20px',
-            borderRadius: '10px',
-            background: 'rgba(255,255,255,0.05)',
-            color: 'white',
-            border: '1px solid rgba(255,255,255,0.1)',
-            fontSize: '14px',
-            fontWeight: '600',
-            cursor: 'pointer'
-          }}>
-            <FaEdit /> Edit Profile
-          </button>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
           <section className="glass-card" style={{ padding: '30px', gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: '30px' }}>
-            <Image 
-              src={user?.image || DEFAULT_IMG_URL}
-              alt="Profile"
-              width={100}
-              height={100}
-              style={{borderRadius: '50%', border: '3px solid var(--accent-primary)' }}
-            />
+            <div style={{ position: 'relative', width: '100px', height: '100px' }}>
+              <Image
+                src={user?.image || DEFAULT_IMG_URL}
+                alt="Profile"
+                fill
+                style={{ borderRadius: '50%', border: '3px solid var(--accent-primary)', objectFit: 'cover' }}
+              />
+            </div>
             <div>
               <h2 style={{ fontSize: '24px', fontWeight: 'bold' }}>{user?.name || "User"}</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', marginTop: '5px' }}>
@@ -67,37 +101,44 @@ export default function Profile() {
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Total Conversations</span>
-                <span style={{ fontWeight: '600' }}>124</span>
+                <span style={{ color: 'var(--text-muted)' }}>Total Sessions</span>
+                <span style={{ fontWeight: '600' }}>{loading ? "..." : stats?.total_sessions ?? 0}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Voice Interaction Time</span>
-                <span style={{ fontWeight: '600' }}>12.5 hrs</span>
+                <span style={{ color: 'var(--text-muted)' }}>Total Reminders Created</span>
+                <span style={{ fontWeight: '600' }}>{loading ? "..." : stats?.total_reminders ?? 0}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Tasks Completed</span>
-                <span style={{ fontWeight: '600' }}>48</span>
+                <span style={{ color: 'var(--text-muted)' }}>Total Upcoming Reminders</span>
+                <span style={{ fontWeight: '600' }}>{loading ? "..." : stats?.upcoming_reminders ?? 0}</span>
               </div>
             </div>
           </section>
 
           <section className="glass-card" style={{ padding: '30px' }}>
             <h3 style={{ fontSize: '18px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <FaCalendarCheck color="var(--accent-primary)" /> Recent Activity
+              <FaGlobe color="var(--accent-primary)" /> General Information
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <div style={{ fontSize: '14px' }}>
-                <div style={{ fontWeight: '600' }}>Last Active</div>
-                <div style={{ color: 'var(--text-muted)' }}>Today at 10:45 AM</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Account Created</span>
+                <span style={{ fontWeight: '600' }}>{loading ? "..." : formatDate(user?.created_at)}</span>
               </div>
-              <div style={{ fontSize: '14px' }}>
-                <div style={{ fontWeight: '600' }}>Account Created</div>
-                <div style={{ color: 'var(--text-muted)' }}>March 15, 2026</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Is Active</span>
+                <span style={{ fontWeight: '600', color: '#4caf50' }}>True</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Timezone</span>
+                <span style={{ fontWeight: '600' }}>{loading ? "..." : userConfig?.timezone || "UTC"}</span>
               </div>
             </div>
           </section>
         </div>
       </motion.div>
+      <div style={{ display: "flex", justifyContent: "center", "paddingTop": "30px", color: "rgb(134, 134, 134)" }}>
+        @Cortex AI | {new Date().getFullYear()}
+      </div>
     </div>
   );
 }

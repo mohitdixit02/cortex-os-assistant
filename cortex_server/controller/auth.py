@@ -6,6 +6,9 @@ from cortex_server.controller.requestModels import TokenResponse
 from cortex_cm.pg import engine, User
 from cortex_cm.pg.req import crud
 from sqlmodel import Session
+from cortex_server.service.chat_service import chat_service
+from cortex_server.service.event_service import event_service
+from uuid import UUID
 
 router = APIRouter(prefix="/v1/auth", tags=["Auth"])
 
@@ -20,8 +23,21 @@ async def get_me(user_id: str = Depends(get_current_user_id)):
             "user_id": str(user.user_id),
             "email": user.email,
             "full_name": user.full_name,
-            "profile_picture": user.profile_picture
+            "profile_picture": user.profile_picture,
+            "created_at": user.created_at
         }
+
+@router.get("/stats")
+async def get_stats(user_id: str = Depends(get_current_user_id)):
+    """Get user statistics."""
+    session_count = chat_service.get_session_count(user_id)
+    event_counts = event_service.get_event_counts(UUID(user_id))
+    
+    return {
+        "total_sessions": session_count,
+        "total_reminders": event_counts["total_reminders"],
+        "upcoming_reminders": event_counts["upcoming_reminders"]
+    }
 
 @router.get("/google/authorize")
 async def authorize():
