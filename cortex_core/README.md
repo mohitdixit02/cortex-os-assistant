@@ -4,46 +4,7 @@ The `Main Brain of the Cortex AI`. This module acts as the principal orchestrato
 It listens to a `Redis DB1`, processes user queries through dynamic plan generation and execution, and submits final responses back to the system (`Redis DB2`), via the `Cortex Queue`.
     
 ## Core Concepts & Workflows
-    
-Cortex Core is divided into four main LangGraph workflows:
-       
-### 1. Main Workflow
-The central orchestration loop that receives user queries and determines the action plan.
-*   **Phase 1: Retrieval** - Fetches the Short Term Memory (STM) and Emotional Profile of the user.
-*   **Phase 2: Orchestration** - Three independent plans are built by the planner and evaluated:
-    *   *Knowledge Plan:* Retrieves long-term user memory/preferences.
-    *   *Messages Plan:* Retrieves past conversation history if referred to by the user.
-    *   *Tools Plan:* Determines which tools are required and generates specific instructions.
-    *   *Evaluation & Aggregation:* The Main Orchestrator aggregates evaluated plans and iterates the refinement until the plans are optimal or a maximum iteration limit is reached.
-*   **Phase 3: Tool Execution** - Executes the generated tools via the **Manager Workflow**.
-*   **Phase 4: Final Response** - LLM generates the final response aligned with user emotions and preferences, optionally refining it based on evaluator feedback, before submitting to `Cortex Queue`.
-       
-#### Plan and Evaluation Logic
-- For the first pass, all three plans are executed. In subsequent iterations, the Main Orchestrator decides which plan(s) to refine based on the evaluation feedback and retrieved information, allowing for dynamic reasoning.
-- In the first pass, Message and Tool Planners can choose to skip execution if the LLM determines they are not needed, but Knowledge Plan is always executed for first time to ensure user preferences are considered if any.
-
-### 2. Manager Workflow
-Triggered by the Main Workflow to execute tools in parallel.
-*   Executes tools based on orchestrator instructions.
-*   **Available Tools:**
-    *   `WebSearchTool`: Searches the web for live data.
-    *   `TaskRetrieverTool`: Retrieves user's past tasks based on time, description, or recency.
-    *   `EventTool`: Custom reminder/event creation logic.
-*   Aggregates and summarizes results (e.g., summarizing raw web data) before returning to the Main Orchestrator.
-
-### 3. Memory Workflow
-Executed asynchronously after the final response is submitted. It handles state persistence without blocking the user response.
-*   **Persist AI Response:** Saves the final response to Postgres.
-*   **Build Short Term Memory (STM):** Summarizes conversation if the unsummarized message count exceeds the threshold.
-*   **Update Emotional Profile:** Updates emotional, logical, and social metrics based on the current interaction.
-*   **Update User Knowledge Base:** Extracts and stores long-term facts/preferences with strictness constraints (`MUST`, `SHOULD`, `CANNOT`, `CAN`).
-
-### 4. Event-Tool Workflow
-A standalone workflow that triggers when a reminder task is fetched, bypassing standard text-generation to yield a customized human-like reminder message based on time of day and event context.
-
----
-
-## Workflow Architecture Diagram
+### Workflow Architecture Diagram
 
 ```mermaid
 graph TD
@@ -116,6 +77,49 @@ graph TD
     end
     E2 --> Submit
 ```
+
+---
+
+### Cortex Core is divided into four main `LangGraph` workflows:
+       
+### 1. Main Workflow
+The central orchestration loop that receives user queries and determines the action plan.
+*   **Phase 1: Retrieval** - Fetches the Short Term Memory (STM) and Emotional Profile of the user.
+*   **Phase 2: Orchestration** - Three independent plans are built by the planner and evaluated:
+    *   *Knowledge Plan:* Retrieves long-term user memory/preferences.
+    *   *Messages Plan:* Retrieves past conversation history if referred to by the user.
+    *   *Tools Plan:* Determines which tools are required and generates specific instructions.
+    *   *Evaluation & Aggregation:* The Main Orchestrator aggregates evaluated plans and iterates the refinement until the plans are optimal or a maximum iteration limit is reached.
+*   **Phase 3: Tool Execution** - Executes the generated tools via the **Manager Workflow**.
+*   **Phase 4: Final Response** - LLM generates the final response aligned with user emotions and preferences, optionally refining it based on evaluator feedback, before submitting to `Cortex Queue`.
+       
+#### Plan and Evaluation Logic
+- For the first pass, all three plans are executed. In subsequent iterations, the Main Orchestrator decides which plan(s) to refine based on the evaluation feedback and retrieved information, allowing for dynamic reasoning.
+- In the first pass, Message and Tool Planners can choose to skip execution if the LLM determines they are not needed, but Knowledge Plan is always executed for first time to ensure user preferences are considered if any.
+
+### 2. Manager Workflow
+Triggered by the Main Workflow to execute tools in parallel.
+*   Executes tools based on orchestrator instructions.
+*   **Available Tools:**
+    *   `WebSearchTool`: Searches the web for live data.
+    *   `TaskRetrieverTool`: Retrieves user's past tasks based on time, description, or recency.
+    *   `EventTool`: Custom reminder/event creation logic.
+*   Aggregates and summarizes results (e.g., summarizing raw web data) before returning to the Main Orchestrator.
+
+### 3. Memory Workflow
+Executed asynchronously after the final response is submitted. It handles state persistence without blocking the user response.
+*   **Persist AI Response:** Saves the final response to Postgres.
+*   **Build Short Term Memory (STM):** Summarizes conversation if the unsummarized message count exceeds the threshold.
+*   **Update Emotional Profile:** Updates emotional, logical, and social metrics based on the current interaction.
+*   **Update User Knowledge Base:** Extracts and stores long-term facts/preferences with strictness constraints (`MUST`, `SHOULD`, `CANNOT`, `CAN`).
+
+### 4. Event-Tool Workflow
+A standalone workflow that triggers when a reminder task is fetched, bypassing standard text-generation to yield a customized human-like reminder message based on time of day and event context.
+
+### 5. Document Retrieval & Query Incline
+To ensure highly contextual and personalized execution, the system employs advanced retrieval techniques:
+*   **Maximal Marginal Relevance (MMR):** The `retrieve_relevant_docs_utility` actively filters unstructured data (like web search results or vector DB chunks). It leverages MMR (`is_mmr_enabled`) to balance raw relevance (cosine similarity) with diversity, preventing the orchestrator from being overwhelmed by repetitive information chunks.
+*   **Query Inclination (Mood & Time):** The user's current emotional state and the time of day are actively retrieved and injected into the Main Workflow. This data inclines the LLM's query handling and final response generation (e.g., providing concise, actionable answers during focused morning hours versus conversational responses in the evening).
 
 ---
 
