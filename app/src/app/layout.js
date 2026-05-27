@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Cortex AI Assistant",
-  description: "Your personal AI assistant for managing day-to-day tasks, scheduling, and more. Powered by Cortex AI.",
+  title: "Cortex OS Assistant",
+  description: "Your personal AI assistant for managing day-to-day tasks, scheduling, and more. Powered by Cortex.",
 };
 
 export default function RootLayout({ children }) {

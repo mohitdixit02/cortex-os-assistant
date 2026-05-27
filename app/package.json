@@ -22,8 +22,8 @@
     "dist:linux": "npm run build && electron-builder --linux"
   },
   "build": {
-    "appId": "com.memoryawareai.app",
-    "productName": "Cortex AI",
+    "appId": "com.cortex-os-assistant.app",
+    "productName": "Cortex OS Assistant",
     "publish": [
       {
         "provider": "github",
@@ -44,17 +44,17 @@
     "win": {
       "target": "nsis",
       "icon": "public/assets/icon.ico",
-      "artifactName": "Cortex-AI-Windows-Setup-${version}.${ext}"
+      "artifactName": "Cortex-OS-Windows-Setup-${version}.${ext}"
     },
     "mac": {
       "target": "dmg",
       "icon": "public/assets/icon.icns",
-      "artifactName": "Cortex-AI-Mac-${version}.${ext}"
+      "artifactName": "Cortex-OS-Mac-${version}.${ext}"
     },
     "linux": {
       "target": "AppImage",
       "icon": "public/assets/icon.png",
-      "artifactName": "Cortex-AI-Linux-${version}.${ext}"
+      "artifactName": "Cortex-OS-Linux-${version}.${ext}"
     }
   },
   "dependencies": {

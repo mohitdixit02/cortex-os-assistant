@@ -69,7 +69,7 @@ class AuthService:
 
         # Verify ID Token
         id_info = id_token.verify_oauth2_token(
-            credentials.id_token, google_requests.Request(), env.GOOGLE_CLIENT_ID
+            credentials.id_token, google_requests.Request(), env.GOOGLE_CLIENT_ID, clock_skew_in_seconds=10
         )
 
         google_id = id_info['sub']
