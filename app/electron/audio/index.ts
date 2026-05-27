@@ -1,10 +1,18 @@
+const { app } = require("electron");
 const path = require("path");
 const AudioRecorder = require("node-audiorecorder");
-const soxPath = require("sox-bin");
 const { VAD } = require("./vad");
 
-const soxDir = path.dirname(soxPath);
-process.env.PATH = `${soxDir};${process.env.PATH}`;
+const isPackaged = app.isPackaged;
+const platform = process.platform;
+const binOsFolder = platform === "win32" ? "win" : platform === "darwin" ? "mac" : "linux";
+
+const soxDir = isPackaged
+  ? path.join(process.resourcesPath, "bin")
+  : path.join(__dirname, "..", "..", "bin", binOsFolder);
+
+const pathSeparator = platform === "win32" ? ";" : ":";
+process.env.PATH = `${soxDir}${pathSeparator}${process.env.PATH}`;
 process.env.AUDIODRIVER = 'waveaudio';
 
 type MicStreamOptions = {
