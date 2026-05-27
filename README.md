@@ -1,6 +1,6 @@
-# Cortex AI Assistant
+# Cortex OS Assistant
 <p align="center">
-  <img src="app/public/assets/CortexAI full.png" width="280" alt="Cortex AI Logo">
+  <img src="app/public/assets/CortexAI full.png" width="280" alt="Cortex OS Logo">
 </p>
 Advanced, memory-aware personal operating system assistant which seamlessly listens to user queries via audio, transcribes them into text, and leverages powerful LangGraph workflows to generate intelligent responses. Unlike traditional assistants, Cortex can understand the gap between conversations, align responses based on user past emotional profile and mood-specific behaviour, making it a truly proactive personal assistant.
 
@@ -129,7 +129,7 @@ The application requires several environment variables to function correctly. Co
 *   **GOOGLE_AUTH_URI**: The Google OAuth 2.0 authorization endpoint.
 *   **GOOGLE_TOKEN_URI**: The Google OAuth 2.0 token exchange endpoint.
 
-## Cortex AI Workflow vs Agent Workflow
+## Cortex OS Workflow vs Agent Workflow
 One thing a fellow developer might be confused about is why LangGraph workflows are used instead of an autonomous agent workflow. The reason is simple:
 - **Control and Predictability:** I wanted to have more control over the flow of the conversation and the reasoning process. With a LangGraph workflow, I can define specific steps and logic for handling user queries, managing memory, and generating responses. 
 - **Consistency:** Agent workflows decide their path on their own based on the query provided, which can lead to unpredictable behavior and less control over the user experience.
