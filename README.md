@@ -68,19 +68,24 @@ The repository is divided into distinct, purpose-built modules. **For detailed t
 
 ## Quick Start / Setup
 
-### Users
-Pre-built binaries are available for users who want to run the application directly. Please check the [releases](../../releases) section of this GitHub repository to download and run the executable file for your operating system. For detailed instructions on using the application, including how to interact with the assistant, manage settings, and utilize features like user configurations, please refer to the [app/README.md](app/README.md).
+### 1. Application
+The user interface is available as a standalone desktop application. 
 
-### Developers
-For developers who wish to build from source or contribute to the project, the entire backend infrastructure is containerized and orchestrated using Docker Compose.
+*   **Download**: Visit the [releases](../../releases) section of this repository to download the executable for your operating system (Windows, macOS, or Linux).
+*   **Connectivity**: The application requires the **Backend Infrastructure** (Step 2) to be running. You can point the application to your backend by configuring environment variables if building from source.
+
+For detailed UI instructions, refer to the [app/README.md](app/README.md).
+
+### 2. Backend Infrastructure
+Cortex AI requires a set of microservices to handle AI reasoning, task queuing, and data persistence. These services are containerized and orchestrated using Docker Compose.
 
 **Prerequisites:**
 *   Docker & Docker Compose
-*   Hugging Face Token (for specific model downloads)
-*   A `.env` file populated based on `.env.example`
+*   Hugging Face Token (for gated model access)
+*   A `.env` file populated based on `.env.example` (See [ENV Guide](#env-guide))
 *   Google Authentication credentials
 
-**Running the System:**
+**Running the Backend:**
 To spin up the PostgreSQL database, Redis instance, and all Python-based microservices:
 
 ```bash
@@ -88,14 +93,14 @@ docker-compose up --build
 ```
 
 **Services Started:**
-*   `cortex-pg-db`: PostgreSQL 17 with `pgvector` on port `5460` (configurable).
+*   `cortex-pg-db`: PostgreSQL 17 with `pgvector` on port `5460`.
 *   `cortex-redis-db`: Redis on port `6379`.
 *   `cortex-queue`: The central task routing API on port `8001`.
 *   `cortex-server`: The client-facing WebSocket and REST API on port `8000`.
 *   `cortex-core`: The background LLM reasoning worker.
 *   `cortex-event-worker`: The background scheduling worker.
 
-To run the frontend application, navigate to the `app/` directory and refer to its specific documentation.
+Once the backend is healthy, ensure your Application (Step 1) is configured to connect to `http://localhost:8000` (or your server's IP).
 
 ## ENV Guide
 The application requires several environment variables to function correctly. Copy `.env.example` to `.env` and configure the following:
