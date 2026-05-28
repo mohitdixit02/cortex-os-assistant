@@ -3,6 +3,7 @@
   --background: #000000;
   --foreground: #ffffff;
   --primary-gradient: linear-gradient(135deg, #00f2ff 0%, #ff00e5 100%);
+  --primary-gradient-dark: linear-gradient(135deg, #0033ff69 0%, #ff00bf6b 100%);
   --sidebar-bg: #050505;
   --card-bg: rgba(255, 255, 255, 0.03);
   --accent-primary: #00f2ff;

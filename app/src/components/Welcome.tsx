@@ -3,48 +3,50 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAppContext } from './AppContext';
-import { FaMicrophone, FaBrain, FaHistory, FaCog, FaUser, FaRocket, FaShieldAlt } from 'react-icons/fa';
+import { FaBrain, FaHistory, FaCog, FaUser, FaRocket, FaSync, FaLightbulb } from 'react-icons/fa';
+import CortexFullLogo from "../../public/assets/CortexAI full.png";
+import Image from 'next/image';
 
 const cards = [
   {
-    title: "Welcome to Cortex",
-    description: "Your advanced AI voice assistant designed for seamless interaction.",
+    title: "Your Proactive Companion",
+    description: "Cortex is a memory-aware OS assistant that understands your history and behaviours.",
     icon: <FaRocket />,
     color: "from-purple-500 to-blue-500"
   },
   {
-    title: "Voice Intelligence",
-    description: "Natural language processing that understands your voice with high precision.",
-    icon: <FaMicrophone />,
+    title: "Non-Blocking Reasoning",
+    description: "Ask follow-up questions while I'm thinking. I handle parallel queries without ever pausing our conversation.",
+    icon: <FaSync />,
     color: "from-blue-500 to-cyan-500"
   },
   {
-    title: "Memory Aware",
-    description: "The assistant remembers your preferences and past interactions for better context.",
-    icon: <FaBrain />,
+    title: "Emotionally Aligned",
+    description: "I sense your mood and the time of day, adjusting my responses—from concise morning updates to relaxed evening chats.",
+    icon: <FaLightbulb />,
     color: "from-purple-600 to-red-500"
   },
   {
-    title: "Session History",
-    description: "Access and review your previous conversations anytime in the history tab.",
-    icon: <FaHistory />,
+    title: "Active Memory Building",
+    description: "I learn your preferences and facts in real-time, building a persistent knowledge base that evolves with you.",
+    icon: <FaBrain />,
     color: "from-red-500 to-orange-500"
   },
   {
-    title: "Customizable Experience",
-    description: "Tweak voice, language, and behavior in the settings to suit your needs.",
+    title: "Deep Thinking Workflows",
+    description: "Utilizing advanced LangGraph orchestration to research, execute tools, and solve complex tasks for you.",
     icon: <FaCog />,
     color: "from-orange-500 to-yellow-500"
   },
   {
-    title: "Privacy Focused",
-    description: "Your data is handled with care, ensuring a secure and private environment.",
-    icon: <FaShieldAlt />,
+    title: "Smart Scheduling",
+    description: "Precision reminders that can wake your system to deliver critical updates.",
+    icon: <FaHistory />,
     color: "from-green-500 to-teal-500"
   },
   {
-    title: "Ready to Start?",
-    description: "Click get started to begin your journey with your new AI companion.",
+    title: "Personalized Discovery",
+    description: "Click get started to securely sign in and begin your journey with a truly personalized AI experience.",
     icon: <FaUser />,
     color: "from-indigo-500 to-purple-600"
   }
@@ -68,10 +70,25 @@ export default function Welcome() {
       width: '100vw',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center',
-      background: 'var(--background)',
-      overflow: 'hidden'
+      justifyContent: 'left',
+      gap: '20%',
+      background: '#523c5a37',
+      overflow: 'hidden',
     }}>
+      <div style={{
+        position: 'relative',
+        top: 0,
+        left: 0,
+        height: '100%',
+        width: '35%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--primary-gradient-dark)',
+        borderRadius: '0 30px 30px 0',
+      }}>
+        <Image src={CortexFullLogo} alt="Cortex Logo" width={480} objectFit='contain' />
+      </div>
       <AnimatePresence mode="wait">
         <motion.div
           key={current}
@@ -110,7 +127,7 @@ export default function Welcome() {
                 width: i === current ? '24px' : '8px',
                 height: '8px',
                 borderRadius: '4px',
-                background: i === current ? 'var(--accent-purple)' : '#333',
+                background: i === current ? 'var(--primary-gradient)' : '#333',
                 transition: 'all 0.3s'
               }} />
             ))}
